@@ -18,6 +18,18 @@ v0.2-input-rendering
 v0.3-sd-deck-read
 ```
 
+## Local Emulator Loop
+
+Most changes should be checked in a local emulator before moving files to real
+hardware. Hardware remains the checkpoint gate, but emulator passes should catch
+basic build, rendering, and input mistakes first.
+
+Preferred emulator:
+
+- Azahar, because it supports `.3dsx` homebrew files
+
+See `docs/emulator-feedback-loop.md`.
+
 ## M0: Repo And Planning
 
 Acceptance test:
@@ -27,7 +39,14 @@ Acceptance test:
 
 ## M1: Toolchain Proof
 
-Acceptance test:
+Local emulator acceptance test:
+
+1. Build the `.3dsx`.
+2. Launch it in Azahar.
+3. Confirm it displays a title and version string.
+4. Confirm it exits cleanly.
+
+Hardware acceptance test:
 
 1. Copy the `.3dsx` build to the SD card.
 2. Launch it from the Homebrew Launcher.
@@ -36,7 +55,7 @@ Acceptance test:
 
 Pass condition:
 
-- app launches on hardware and exits without hanging
+- app launches in the emulator and on hardware without hanging
 
 ## M2: Input And Rendering Proof
 

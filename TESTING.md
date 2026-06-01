@@ -14,6 +14,19 @@ For each checkpoint:
 5. Fix the smallest confirmed issue.
 6. Repeat until the checkpoint passes.
 
+## Emulator Feedback Loop
+
+Use the emulator for quick iteration between checkpoint builds:
+
+1. Build the `.3dsx`.
+2. Launch it in the emulator.
+3. Check the narrow behavior under development.
+4. Fix obvious rendering, crash, or input problems.
+5. Move to hardware only when the local behavior is stable.
+
+The emulator loop is allowed to be faster and rougher than the hardware loop.
+Hardware test results should still be recorded in `docs/device-test-log.md`.
+
 ## Initial Target Device
 
 Known user device:

@@ -68,12 +68,14 @@ Exit criteria:
 Deliverables:
 
 - minimal `.3dsx`
-- app boots on hardware
+- app boots in the local emulator
+- app boots on hardware at the checkpoint boundary
 - app draws text on screen
 - app exits cleanly
 
 Exit criteria:
 
+- app launches in the local emulator
 - user confirms the app launches on the 3DS
 - result is recorded in `docs/device-test-log.md`
 

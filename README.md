@@ -45,6 +45,7 @@ See:
 - [CHECKPOINTS.md](CHECKPOINTS.md)
 - [TESTING.md](TESTING.md)
 - [docs/deck-format.md](docs/deck-format.md)
+- [docs/emulator-feedback-loop.md](docs/emulator-feedback-loop.md)
 - [docs/device-test-log.md](docs/device-test-log.md)
 
 ## Non-Goals
