@@ -213,3 +213,4 @@ Do not attempt FSRS parity in the first version.
 - Make every hardware test small and repeatable.
 - Preserve review state separately from imported card content.
 - Prefer text-only correctness before media support.
+- Follow the C conventions in `docs/c-style-and-architecture.md`.
