@@ -35,9 +35,30 @@ anki3ds/
   tools/            helper scripts
 ```
 
+## Build
+
+The 3DS app currently builds a minimal toolchain proof.
+
+```sh
+make
+```
+
+This produces:
+
+```text
+app-3ds/anki3ds.3dsx
+app-3ds/anki3ds.smdh
+```
+
+To copy the build into the gitignored local SD mirror:
+
+```sh
+make install-local-sd
+```
+
 ## Current Status
 
-Planning only.
+M1 toolchain proof builds locally. Emulator and hardware verification are next.
 
 See:
 

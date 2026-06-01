@@ -27,6 +27,19 @@ Use the emulator for quick iteration between checkpoint builds:
 The emulator loop is allowed to be faster and rougher than the hardware loop.
 Hardware test results should still be recorded in `docs/device-test-log.md`.
 
+Current build commands:
+
+```sh
+make
+make install-local-sd
+```
+
+The local SD mirror lives at:
+
+```text
+local/sdmc/3ds/anki3ds/
+```
+
 ## Initial Target Device
 
 Known user device:

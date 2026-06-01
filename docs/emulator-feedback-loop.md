@@ -11,7 +11,7 @@ Use Azahar for the first local loop because it supports `.3dsx` homebrew files.
 Useful local loop:
 
 ```text
-edit code -> build .3dsx -> run in Azahar -> fix obvious problems
+edit code -> make -> make install-local-sd -> run in Azahar -> fix obvious problems
 ```
 
 Then, at checkpoint boundaries:
@@ -39,10 +39,11 @@ build artifacts do not get committed.
 
 For the toolchain proof, the emulator test is intentionally small:
 
-1. Build `anki3ds.3dsx`.
-2. Launch it in Azahar.
-3. Confirm the top screen shows the app name and version.
-4. Press `Start` to exit.
+1. Build `anki3ds.3dsx` with `make`.
+2. Copy it into `local/sdmc/` with `make install-local-sd`.
+3. Launch it in Azahar.
+4. Confirm the top screen shows the app name and version.
+5. Press `Start` to exit.
 
 Pass condition:
 

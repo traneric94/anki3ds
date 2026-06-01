@@ -39,6 +39,13 @@ Acceptance test:
 
 ## M1: Toolchain Proof
 
+Build:
+
+```sh
+make
+make install-local-sd
+```
+
 Local emulator acceptance test:
 
 1. Build the `.3dsx`.
