@@ -32,6 +32,7 @@ Current build commands:
 ```sh
 make
 make install-local-sd
+make run-emulator
 ```
 
 The local SD mirror lives at:
@@ -39,6 +40,8 @@ The local SD mirror lives at:
 ```text
 local/sdmc/3ds/anki3ds/
 ```
+
+Record emulator runs in `docs/emulator-test-log.md`.
 
 ## Initial Target Device
 

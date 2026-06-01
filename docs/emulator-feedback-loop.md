@@ -11,7 +11,7 @@ Use Azahar for the first local loop because it supports `.3dsx` homebrew files.
 Useful local loop:
 
 ```text
-edit code -> make -> make install-local-sd -> run in Azahar -> fix obvious problems
+edit code -> make -> make run-emulator -> fix obvious problems
 ```
 
 Then, at checkpoint boundaries:
@@ -40,14 +40,28 @@ build artifacts do not get committed.
 For the toolchain proof, the emulator test is intentionally small:
 
 1. Build `anki3ds.3dsx` with `make`.
-2. Copy it into `local/sdmc/` with `make install-local-sd`.
-3. Launch it in Azahar.
-4. Confirm the top screen shows the app name and version.
-5. Press `Start` to exit.
+2. Launch it in Azahar with `make run-emulator`.
+3. Confirm the top screen shows the app name and version.
+4. Press `Start` to exit.
 
 Pass condition:
 
 - the app launches, renders text, and exits cleanly.
+
+## Installed Emulator
+
+Current local install path:
+
+```text
+~/Applications/azahar-macos-arm64-2125.1.2/Azahar.app
+```
+
+The downloaded release was `azahar-macos-arm64-2125.1.2.zip` from the official
+`azahar-emu/azahar` GitHub release. Its SHA-256 digest was verified as:
+
+```text
+5d3aedc3840cf3b536caea9e9b60811e6c3a07475e2e5a36d816ffcbd58eecb4
+```
 
 ## Hardware Still Matters
 

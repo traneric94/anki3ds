@@ -44,12 +44,13 @@ Build:
 ```sh
 make
 make install-local-sd
+make run-emulator
 ```
 
 Local emulator acceptance test:
 
 1. Build the `.3dsx`.
-2. Launch it in Azahar.
+2. Launch it in Azahar with `make run-emulator`.
 3. Confirm it displays a title and version string.
 4. Confirm it exits cleanly.
 

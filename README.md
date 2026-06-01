@@ -56,6 +56,18 @@ To copy the build into the gitignored local SD mirror:
 make install-local-sd
 ```
 
+To launch the current `.3dsx` in Azahar from a normal macOS session:
+
+```sh
+make run-emulator
+```
+
+By default this expects Azahar at:
+
+```text
+~/Applications/azahar-macos-arm64-2125.1.2/Azahar.app
+```
+
 ## Current Status
 
 M1 toolchain proof builds locally. Emulator and hardware verification are next.
@@ -68,6 +80,7 @@ See:
 - [docs/deck-format.md](docs/deck-format.md)
 - [docs/c-style-and-architecture.md](docs/c-style-and-architecture.md)
 - [docs/emulator-feedback-loop.md](docs/emulator-feedback-loop.md)
+- [docs/emulator-test-log.md](docs/emulator-test-log.md)
 - [docs/device-test-log.md](docs/device-test-log.md)
 
 ## Non-Goals
