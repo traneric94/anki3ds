@@ -127,7 +127,8 @@ If `state.tsv` is missing after an interrupted save, the app can load
 `state.tsv.bak`.
 
 This is an early day-level spaced repetition format. Minute-level learning
-steps, unsuspend UI, burying, filtered decks, and review logs are planned later.
+steps, single-card unsuspend UI, burying, filtered decks, and review logs are
+planned later.
 Older app builds that only accept seven- or eight-column rows will reject state
 saved by this version.
 

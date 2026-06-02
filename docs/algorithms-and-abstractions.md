@@ -130,7 +130,8 @@ The app loop is a small mode machine:
 - `LOAD_ERROR`: show the active path and load result, return to deck list.
 - `REVIEW`: show front, reveal back, accept a rating.
 - `SUMMARY`: show counts when no cards are due today.
-- `ACTIONS`: confirm destructive actions such as progress reset.
+- `ACTIONS`: choose deck-level actions such as restoring suspended cards or
+  resetting progress.
 
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls. This keeps button prompts out of the review card
@@ -156,6 +157,10 @@ Review algorithm:
 `R` suspends the current card without counting a review. Suspended cards are
 saved in `state.tsv`, treated as not due, skipped by queue advancement, and
 included in total card counts.
+
+The actions screen can restore all suspended cards in the active deck. This is
+the default selected action so opening actions and pressing `A` does not reset
+progress. Reset remains available by moving the action selection first.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session

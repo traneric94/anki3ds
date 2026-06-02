@@ -248,6 +248,23 @@ static void test_scheduler_suspend_last_due_card(void)
 	check(scheduler_current_index(&session) == 0, "undo last suspend restores current index");
 }
 
+static void test_scheduler_unsuspend_all(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	check(scheduler_suspend_current(&session), "suspend before unsuspend succeeds");
+	check(session.due_count == 1, "suspend before unsuspend drops due count");
+	check(scheduler_current_index(&session) == 1, "suspend before unsuspend advances");
+
+	check(scheduler_unsuspend_all(&session) == 1, "unsuspend all returns count");
+	check(!session.cards[0].suspended, "unsuspend all clears flag");
+	check(session.due_count == 2, "unsuspend all restores due count");
+	check(scheduler_current_index(&session) == 0, "unsuspend all repositions current");
+	check(!scheduler_undo_last(&session), "unsuspend all clears one-step undo");
+	check(scheduler_unsuspend_all(&session) == 0, "unsuspend all no-ops without suspended cards");
+}
+
 static void test_scheduler_limits_new_cards(void)
 {
 	struct scheduler_session session;
@@ -736,6 +753,7 @@ int main(void)
 	test_scheduler_undo_last_rating();
 	test_scheduler_suspend_current();
 	test_scheduler_suspend_last_due_card();
+	test_scheduler_unsuspend_all();
 	test_scheduler_limits_new_cards();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();

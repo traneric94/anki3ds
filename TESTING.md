@@ -84,10 +84,11 @@ N key = rescan decks / actions
 M key = exit
 ```
 
-In review and summary modes, `N` opens the actions screen. Press `A` there to
-confirm reset, or `S`/`N` to cancel. In review and summary modes, `Q` undoes
-the last rating or suspend action and saves the restored state. In review mode,
-`W` suspends the current card.
+In review and summary modes, `N` opens the actions screen. The default action is
+restore suspended cards. Use `T`/`G` to choose reset progress, press `A` to
+confirm the selected action, or press `S`/`N` to cancel. In review and summary
+modes, `Q` undoes the last rating or suspend action and saves the restored
+state. In review mode, `W` suspends the current card.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.

@@ -494,6 +494,29 @@ bool scheduler_suspend_current(struct scheduler_session *session)
 	return true;
 }
 
+unsigned int scheduler_unsuspend_all(struct scheduler_session *session)
+{
+	unsigned int unsuspended_count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (session->cards[index].suspended)
+		{
+			session->cards[index].suspended = false;
+			unsuspended_count++;
+		}
+	}
+
+	if (unsuspended_count == 0)
+		return 0;
+
+	session->undo.available = false;
+	session->undo.kind = SCHEDULER_UNDO_NONE;
+	scheduler_recount(session);
+	scheduler_reposition(session);
+	return unsuspended_count;
+}
+
 bool scheduler_undo_last(struct scheduler_session *session)
 {
 	if (!session->undo.available)

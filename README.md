@@ -110,9 +110,10 @@ Multi-deck text review works at build level: the app scans
 loads optional per-deck `settings.tsv` daily limits, reveals answers, records
 ratings, schedules cards with a day-level spaced repetition algorithm, saves
 local `state.tsv` progress beside that deck, and can undo the last rating or
-suspend action with `L`, suspend cards with `R`, or reset saved progress from
-the `SELECT` actions screen. The top screen shows deck/card content, while the
-bottom screen shows controls and review status.
+suspend action with `L`, suspend cards with `R`, restore suspended cards from
+the `SELECT` actions screen, or reset saved progress after selecting reset from
+that actions screen. The top screen shows deck/card content, while the bottom
+screen shows controls and review status.
 
 See:
 

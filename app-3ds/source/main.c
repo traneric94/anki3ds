@@ -24,10 +24,17 @@ enum app_mode
 	APP_MODE_ACTIONS,
 };
 
+enum action_item
+{
+	ACTION_ITEM_UNSUSPEND_ALL,
+	ACTION_ITEM_RESET_PROGRESS,
+};
+
 struct app_state
 {
 	enum app_mode mode;
 	enum app_mode action_return_mode;
+	enum action_item selected_action;
 	bool revealed;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
@@ -253,6 +260,7 @@ static void app_load_selected_deck(struct app_state *app)
 static void app_open_actions(struct app_state *app)
 {
 	app->action_return_mode = app->mode;
+	app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
 	app->mode = APP_MODE_ACTIONS;
 }
 
@@ -401,14 +409,30 @@ static void draw_summary_screen(const struct app_state *app)
 
 static void draw_actions_screen(const struct app_state *app)
 {
+	const char *unsuspend_marker =
+		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? ">" : " ";
+	const char *reset_marker =
+		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? ">" : " ";
+
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[3;1HActions");
-	printf("\x1b[6;1H> Reset deck progress");
-	printf("\x1b[8;1HDeck: %s", app->deck.name);
-	printf("\x1b[10;1HThis removes state.tsv for");
-	printf("\x1b[11;1Hthe active deck, then reloads.");
-	printf("\x1b[14;1HState: %s", app->state_message);
+	printf("\x1b[6;1H%s Restore suspended cards", unsuspend_marker);
+	printf("\x1b[8;1H%s Reset deck progress", reset_marker);
+	printf("\x1b[11;1HDeck: %s", app->deck.name);
+
+	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
+	{
+		printf("\x1b[14;1HClears all suspended flags");
+		printf("\x1b[15;1Hfor the active deck.");
+	}
+	else
+	{
+		printf("\x1b[14;1HRemoves saved progress for");
+		printf("\x1b[15;1Hthe active deck, then reloads.");
+	}
+
+	printf("\x1b[18;1HState: %s", app->state_message);
 }
 
 static void draw_bottom_controls_screen(const struct app_state *app)
@@ -511,9 +535,10 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	}
 	case APP_MODE_ACTIONS:
 		printf("\x1b[1;1HActions");
-		printf("\x1b[3;1HA: confirm reset");
-		printf("\x1b[5;1HB or SELECT: cancel");
-		printf("\x1b[7;1HSTART: exit");
+		printf("\x1b[3;1HA: confirm selected");
+		printf("\x1b[5;1HD-pad Up/Down: choose");
+		printf("\x1b[7;1HB or SELECT: cancel");
+		printf("\x1b[9;1HSTART: exit");
 		break;
 	}
 }
@@ -631,6 +656,36 @@ static bool reset_progress(struct app_state *app)
 	return true;
 }
 
+static bool unsuspend_all_cards(struct app_state *app)
+{
+	unsigned int unsuspended_count = scheduler_unsuspend_all(&app->session);
+
+	if (unsuspended_count == 0)
+	{
+		app->state_message = "nothing suspended";
+		app->mode = app->action_return_mode;
+		return true;
+	}
+
+	app->state_save_result = review_state_save(
+		&app->deck,
+		&app->session,
+		app->active_state_path
+	);
+	app->state_message =
+		app->state_save_result == REVIEW_STATE_SAVE_OK ?
+		"unsuspended" :
+		review_state_save_result_name(app->state_save_result);
+	app->revealed = false;
+
+	if (scheduler_is_complete(&app->session))
+		app->mode = APP_MODE_SUMMARY;
+	else
+		app->mode = APP_MODE_REVIEW;
+
+	return true;
+}
+
 static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 {
 	if (keys_down & KEY_SELECT)
@@ -669,8 +724,20 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 
 static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
 {
+	if (keys_down & (KEY_DUP | KEY_DDOWN))
+	{
+		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
+			app->selected_action = ACTION_ITEM_RESET_PROGRESS;
+		else
+			app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
+		return true;
+	}
+
 	if (keys_down & KEY_A)
 	{
+		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
+			return unsuspend_all_cards(app);
+
 		if (!reset_progress(app))
 			app->mode = APP_MODE_ACTIONS;
 		return true;

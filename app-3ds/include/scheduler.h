@@ -97,6 +97,7 @@ void scheduler_set_daily_limits(
 void scheduler_reposition(struct scheduler_session *session);
 void scheduler_rate_current(struct scheduler_session *session, enum scheduler_rating rating);
 bool scheduler_suspend_current(struct scheduler_session *session);
+unsigned int scheduler_unsuspend_all(struct scheduler_session *session);
 bool scheduler_undo_last(struct scheduler_session *session);
 const char *scheduler_rating_name(enum scheduler_rating rating);
 
