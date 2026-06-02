@@ -8,6 +8,7 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
+#include "media_cache.h"
 #include "media_image.h"
 #include "review_state.h"
 #include "scheduler.h"
@@ -932,6 +933,42 @@ static void test_media_image_rejects_bad_files(void)
 	remove(TEST_MEDIA_PATH);
 }
 
+static void test_media_cache_reuses_loaded_image(void)
+{
+	static const unsigned char content[] = {
+		'A', '3', 'I', '1',
+		1, 0,
+		1, 0,
+		0x00, 0xf8,
+	};
+	struct media_cache cache;
+	const struct media_cache_slot *first;
+	const struct media_cache_slot *second;
+	const struct media_cache_slot *after_clear;
+
+	media_cache_init(&cache);
+	write_binary_file(TEST_MEDIA_PATH, content, sizeof(content));
+
+	first = media_cache_load(&cache, TEST_MEDIA_PATH);
+	check(first->result == MEDIA_IMAGE_LOAD_OK, "media cache first load succeeds");
+	check(first->image.pixels[0] == 0xf800, "media cache first load pixel");
+
+	remove(TEST_MEDIA_PATH);
+	second = media_cache_load(&cache, TEST_MEDIA_PATH);
+	check(second == first, "media cache reuses loaded slot");
+	check(second->result == MEDIA_IMAGE_LOAD_OK, "media cache avoids second file read");
+	check(second->image.pixels[0] == 0xf800, "media cache preserves cached pixel");
+
+	media_cache_clear(&cache);
+	after_clear = media_cache_load(&cache, TEST_MEDIA_PATH);
+	check(
+		after_clear->result == MEDIA_IMAGE_LOAD_NOT_FOUND,
+		"media cache clear allows reload"
+	);
+
+	remove(TEST_MEDIA_PATH);
+}
+
 static void remove_test_deck_dir(const char *deck_id)
 {
 	char path[256];
@@ -1381,6 +1418,7 @@ int main(void)
 	test_deck_index_builds_paths();
 	test_media_image_loads_rgb565();
 	test_media_image_rejects_bad_files();
+	test_media_cache_reuses_loaded_image();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
