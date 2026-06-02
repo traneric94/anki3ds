@@ -319,6 +319,12 @@ static void test_scheduler_scales_review_intervals(void)
 	check(session.cards[0].lapses == 1, "again increments review lapses");
 	check(session.cards[0].ease_permille == 2300, "again lowers review ease");
 	check(session.due_count == 1, "again remains due");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.cards[0].interval_days == 1, "lapsed good starts one-day relearning interval");
+	check(session.cards[0].due_day == TEST_TODAY + 1, "lapsed good schedules tomorrow");
+	check(session.cards[0].lapses == 1, "lapsed good preserves lapse count");
+	check(session.due_count == 0, "lapsed good clears due queue");
 }
 
 static void test_scheduler_undo_last_rating(void)

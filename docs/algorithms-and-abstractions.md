@@ -234,6 +234,11 @@ New cards start due today with ease `2500` and interval `0`. A card stays in
 the initial learning path while its interval is `0` and it has no lapses, so
 repeated new-card `Again` ratings do not count as review lapses.
 
+Review cards rated `Again` enter a simple relearning path with interval `0` and
+at least one lapse. In relearning, `Hard` and `Good` schedule the card for
+tomorrow, while `Easy` schedules it for four days later. This prevents a lapsed
+card from jumping forward by multiplying a zero-day interval by its ease.
+
 Rating behavior:
 
 - `Again`: due today, interval `0`, ease decreases by `200`.

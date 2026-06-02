@@ -436,9 +436,47 @@ static void schedule_review_card(
 	}
 }
 
+static void schedule_relearning_card(
+	struct scheduler_session *session,
+	struct scheduler_card *card,
+	enum scheduler_rating rating
+)
+{
+	switch (rating)
+	{
+	case SCHEDULER_RATING_AGAIN:
+		card->interval_days = 0;
+		card->due_day = session->today;
+		card->ease_permille = adjusted_ease(card->ease_permille, -200);
+		card->lapses++;
+		break;
+	case SCHEDULER_RATING_HARD:
+		card->interval_days = 1;
+		card->due_day = add_days(session->today, card->interval_days);
+		card->ease_permille = adjusted_ease(card->ease_permille, -150);
+		break;
+	case SCHEDULER_RATING_GOOD:
+		card->interval_days = 1;
+		card->due_day = add_days(session->today, card->interval_days);
+		break;
+	case SCHEDULER_RATING_EASY:
+		card->interval_days = 4;
+		card->due_day = add_days(session->today, card->interval_days);
+		card->ease_permille = adjusted_ease(card->ease_permille, 150);
+		break;
+	case SCHEDULER_RATING_COUNT:
+		break;
+	}
+}
+
 static bool scheduler_card_is_in_initial_learning(const struct scheduler_card *card)
 {
 	return card->interval_days == 0 && card->lapses == 0;
+}
+
+static bool scheduler_card_is_in_relearning(const struct scheduler_card *card)
+{
+	return card->interval_days == 0 && card->lapses > 0;
 }
 
 static void scheduler_save_undo(
@@ -465,6 +503,7 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 {
 	struct scheduler_card *card;
 	bool use_initial_schedule;
+	bool use_relearning_schedule;
 
 	if (!scheduler_has_current(session))
 		return;
@@ -475,6 +514,7 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 	card = &session->cards[session->current_index];
 
 	use_initial_schedule = scheduler_card_is_in_initial_learning(card);
+	use_relearning_schedule = scheduler_card_is_in_relearning(card);
 	card->last_rating = rating;
 	if (card->review_count == 0 && card->first_review_day == 0)
 		card->first_review_day = session->today;
@@ -484,6 +524,8 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 
 	if (use_initial_schedule)
 		schedule_new_card(session, card, rating);
+	else if (use_relearning_schedule)
+		schedule_relearning_card(session, card, rating);
 	else
 		schedule_review_card(session, card, rating);
 
