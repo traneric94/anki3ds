@@ -8,6 +8,7 @@
 #define MEDIA_IMAGE_MAGIC_1 '3'
 #define MEDIA_IMAGE_MAGIC_2 'I'
 #define MEDIA_IMAGE_MAGIC_3 '1'
+#define MEDIA_IMAGE_BYTES_PER_PIXEL 2
 
 static unsigned int read_u16_le(const unsigned char *bytes)
 {
@@ -24,6 +25,8 @@ enum media_image_load_result media_image_load(struct media_image *image, const c
 	FILE *file;
 	unsigned char header[MEDIA_IMAGE_HEADER_SIZE];
 	size_t pixel_count;
+	size_t pixel_bytes;
+	unsigned char *pixels;
 
 	media_image_init(image);
 
@@ -71,17 +74,18 @@ enum media_image_load_result media_image_load(struct media_image *image, const c
 		return MEDIA_IMAGE_LOAD_TOO_LARGE;
 	}
 
+	pixel_bytes = pixel_count * MEDIA_IMAGE_BYTES_PER_PIXEL;
+	pixels = (unsigned char *)image->pixels;
+	if (fread(pixels, 1, pixel_bytes, file) != pixel_bytes)
+	{
+		fclose(file);
+		return MEDIA_IMAGE_LOAD_BAD_FORMAT;
+	}
+
 	for (size_t index = 0; index < pixel_count; index++)
 	{
-		unsigned char pixel[2];
-
-		if (fread(pixel, 1, sizeof(pixel), file) != sizeof(pixel))
-		{
-			fclose(file);
-			return MEDIA_IMAGE_LOAD_BAD_FORMAT;
-		}
-
-		image->pixels[index] = (uint16_t)read_u16_le(pixel);
+		image->pixels[index] =
+			(uint16_t)read_u16_le(&pixels[index * MEDIA_IMAGE_BYTES_PER_PIXEL]);
 	}
 
 	if (fgetc(file) != EOF)

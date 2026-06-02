@@ -1139,6 +1139,19 @@ static void test_media_image_rejects_bad_files(void)
 		1, 0,
 		0, 0,
 	};
+	static const unsigned char truncated_pixels[] = {
+		'A', '3', 'I', '1',
+		2, 0,
+		1, 0,
+		0x00, 0xf8,
+	};
+	static const unsigned char trailing_pixels[] = {
+		'A', '3', 'I', '1',
+		1, 0,
+		1, 0,
+		0x00, 0xf8,
+		0xff,
+	};
 	struct media_image image;
 
 	remove(TEST_MEDIA_PATH);
@@ -1157,6 +1170,18 @@ static void test_media_image_rejects_bad_files(void)
 	check(
 		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_TOO_LARGE,
 		"oversized media image rejected"
+	);
+
+	write_binary_file(TEST_MEDIA_PATH, truncated_pixels, sizeof(truncated_pixels));
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
+		"truncated media image pixels rejected"
+	);
+
+	write_binary_file(TEST_MEDIA_PATH, trailing_pixels, sizeof(trailing_pixels));
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
+		"trailing media image bytes rejected"
 	);
 
 	remove(TEST_MEDIA_PATH);
