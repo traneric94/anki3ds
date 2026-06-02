@@ -50,6 +50,7 @@ Current practical constraints:
 - The app only reads the `name` string from deck metadata during deck scanning.
 - The selector shows at most `DECK_INDEX_MAX_DECKS` decks and reports overflow.
 - Rescan is explicit from the deck selector with `SELECT`.
+- Rescan keeps the selected folder id highlighted when that deck still exists.
 - Missing deck root or zero valid decks is a recoverable deck-selector state.
 
 This boundary is small enough to host-test without libctru: build one entry,

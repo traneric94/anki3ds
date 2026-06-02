@@ -305,3 +305,25 @@ const struct deck_entry *deck_index_get(const struct deck_index *index, size_t e
 
 	return &index->entries[entry_index];
 }
+
+bool deck_index_find(
+	const struct deck_index *index,
+	const char *deck_id,
+	size_t *entry_index
+)
+{
+	if (index == NULL || deck_id == NULL)
+		return false;
+
+	for (size_t index_entry = 0; index_entry < index->count; index_entry++)
+	{
+		if (strcmp(index->entries[index_entry].id, deck_id) == 0)
+		{
+			if (entry_index != NULL)
+				*entry_index = index_entry;
+			return true;
+		}
+	}
+
+	return false;
+}

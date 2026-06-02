@@ -296,6 +296,13 @@ static void wait_for_idle_input(void)
 static void app_scan_decks(struct app_state *app)
 {
 	unsigned int today = current_day();
+	char selected_deck_id[DECK_MAX_NAME_LENGTH];
+	const struct deck_entry *selected_deck;
+
+	selected_deck_id[0] = '\0';
+	selected_deck = deck_index_get(&app->deck_index, app->selected_deck_index);
+	if (selected_deck != NULL)
+		copy_string(selected_deck_id, sizeof(selected_deck_id), selected_deck->id);
 
 	deck_index_scan(&app->deck_index, DECK_INDEX_ROOT_PATH);
 
@@ -316,6 +323,8 @@ static void app_scan_decks(struct app_state *app)
 	}
 
 	app->selected_deck_index = 0;
+	if (selected_deck_id[0] != '\0')
+		deck_index_find(&app->deck_index, selected_deck_id, &app->selected_deck_index);
 }
 
 static void app_load_selected_deck(struct app_state *app)

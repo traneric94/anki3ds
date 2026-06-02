@@ -30,6 +30,11 @@ struct deck_index
 void deck_index_init(struct deck_index *index);
 void deck_index_scan(struct deck_index *index, const char *root_path);
 const struct deck_entry *deck_index_get(const struct deck_index *index, size_t entry_index);
+bool deck_index_find(
+	const struct deck_index *index,
+	const char *deck_id,
+	size_t *entry_index
+);
 bool deck_index_build_entry(struct deck_entry *entry, const char *root_path, const char *deck_id);
 
 #endif

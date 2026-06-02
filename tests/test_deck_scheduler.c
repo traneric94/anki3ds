@@ -859,6 +859,7 @@ static void create_test_deck_dir(const char *deck_id, bool has_cards)
 static void test_deck_index_scans_sorted_decks_with_cards(void)
 {
 	struct deck_index index;
+	size_t entry_index;
 
 	cleanup_deck_index_test_root();
 	mkdir(TEST_DECK_ROOT, 0700);
@@ -871,6 +872,12 @@ static void test_deck_index_scans_sorted_decks_with_cards(void)
 	check(index.count == 2, "deck index scans only folders with cards");
 	check(strcmp(index.entries[0].id, "alpha") == 0, "deck index sorts first deck");
 	check(strcmp(index.entries[1].id, "zeta") == 0, "deck index sorts second deck");
+	check(deck_index_find(&index, "alpha", &entry_index), "deck index finds first deck");
+	check(entry_index == 0, "deck index first deck index");
+	check(deck_index_find(&index, "zeta", &entry_index), "deck index finds second deck");
+	check(entry_index == 1, "deck index second deck index");
+	check(!deck_index_find(&index, "missing", &entry_index), "deck index rejects missing deck");
+	check(!deck_index_find(NULL, "alpha", &entry_index), "deck index rejects null index");
 	check(!index.overflowed, "deck index does not report overflow under limit");
 
 	cleanup_deck_index_test_root();
