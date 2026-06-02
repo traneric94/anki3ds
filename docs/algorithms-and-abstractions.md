@@ -172,7 +172,8 @@ included in total card counts.
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset
 progress. Daily limits can be edited from the same actions screen. Reset
-remains available by moving the action selection first.
+remains available by moving the action selection first, then confirming on a
+separate reset screen with `X`.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
@@ -180,9 +181,10 @@ counters before applying the action. Undo restores that snapshot, clears the
 undo slot, returns to review mode, and saves the restored `state.tsv`. Loading a
 deck or restoring saved card state clears the undo slot.
 
-`SELECT` opens an actions screen from review and summary modes. Confirming reset
-removes the active `state.tsv` and reloads the selected deck. If removal fails,
-the app leaves the current session in place and shows `reset failed`.
+`SELECT` opens an actions screen from review and summary modes. Choosing reset
+opens a confirmation screen. Pressing `X` there removes the active `state.tsv`
+and reloads the selected deck. If removal fails, the app leaves the current
+session in place and shows `reset failed`.
 
 `rating_counts` are live session counters. Restored state contributes to
 per-card `review_count`, but not to the current session's rating-count totals.

@@ -94,11 +94,12 @@ M key = exit
 
 In review and summary modes, `N` opens the actions screen. The default action is
 restore suspended cards. Use `T`/`G` to choose daily limits or reset progress,
-press `A` to confirm the selected action, or press `S`/`N` to cancel. On the
-daily limits screen, use `T`/`G` to choose `new_limit` or `review_limit`,
-`F`/`H` to cycle preset values, `A` to save, or `S`/`N` to cancel. In review
-and summary modes, `Q` undoes the last rating or suspend action and saves the
-restored state. In review mode, `W` suspends the current card.
+press `A` to open the selected action, or press `S`/`N` to cancel. On the daily
+limits screen, use `T`/`G` to choose `new_limit` or `review_limit`, `F`/`H` to
+cycle preset values, `A` to save, or `S`/`N` to cancel. Reset progress opens a
+confirmation screen; press `Z` for 3DS `X` to reset, or `S`/`N` to cancel. In
+review and summary modes, `Q` undoes the last rating or suspend action and
+saves the restored state. In review mode, `W` suspends the current card.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.

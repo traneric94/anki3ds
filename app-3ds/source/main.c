@@ -39,6 +39,7 @@ enum app_mode
 	APP_MODE_SUMMARY,
 	APP_MODE_ACTIONS,
 	APP_MODE_SETTINGS,
+	APP_MODE_CONFIRM_RESET,
 };
 
 enum action_item
@@ -403,6 +404,11 @@ static void app_open_settings(struct app_state *app)
 	app->mode = APP_MODE_SETTINGS;
 }
 
+static void app_open_reset_confirmation(struct app_state *app)
+{
+	app->mode = APP_MODE_CONFIRM_RESET;
+}
+
 static void app_init(struct app_state *app)
 {
 	memset(app, 0, sizeof(*app));
@@ -628,6 +634,20 @@ static void draw_settings_screen(const struct app_state *app)
 	printf("\x1b[18;1HSave: %s", app->settings_message);
 }
 
+static void draw_reset_confirmation_screen(const struct app_state *app)
+{
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds Review");
+	printf("\x1b[3;1HReset deck progress?");
+	printf("\x1b[5;1HDeck: ");
+	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	printf("\x1b[8;1HThis removes saved review");
+	printf("\x1b[9;1Hstate for this deck.");
+	printf("\x1b[12;1HCards stay in cards.tsv.");
+	printf("\x1b[15;1HUse X to reset.");
+	printf("\x1b[17;1HUse B or SELECT to cancel.");
+}
+
 static void draw_bottom_controls_screen(const struct app_state *app)
 {
 	consoleClear();
@@ -757,6 +777,12 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[9;1HB or SELECT: cancel");
 		printf("\x1b[11;1HSTART: exit");
 		break;
+	case APP_MODE_CONFIRM_RESET:
+		printf("\x1b[1;1HConfirm reset");
+		printf("\x1b[3;1HX: reset progress");
+		printf("\x1b[5;1HB or SELECT: cancel");
+		printf("\x1b[7;1HSTART: exit");
+		break;
 	}
 }
 
@@ -783,6 +809,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_SETTINGS:
 		draw_settings_screen(app);
+		break;
+	case APP_MODE_CONFIRM_RESET:
+		draw_reset_confirmation_screen(app);
 		break;
 	}
 
@@ -999,14 +1028,31 @@ static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
 			return true;
 		}
 
-		if (!reset_progress(app))
-			app->mode = APP_MODE_ACTIONS;
+		app_open_reset_confirmation(app);
 		return true;
 	}
 
 	if (keys_down & (KEY_B | KEY_SELECT))
 	{
 		app->mode = app->action_return_mode;
+		return true;
+	}
+
+	return false;
+}
+
+static bool app_handle_reset_confirmation_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & KEY_X)
+	{
+		if (!reset_progress(app))
+			app->mode = APP_MODE_CONFIRM_RESET;
+		return true;
+	}
+
+	if (keys_down & (KEY_B | KEY_SELECT))
+	{
+		app->mode = APP_MODE_ACTIONS;
 		return true;
 	}
 
@@ -1052,6 +1098,8 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return app_handle_actions_input(app, keys_down);
 	if (app->mode == APP_MODE_SETTINGS)
 		return app_handle_settings_input(app, keys_down);
+	if (app->mode == APP_MODE_CONFIRM_RESET)
+		return app_handle_reset_confirmation_input(app, keys_down);
 
 	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
 	{
