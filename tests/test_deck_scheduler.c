@@ -766,6 +766,29 @@ static void write_file(const char *path, const char *content)
 	fclose(file);
 }
 
+static void load_entry_deck(
+	struct deck *deck,
+	const struct deck_entry *entry,
+	const char *message
+)
+{
+	deck_init(deck, entry->display_name);
+	check(deck_load_cards(deck, entry->cards_path) == DECK_LOAD_OK, message);
+}
+
+static void save_entry_state(
+	const struct deck *deck,
+	const struct scheduler_session *session,
+	const struct deck_entry *entry,
+	const char *message
+)
+{
+	check(
+		review_state_save(deck, session, entry->state_path) == REVIEW_STATE_SAVE_OK,
+		message
+	);
+}
+
 static void test_deck_index_builds_paths(void)
 {
 	struct deck_entry entry;
@@ -798,6 +821,10 @@ static void remove_test_deck_dir(const char *deck_id)
 	snprintf(path, sizeof(path), "%s/%s/deck.json", TEST_DECK_ROOT, deck_id);
 	remove(path);
 	snprintf(path, sizeof(path), "%s/%s/settings.tsv", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/settings.tsv.tmp", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/settings.tsv.bak", TEST_DECK_ROOT, deck_id);
 	remove(path);
 	snprintf(path, sizeof(path), "%s/%s/state.tsv", TEST_DECK_ROOT, deck_id);
 	remove(path);
@@ -1005,6 +1032,199 @@ static void test_deck_summary_reports_load_error(void)
 	cleanup_deck_index_test_root();
 }
 
+static void test_daily_use_workflow_persists_two_decks(void)
+{
+	struct deck_index index;
+	struct deck alpha_deck;
+	struct deck beta_deck;
+	struct deck alpha_reloaded_deck;
+	struct deck beta_reloaded_deck;
+	struct scheduler_session alpha_session;
+	struct scheduler_session beta_session;
+	struct scheduler_session alpha_reloaded;
+	struct scheduler_session beta_reloaded;
+	struct app_settings alpha_settings;
+	struct app_settings loaded_settings;
+	struct deck_summary summary;
+	size_t alpha_index = 0;
+	size_t beta_index = 0;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/alpha", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+	snprintf(path, sizeof(path), "%s/beta", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+
+	snprintf(path, sizeof(path), "%s/alpha/cards.tsv", TEST_DECK_ROOT);
+	write_file(
+		path,
+		"alpha-1\tnote-1\talpha front 1\talpha back 1\ttag\n"
+		"alpha-2\tnote-2\talpha front 2\talpha back 2\ttag\n"
+		"alpha-3\tnote-3\talpha front 3\talpha back 3\ttag\n"
+	);
+	snprintf(path, sizeof(path), "%s/beta/cards.tsv", TEST_DECK_ROOT);
+	write_file(
+		path,
+		"beta-1\tnote-1\tbeta front 1\tbeta back 1\ttag\n"
+		"beta-2\tnote-2\tbeta front 2\tbeta back 2\ttag\n"
+	);
+
+	deck_index_scan(&index, TEST_DECK_ROOT);
+	check(index.count == 2, "daily workflow scans two decks");
+	check(deck_index_find(&index, "alpha", &alpha_index), "daily workflow finds alpha");
+	check(deck_index_find(&index, "beta", &beta_index), "daily workflow finds beta");
+
+	deck_summary_load(&summary, &index.entries[alpha_index], TEST_TODAY);
+	check(summary.deck_load_result == DECK_LOAD_OK, "daily workflow alpha summary loads");
+	check(summary.card_count == 3, "daily workflow alpha summary card count");
+	check(summary.due_count == 3, "daily workflow alpha starts due");
+	check(summary.suspended_count == 0, "daily workflow alpha starts unsuspended");
+
+	load_entry_deck(
+		&alpha_deck,
+		&index.entries[alpha_index],
+		"daily workflow alpha deck loads"
+	);
+	scheduler_init(&alpha_session, alpha_deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(
+			&alpha_deck,
+			&alpha_session,
+			index.entries[alpha_index].state_path
+		) == REVIEW_STATE_LOAD_NOT_FOUND,
+		"daily workflow alpha starts without state"
+	);
+
+	scheduler_rate_current(&alpha_session, SCHEDULER_RATING_GOOD);
+	check(alpha_session.due_count == 2, "daily workflow alpha rating applies");
+	save_entry_state(
+		&alpha_deck,
+		&alpha_session,
+		&index.entries[alpha_index],
+		"daily workflow alpha rating saves"
+	);
+	check(scheduler_undo_last(&alpha_session), "daily workflow alpha rating undo works");
+	check(alpha_session.due_count == 3, "daily workflow alpha undo restores due count");
+	save_entry_state(
+		&alpha_deck,
+		&alpha_session,
+		&index.entries[alpha_index],
+		"daily workflow alpha undo saves"
+	);
+	scheduler_rate_current(&alpha_session, SCHEDULER_RATING_EASY);
+	check(alpha_session.cards[0].due_day == TEST_TODAY + 4, "daily workflow alpha rerates");
+	save_entry_state(
+		&alpha_deck,
+		&alpha_session,
+		&index.entries[alpha_index],
+		"daily workflow alpha rerating saves"
+	);
+
+	alpha_settings.new_limit = 2;
+	alpha_settings.review_limit = 4;
+	check(
+		app_settings_save(
+			&alpha_settings,
+			index.entries[alpha_index].settings_path
+		) == APP_SETTINGS_SAVE_OK,
+		"daily workflow alpha settings save"
+	);
+
+	load_entry_deck(
+		&beta_deck,
+		&index.entries[beta_index],
+		"daily workflow beta deck loads"
+	);
+	scheduler_init(&beta_session, beta_deck.card_count, TEST_TODAY);
+	check(scheduler_suspend_current(&beta_session), "daily workflow beta suspends card");
+	check(scheduler_suspended_count(&beta_session) == 1, "daily workflow beta count suspends");
+	save_entry_state(
+		&beta_deck,
+		&beta_session,
+		&index.entries[beta_index],
+		"daily workflow beta suspension saves"
+	);
+	deck_summary_load(&summary, &index.entries[beta_index], TEST_TODAY);
+	check(summary.suspended_count == 1, "daily workflow beta summary shows suspension");
+
+	check(scheduler_unsuspend_all(&beta_session) == 1, "daily workflow beta restores card");
+	check(scheduler_suspended_count(&beta_session) == 0, "daily workflow beta count restores");
+	save_entry_state(
+		&beta_deck,
+		&beta_session,
+		&index.entries[beta_index],
+		"daily workflow beta restore saves"
+	);
+	scheduler_rate_current(&beta_session, SCHEDULER_RATING_GOOD);
+	save_entry_state(
+		&beta_deck,
+		&beta_session,
+		&index.entries[beta_index],
+		"daily workflow beta review saves"
+	);
+
+	check(
+		app_settings_load(
+			&loaded_settings,
+			index.entries[alpha_index].settings_path
+		) == APP_SETTINGS_LOAD_OK,
+		"daily workflow alpha settings reload"
+	);
+	check(loaded_settings.new_limit == 2, "daily workflow alpha new limit persists");
+	check(loaded_settings.review_limit == 4, "daily workflow alpha review limit persists");
+
+	load_entry_deck(
+		&alpha_reloaded_deck,
+		&index.entries[alpha_index],
+		"daily workflow alpha reload deck"
+	);
+	scheduler_init(&alpha_reloaded, alpha_reloaded_deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(
+		&alpha_reloaded,
+		loaded_settings.new_limit,
+		loaded_settings.review_limit
+	);
+	check(
+		review_state_load(
+			&alpha_reloaded_deck,
+			&alpha_reloaded,
+			index.entries[alpha_index].state_path
+		) == REVIEW_STATE_LOAD_OK,
+		"daily workflow alpha state reload"
+	);
+	check(
+		alpha_reloaded.cards[0].review_count == 1,
+		"daily workflow alpha review persists"
+	);
+	check(
+		alpha_reloaded.cards[0].last_rating == SCHEDULER_RATING_EASY,
+		"daily workflow alpha rating persists"
+	);
+	check(!scheduler_card_is_due(&alpha_reloaded, 0), "daily workflow alpha reviewed card hidden");
+	check(alpha_reloaded.due_count == 1, "daily workflow alpha new limit applies after reload");
+
+	load_entry_deck(
+		&beta_reloaded_deck,
+		&index.entries[beta_index],
+		"daily workflow beta reload deck"
+	);
+	scheduler_init(&beta_reloaded, beta_reloaded_deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(
+			&beta_reloaded_deck,
+			&beta_reloaded,
+			index.entries[beta_index].state_path
+		) == REVIEW_STATE_LOAD_OK,
+		"daily workflow beta state reload"
+	);
+	check(scheduler_suspended_count(&beta_reloaded) == 0, "daily workflow beta restore persists");
+	check(beta_reloaded.cards[0].review_count == 1, "daily workflow beta review persists");
+
+	cleanup_deck_index_test_root();
+}
+
 int main(void)
 {
 	test_parse_card_line();
@@ -1043,6 +1263,7 @@ int main(void)
 	test_deck_index_reports_overflow();
 	test_deck_summary_counts_due_cards();
 	test_deck_summary_reports_load_error();
+	test_daily_use_workflow_persists_two_decks();
 
 	if (failures != 0)
 	{

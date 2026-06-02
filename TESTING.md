@@ -139,6 +139,9 @@ Run current host-side C tests with:
 make test-host
 ```
 
+The host C suite includes an M7-shaped daily-use workflow covering two decks,
+rating undo, suspension restore, daily limits, and relaunch persistence.
+
 Run converter tests with:
 
 ```sh
