@@ -31,7 +31,9 @@ Current build commands:
 
 ```sh
 make
+make test
 make test-host
+make test-converter
 make install-local-sd
 make install-local-sample-deck
 make install-azahar-sample-deck
@@ -90,6 +92,12 @@ Run current host-side C tests with:
 
 ```sh
 make test-host
+```
+
+Run converter tests with:
+
+```sh
+make test-converter
 ```
 
 The converter should have automated tests because it handles user data.

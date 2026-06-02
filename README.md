@@ -53,7 +53,7 @@ app-3ds/anki3ds.smdh
 To run host-side parser, scheduler, and review-state tests:
 
 ```sh
-make test-host
+make test
 ```
 
 To copy the build into the gitignored local SD mirror:
@@ -93,6 +93,14 @@ By default this expects Azahar at:
 
 ```text
 ~/Applications/azahar-macos-arm64-2125.1.2/Azahar.app
+```
+
+To convert a simple tab-separated export into an anki3ds deck:
+
+```sh
+python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
+  --deck-id my-deck \
+  --deck-name "My Deck"
 ```
 
 ## Current Status
