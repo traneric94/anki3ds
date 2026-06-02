@@ -14,7 +14,7 @@ The 3DS app should read a simple format that avoids full Anki complexity.
 ```
 
 Folder ids should use only letters, numbers, `_`, and `-`. The current app uses
-the folder id as the selector display name and reads:
+the folder id as the stable runtime id and reads:
 
 ```text
 sdmc:/3ds/anki3ds/decks/<deck-id>/cards.tsv
@@ -49,6 +49,8 @@ Draft:
 
 `deck_id` must match the folder id. The converter defaults it from the output
 folder name, and rejects mismatches so desktop output stays loadable on-device.
+The 3DS app reads the optional `name` string for deck-list and review-screen
+display, falling back to the folder id when metadata is missing or malformed.
 
 ## cards.tsv
 

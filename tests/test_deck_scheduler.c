@@ -644,6 +644,8 @@ static void test_deck_index_builds_paths(void)
 		"deck index builds entry"
 	);
 	check(strcmp(entry.id, "sample") == 0, "deck index stores id");
+	check(strcmp(entry.display_name, "sample") == 0, "deck index defaults display name");
+	check(strcmp(entry.deck_json_path, "/root/sample/deck.json") == 0, "deck json path builds");
 	check(strcmp(entry.cards_path, "/root/sample/cards.tsv") == 0, "cards path builds");
 	check(strcmp(entry.state_path, "/root/sample/state.tsv") == 0, "state path builds");
 	check(
@@ -662,6 +664,8 @@ static void remove_test_deck_dir(const char *deck_id)
 
 	snprintf(path, sizeof(path), "%s/%s/cards.tsv", TEST_DECK_ROOT, deck_id);
 	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/deck.json", TEST_DECK_ROOT, deck_id);
+	remove(path);
 	snprintf(path, sizeof(path), "%s/%s", TEST_DECK_ROOT, deck_id);
 	rmdir(path);
 }
@@ -669,6 +673,7 @@ static void remove_test_deck_dir(const char *deck_id)
 static void cleanup_deck_index_test_root(void)
 {
 	remove_test_deck_dir("alpha");
+	remove_test_deck_dir("beta");
 	remove_test_deck_dir("empty");
 	remove_test_deck_dir("zeta");
 
@@ -683,7 +688,11 @@ static void cleanup_deck_index_test_root(void)
 	rmdir(TEST_DECK_ROOT);
 }
 
-static void create_test_deck_dir(const char *deck_id, bool has_cards)
+static void create_test_deck_dir_with_name(
+	const char *deck_id,
+	bool has_cards,
+	const char *deck_name
+)
 {
 	char path[256];
 
@@ -695,6 +704,17 @@ static void create_test_deck_dir(const char *deck_id, bool has_cards)
 		snprintf(path, sizeof(path), "%s/%s/cards.tsv", TEST_DECK_ROOT, deck_id);
 		write_file(path, "card\tnote\tfront\tback\ttags\n");
 	}
+
+	if (deck_name != NULL)
+	{
+		snprintf(path, sizeof(path), "%s/%s/deck.json", TEST_DECK_ROOT, deck_id);
+		write_file(path, deck_name);
+	}
+}
+
+static void create_test_deck_dir(const char *deck_id, bool has_cards)
+{
+	create_test_deck_dir_with_name(deck_id, has_cards, NULL);
 }
 
 static void test_deck_index_scans_sorted_decks_with_cards(void)
@@ -713,6 +733,31 @@ static void test_deck_index_scans_sorted_decks_with_cards(void)
 	check(strcmp(index.entries[0].id, "alpha") == 0, "deck index sorts first deck");
 	check(strcmp(index.entries[1].id, "zeta") == 0, "deck index sorts second deck");
 	check(!index.overflowed, "deck index does not report overflow under limit");
+
+	cleanup_deck_index_test_root();
+}
+
+static void test_deck_index_loads_display_names(void)
+{
+	struct deck_index index;
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	create_test_deck_dir_with_name(
+		"alpha",
+		true,
+		"{\n  \"format_version\": 1,\n  \"name\": \"Alpha Deck\"\n}\n"
+	);
+	create_test_deck_dir_with_name("beta", true, "{ \"name\": \"bad\\u0020name\" }\n");
+	create_test_deck_dir_with_name("zeta", true, "{ \"name\": null, \"created_by\": \"x\" }\n");
+
+	deck_index_scan(&index, TEST_DECK_ROOT);
+
+	check(index.count == 3, "deck index scans named decks");
+	check(strcmp(index.entries[0].id, "alpha") == 0, "named deck id remains folder id");
+	check(strcmp(index.entries[0].display_name, "Alpha Deck") == 0, "deck name loads");
+	check(strcmp(index.entries[1].display_name, "beta") == 0, "bad deck name falls back");
+	check(strcmp(index.entries[2].display_name, "zeta") == 0, "non-string deck name falls back");
 
 	cleanup_deck_index_test_root();
 }
@@ -771,6 +816,7 @@ int main(void)
 	test_app_settings_bad_file_uses_defaults();
 	test_deck_index_builds_paths();
 	test_deck_index_scans_sorted_decks_with_cards();
+	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
 
 	if (failures != 0)

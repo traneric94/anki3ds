@@ -217,7 +217,7 @@ static void app_load_selected_deck(struct app_state *app)
 		sizeof(app->active_settings_path),
 		entry->settings_path
 	);
-	deck_init(&app->deck, entry->id);
+	deck_init(&app->deck, entry->display_name);
 	app->revealed = false;
 	app_settings_default(&app->settings);
 	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
@@ -326,7 +326,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 				"\x1b[%lu;1H%s %s",
 				(unsigned long)(5 + index),
 				marker,
-				app->deck_index.entries[index].id
+				app->deck_index.entries[index].display_name
 			);
 		}
 
