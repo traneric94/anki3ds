@@ -25,6 +25,7 @@
 #define MEDIA_BACK_Y 160
 #define DECK_NAME_HEADER_WIDTH 42
 #define DECK_NAME_SELECTOR_WIDTH 32
+#define MEDIA_CACHE_SLOT_COUNT 2
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -91,8 +92,18 @@ struct app_state
 	struct scheduler_session session;
 };
 
+struct media_cache_slot
+{
+	bool occupied;
+	char path[DECK_INDEX_MAX_PATH_LENGTH];
+	enum media_image_load_result result;
+	struct media_image image;
+};
+
 static PrintConsole top_screen;
 static PrintConsole bottom_screen;
+static struct media_cache_slot media_cache[MEDIA_CACHE_SLOT_COUNT];
+static size_t media_cache_next_slot;
 
 static void select_top_screen(void)
 {
@@ -306,6 +317,31 @@ static void wait_for_idle_input(void)
 	hidWaitForAnyEvent(true, 0, IDLE_INPUT_WAIT_NS);
 }
 
+static void media_cache_clear(void)
+{
+	memset(media_cache, 0, sizeof(media_cache));
+	media_cache_next_slot = 0;
+}
+
+static const struct media_cache_slot *media_cache_load(const char *path)
+{
+	struct media_cache_slot *slot;
+
+	for (size_t index = 0; index < MEDIA_CACHE_SLOT_COUNT; index++)
+	{
+		if (media_cache[index].occupied && strcmp(media_cache[index].path, path) == 0)
+			return &media_cache[index];
+	}
+
+	slot = &media_cache[media_cache_next_slot];
+	media_cache_next_slot = (media_cache_next_slot + 1) % MEDIA_CACHE_SLOT_COUNT;
+	memset(slot, 0, sizeof(*slot));
+	copy_string(slot->path, sizeof(slot->path), path);
+	slot->result = media_image_load(&slot->image, path);
+	slot->occupied = true;
+	return slot;
+}
+
 static unsigned char rgb565_red(uint16_t pixel)
 {
 	return (unsigned char)((((pixel >> 11) & 0x1f) * 255u) / 31u);
@@ -388,8 +424,7 @@ static void draw_card_media(
 	int status_row
 )
 {
-	struct media_image image;
-	enum media_image_load_result result;
+	const struct media_cache_slot *slot;
 	char path[DECK_INDEX_MAX_PATH_LENGTH];
 
 	if (media_name[0] == '\0')
@@ -401,16 +436,16 @@ static void draw_card_media(
 		return;
 	}
 
-	result = media_image_load(&image, path);
-	if (result == MEDIA_IMAGE_LOAD_OK)
+	slot = media_cache_load(path);
+	if (slot->result == MEDIA_IMAGE_LOAD_OK)
 	{
-		draw_top_image(&image, x, y);
+		draw_top_image(&slot->image, x, y);
 		return;
 	}
 
 	printf("\x1b[%d;1HMedia ", status_row);
 	print_truncated(media_name, 24);
-	printf(": %s", media_image_load_result_name(result));
+	printf(": %s", media_image_load_result_name(slot->result));
 }
 
 static void app_scan_decks(struct app_state *app)
@@ -477,6 +512,7 @@ static void app_load_selected_deck(struct app_state *app)
 		entry->settings_path
 	);
 	copy_string(app->active_media_path, sizeof(app->active_media_path), entry->media_path);
+	media_cache_clear();
 	deck_init(&app->deck, entry->display_name);
 	app->revealed = false;
 	app_settings_default(&app->settings);

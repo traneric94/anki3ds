@@ -177,6 +177,11 @@ progress. Daily limits can be edited from the same actions screen. Reset
 remains available by moving the action selection first, then confirming on a
 separate reset screen with `X`.
 
+Cards may reference front/back `.a3i` media. The app keeps a two-slot media
+cache for the active deck, enough for the current card's front and back images.
+This avoids repeated SD reads on redraws while keeping memory bounded. Loading a
+deck clears the cache.
+
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
 counters before applying the action. Undo restores that snapshot, clears the
