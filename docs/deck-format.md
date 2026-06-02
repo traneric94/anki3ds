@@ -20,10 +20,11 @@ the folder id as the stable runtime id and reads:
 sdmc:/3ds/anki3ds/decks/<deck-id>/cards.tsv
 ```
 
-The tracked text-only sample decks live in `sample-decks/` and install to:
+The tracked sample decks live in `sample-decks/` and install to:
 
 ```text
 sdmc:/3ds/anki3ds/decks/limits-demo/cards.tsv
+sdmc:/3ds/anki3ds/decks/media-demo/cards.tsv
 sdmc:/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
@@ -31,6 +32,7 @@ Each sample deck also includes:
 
 ```text
 sdmc:/3ds/anki3ds/decks/limits-demo/settings.tsv
+sdmc:/3ds/anki3ds/decks/media-demo/settings.tsv
 sdmc:/3ds/anki3ds/decks/sample/settings.tsv
 ```
 
@@ -146,6 +148,32 @@ steps, single-card unsuspend UI, burying, filtered decks, and review logs are
 planned later.
 Older app builds that only accept seven- or eight-column rows will reject state
 saved by this version.
+
+## media/*.a3i
+
+The 3DS app can display bounded raw `.a3i` images referenced by `front_media`
+or `back_media`.
+
+File layout:
+
+```text
+bytes 0-3:  A3I1
+bytes 4-5:  little-endian width
+bytes 6-7:  little-endian height
+bytes 8-:   little-endian RGB565 pixels, row-major
+```
+
+Limits:
+
+- maximum width: 160 pixels
+- maximum height: 72 pixels
+- zero dimensions are invalid
+- extra or missing pixel data is invalid
+
+The converter can currently convert binary PPM `P6` images into `.a3i` files.
+Common image formats such as PNG/JPEG should be converted to PPM first or added
+through a future optional desktop dependency. The 3DS app intentionally does no
+general-purpose image decoding.
 
 ## Review Log
 

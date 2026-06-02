@@ -8,6 +8,7 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
+#include "media_image.h"
 #include "review_state.h"
 #include "scheduler.h"
 
@@ -18,12 +19,14 @@
 #define TEST_SETTINGS_TEMP_PATH TEST_SETTINGS_PATH ".tmp"
 #define TEST_SETTINGS_BACKUP_PATH TEST_SETTINGS_PATH ".bak"
 #define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
+#define TEST_MEDIA_PATH "/private/tmp/anki3ds-media-test.a3i"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 
 static int failures;
 
 static void write_file(const char *path, const char *content);
+static void write_binary_file(const char *path, const unsigned char *content, size_t size);
 
 static void check(bool condition, const char *message)
 {
@@ -143,6 +146,26 @@ static void test_tracked_sample_decks_load(void)
 	);
 	check(settings.new_limit == 2, "tracked limits demo new limit");
 	check(settings.review_limit == 5, "tracked limits demo review limit");
+
+	deck_init(&deck, "media-demo");
+	check(
+		deck_load_cards(&deck, "sample-decks/media-demo/cards.tsv") == DECK_LOAD_OK,
+		"tracked media demo deck loads"
+	);
+	check(deck.card_count == 2, "tracked media demo deck card count");
+	check(
+		strcmp(deck.cards[0].front_media, "colors.a3i") == 0,
+		"tracked media demo front media loads"
+	);
+	check(
+		strcmp(deck.cards[0].back_media, "colors.a3i") == 0,
+		"tracked media demo back media loads"
+	);
+	check(
+		app_settings_load(&settings, "sample-decks/media-demo/settings.tsv") ==
+			APP_SETTINGS_LOAD_OK,
+		"tracked media demo settings load"
+	);
 }
 
 static void test_scheduler_schedules_due_days(void)
@@ -786,6 +809,18 @@ static void write_file(const char *path, const char *content)
 	fclose(file);
 }
 
+static void write_binary_file(const char *path, const unsigned char *content, size_t size)
+{
+	FILE *file = fopen(path, "wb");
+
+	check(file != NULL, "test binary file opens");
+	if (file == NULL)
+		return;
+
+	fwrite(content, 1, size, file);
+	fclose(file);
+}
+
 static void load_entry_deck(
 	struct deck *deck,
 	const struct deck_entry *entry,
@@ -826,10 +861,75 @@ static void test_deck_index_builds_paths(void)
 		strcmp(entry.settings_path, "/root/sample/settings.tsv") == 0,
 		"settings path builds"
 	);
+	check(strcmp(entry.media_path, "/root/sample/media") == 0, "media path builds");
 	check(!deck_index_build_entry(&entry, "/root", ".hidden"), "hidden id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad id"), "space id rejected");
+}
+
+static void test_media_image_loads_rgb565(void)
+{
+	static const unsigned char content[] = {
+		'A', '3', 'I', '1',
+		2, 0,
+		1, 0,
+		0x00, 0xf8,
+		0xe0, 0x07,
+	};
+	struct media_image image;
+
+	write_binary_file(TEST_MEDIA_PATH, content, sizeof(content));
+
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_OK,
+		"media image loads"
+	);
+	check(image.loaded, "media image loaded flag");
+	check(image.width == 2, "media image width loads");
+	check(image.height == 1, "media image height loads");
+	check(image.pixels[0] == 0xf800, "media image first pixel loads");
+	check(image.pixels[1] == 0x07e0, "media image second pixel loads");
+
+	remove(TEST_MEDIA_PATH);
+}
+
+static void test_media_image_rejects_bad_files(void)
+{
+	static const unsigned char bad_magic[] = {
+		'B', 'A', 'D', '!',
+		1, 0,
+		1, 0,
+		0, 0,
+	};
+	static const unsigned char too_large[] = {
+		'A', '3', 'I', '1',
+		(MEDIA_IMAGE_MAX_WIDTH + 1) & 0xff,
+		((MEDIA_IMAGE_MAX_WIDTH + 1) >> 8) & 0xff,
+		1, 0,
+		0, 0,
+	};
+	struct media_image image;
+
+	remove(TEST_MEDIA_PATH);
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_NOT_FOUND,
+		"missing media image reports not found"
+	);
+
+	write_binary_file(TEST_MEDIA_PATH, bad_magic, sizeof(bad_magic));
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
+		"bad media image magic rejected"
+	);
+
+	write_binary_file(TEST_MEDIA_PATH, too_large, sizeof(too_large));
+	check(
+		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_TOO_LARGE,
+		"oversized media image rejected"
+	);
+
+	remove(TEST_MEDIA_PATH);
 }
 
 static void remove_test_deck_dir(const char *deck_id)
@@ -1279,6 +1379,8 @@ int main(void)
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();
+	test_media_image_loads_rgb565();
+	test_media_image_rejects_bad_files();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();

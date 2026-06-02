@@ -18,6 +18,7 @@ struct deck_entry
 	char deck_json_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char state_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char settings_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char media_path[DECK_INDEX_MAX_PATH_LENGTH];
 };
 
 struct deck_index

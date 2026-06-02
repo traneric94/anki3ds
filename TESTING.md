@@ -53,10 +53,16 @@ The tracked sample decks install to:
 ```text
 local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 local/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
+local/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
+local/sdmc/3ds/anki3ds/decks/media-demo/media/colors.a3i
+local/sdmc/3ds/anki3ds/decks/media-demo/settings.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/media/colors.a3i
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ```
@@ -156,6 +162,7 @@ Minimum converter tests:
 - preserves stable card IDs
 - handles tabs and line breaks
 - strips or simplifies simple HTML
+- converts optional media fields into bounded `.a3i` files
 - writes expected deck folder layout
 - preserves existing review state on re-import
 

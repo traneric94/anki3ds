@@ -8,6 +8,7 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
+#include "media_image.h"
 #include "review_state.h"
 #include "scheduler.h"
 
@@ -16,6 +17,12 @@
 #define IDLE_INPUT_WAIT_NS 100000000LL
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
+#define MEDIA_TEXT_WIDTH 25
+#define TOP_SCREEN_WIDTH 400
+#define TOP_SCREEN_HEIGHT 240
+#define MEDIA_IMAGE_X 224
+#define MEDIA_FRONT_Y 72
+#define MEDIA_BACK_Y 160
 #define DECK_NAME_HEADER_WIDTH 42
 #define DECK_NAME_SELECTOR_WIDTH 32
 
@@ -75,6 +82,7 @@ struct app_state
 	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char active_media_path[DECK_INDEX_MAX_PATH_LENGTH];
 	struct app_settings settings;
 	struct app_settings edited_settings;
 	struct deck_index deck_index;
@@ -111,7 +119,12 @@ static unsigned int current_day(void)
 	return (unsigned int)(now / SECONDS_PER_DAY);
 }
 
-static void draw_wrapped_text(const char *text, int row, int max_rows)
+static void draw_wrapped_text_columns(
+	const char *text,
+	int row,
+	int max_rows,
+	int max_columns
+)
 {
 	int current_row = row;
 	int column = TEXT_LEFT;
@@ -144,7 +157,7 @@ static void draw_wrapped_text(const char *text, int row, int max_rows)
 		if (value == '\t')
 			value = ' ';
 
-		if (column >= TEXT_LEFT + TEXT_WIDTH)
+		if (column >= TEXT_LEFT + max_columns)
 		{
 			current_row++;
 			column = TEXT_LEFT;
@@ -162,7 +175,7 @@ static void draw_wrapped_text(const char *text, int row, int max_rows)
 
 	if (truncated && max_rows > 0)
 	{
-		console_move(row + max_rows - 1, TEXT_LEFT + TEXT_WIDTH - 3);
+		console_move(row + max_rows - 1, TEXT_LEFT + max_columns - 3);
 		printf("...");
 	}
 }
@@ -293,6 +306,113 @@ static void wait_for_idle_input(void)
 	hidWaitForAnyEvent(true, 0, IDLE_INPUT_WAIT_NS);
 }
 
+static unsigned char rgb565_red(uint16_t pixel)
+{
+	return (unsigned char)((((pixel >> 11) & 0x1f) * 255u) / 31u);
+}
+
+static unsigned char rgb565_green(uint16_t pixel)
+{
+	return (unsigned char)((((pixel >> 5) & 0x3f) * 255u) / 63u);
+}
+
+static unsigned char rgb565_blue(uint16_t pixel)
+{
+	return (unsigned char)(((pixel & 0x1f) * 255u) / 31u);
+}
+
+static void draw_top_image(const struct media_image *image, int x, int y)
+{
+	u16 frame_width;
+	u16 frame_height;
+	u8 *framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &frame_width, &frame_height);
+
+	(void)frame_width;
+	(void)frame_height;
+
+	if (framebuffer == NULL || !image->loaded)
+		return;
+
+	for (unsigned int source_y = 0; source_y < image->height; source_y++)
+	{
+		int screen_y = y + (int)source_y;
+
+		if (screen_y < 0 || screen_y >= TOP_SCREEN_HEIGHT)
+			continue;
+
+		for (unsigned int source_x = 0; source_x < image->width; source_x++)
+		{
+			int screen_x = x + (int)source_x;
+			uint16_t pixel;
+			size_t offset;
+
+			if (screen_x < 0 || screen_x >= TOP_SCREEN_WIDTH)
+				continue;
+
+			pixel = image->pixels[source_y * image->width + source_x];
+			offset = (
+				(size_t)(TOP_SCREEN_HEIGHT - screen_y - 1) +
+				(size_t)screen_x * TOP_SCREEN_HEIGHT
+			) * 3;
+
+			framebuffer[offset] = rgb565_blue(pixel);
+			framebuffer[offset + 1] = rgb565_green(pixel);
+			framebuffer[offset + 2] = rgb565_red(pixel);
+		}
+	}
+}
+
+static bool build_media_file_path(
+	char *destination,
+	size_t destination_size,
+	const struct app_state *app,
+	const char *media_name
+)
+{
+	int written = snprintf(
+		destination,
+		destination_size,
+		"%s/%s",
+		app->active_media_path,
+		media_name
+	);
+
+	return written >= 0 && (size_t)written < destination_size;
+}
+
+static void draw_card_media(
+	const struct app_state *app,
+	const char *media_name,
+	int x,
+	int y,
+	int status_row
+)
+{
+	struct media_image image;
+	enum media_image_load_result result;
+	char path[DECK_INDEX_MAX_PATH_LENGTH];
+
+	if (media_name[0] == '\0')
+		return;
+
+	if (!build_media_file_path(path, sizeof(path), app, media_name))
+	{
+		printf("\x1b[%d;1HMedia path too long", status_row);
+		return;
+	}
+
+	result = media_image_load(&image, path);
+	if (result == MEDIA_IMAGE_LOAD_OK)
+	{
+		draw_top_image(&image, x, y);
+		return;
+	}
+
+	printf("\x1b[%d;1HMedia ", status_row);
+	print_truncated(media_name, 24);
+	printf(": %s", media_image_load_result_name(result));
+}
+
 static void app_scan_decks(struct app_state *app)
 {
 	unsigned int today = current_day();
@@ -356,6 +476,7 @@ static void app_load_selected_deck(struct app_state *app)
 		sizeof(app->active_settings_path),
 		entry->settings_path
 	);
+	copy_string(app->active_media_path, sizeof(app->active_media_path), entry->media_path);
 	deck_init(&app->deck, entry->display_name);
 	app->revealed = false;
 	app_settings_default(&app->settings);
@@ -516,6 +637,8 @@ static void draw_load_error_screen(const struct app_state *app)
 static void draw_review_screen(const struct app_state *app)
 {
 	const struct card *card = current_card(app);
+	bool front_has_media;
+	bool back_has_media;
 
 	consoleClear();
 	draw_header(app);
@@ -526,20 +649,41 @@ static void draw_review_screen(const struct app_state *app)
 		return;
 	}
 
+	front_has_media = card->front_media[0] != '\0';
+	back_has_media = card->back_media[0] != '\0';
+
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
 	printf("\x1b[7;1HFront");
 	printf("\x1b[8;1H------------------------------------------------");
 
 	if (app->revealed)
 	{
-		draw_wrapped_text(card->front, 9, 5);
+		draw_wrapped_text_columns(
+			card->front,
+			9,
+			5,
+			front_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+		);
 		printf("\x1b[15;1HBack");
 		printf("\x1b[16;1H------------------------------------------------");
-		draw_wrapped_text(card->back, 17, 7);
+		draw_wrapped_text_columns(
+			card->back,
+			17,
+			6,
+			back_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+		);
+		draw_card_media(app, card->front_media, MEDIA_IMAGE_X, MEDIA_FRONT_Y, 14);
+		draw_card_media(app, card->back_media, MEDIA_IMAGE_X, MEDIA_BACK_Y, 23);
 	}
 	else
 	{
-		draw_wrapped_text(card->front, 9, 15);
+		draw_wrapped_text_columns(
+			card->front,
+			9,
+			15,
+			front_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+		);
+		draw_card_media(app, card->front_media, MEDIA_IMAGE_X, MEDIA_FRONT_Y, 21);
 	}
 }
 

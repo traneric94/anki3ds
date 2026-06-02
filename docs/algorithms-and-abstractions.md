@@ -241,15 +241,17 @@ Algorithm:
 7. Write `deck.json` with format version, deck id, deck name, creator, and
    card count.
 8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
-9. Write default `settings.tsv` if it does not already exist.
+9. If media fields and `--media-root` are provided, convert referenced binary
+   PPM `P6` files into bounded raw `.a3i` files under `media/`.
+10. Write default `settings.tsv` if it does not already exist.
 
 The converter deliberately does not open or rewrite existing `state.tsv` or
 `settings.tsv`, so review progress and deck-specific daily limits survive
 re-imports into the same deck folder. The folder id is the runtime deck id on
 the 3DS, so the converter defaults `deck_id` from the output folder name and
-rejects mismatches. Current converter support is text-only; media,
-HTML/template rendering, and Anki collection parsing belong on the desktop side
-rather than on the 3DS.
+rejects mismatches. Current converter media support is deliberately narrow:
+PPM `P6` in, `.a3i` out. Rich HTML/template rendering and Anki collection
+parsing still belong on the desktop side rather than on the 3DS.
 
 ## C Boundaries We Want
 
@@ -261,6 +263,7 @@ Keep the portable logic separate from the libctru shell:
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
 | `scheduler` | per-card session state, rating transitions, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
+| `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
 | converter | desktop import, stable IDs, deck folder writes | local 3DS progress mutation |
 

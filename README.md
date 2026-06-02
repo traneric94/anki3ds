@@ -79,6 +79,7 @@ By default this uses:
 
 ```text
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
@@ -110,9 +111,20 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
+Optional media fields can be converted from binary PPM `P6` images into the
+device-side `.a3i` format:
+
+```sh
+python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
+  --deck-id my-deck \
+  --deck-name "My Deck" \
+  --front-media-field 3 \
+  --media-root path/to/media
+```
+
 ## Current Status
 
-Multi-deck text review works at build level: the app scans
+Multi-deck text and small-image review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
 shows due/new counts in the deck selector, loads optional per-deck
 `settings.tsv` daily limits, can edit those daily limits from the `SELECT`
@@ -121,7 +133,8 @@ day-level spaced repetition algorithm, saves local `state.tsv` progress beside
 that deck, and can undo the last rating or suspend action with `L`, suspend
 cards with `R`, see suspended-card counts in deck, action, and summary views,
 restore suspended cards from the actions screen, or reset saved progress after
-opening the reset action and confirming with `X`. The top screen shows
+opening the reset action and confirming with `X`. Cards may optionally reference
+bounded `.a3i` images under the deck's `media/` folder. The top screen shows
 deck/card content, while the bottom screen shows controls and review status.
 
 See:

@@ -256,6 +256,18 @@ bool deck_index_build_entry(struct deck_entry *entry, const char *root_path, con
 	{
 		return false;
 	}
+	if (
+		!path_join_deck_file(
+			entry->media_path,
+			sizeof(entry->media_path),
+			root_path,
+			deck_id,
+			"media"
+		)
+	)
+	{
+		return false;
+	}
 
 	copy_string(entry->id, sizeof(entry->id), deck_id);
 	copy_string(entry->display_name, sizeof(entry->display_name), deck_id);

@@ -12,6 +12,7 @@ from converter.anki3ds_convert import (
     escape_tsv_field,
     main,
     normalize_text,
+    write_a3i_image,
     write_deck,
 )
 
@@ -64,6 +65,29 @@ class ConverterTests(unittest.TestCase):
 
         self.assertEqual(cards[0].front, "front\nline")
         self.assertEqual(cards[0].back, "back text")
+
+    def test_convert_lines_reads_media_fields(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.ppm\tback.ppm"],
+            front_field=0,
+            back_field=1,
+            tags_field=2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        self.assertEqual(cards[0].front_media, "front.ppm")
+        self.assertEqual(cards[0].back_media, "back.ppm")
+
+    def test_convert_lines_rejects_media_paths(self):
+        with self.assertRaisesRegex(ValueError, "plain filenames"):
+            convert_lines(
+                ["front\tback\ttag\tbad/path.ppm"],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+                front_media_field=3,
+            )
 
     def test_convert_lines_disambiguates_duplicate_ids(self):
         cards = convert_lines(
@@ -129,6 +153,84 @@ class ConverterTests(unittest.TestCase):
                 (output / "settings.tsv").read_text(encoding="utf-8"),
                 "new_limit\t20\nreview_limit\t200\n",
             )
+
+    def test_write_deck_writes_existing_media_names(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.a3i\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            write_deck(output, "sample", "Sample", cards)
+
+            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
+            fields = line.split("\t")
+            self.assertEqual(len(fields), 7)
+            self.assertEqual(fields[5], "front.a3i")
+            self.assertEqual(fields[6], "")
+
+    def test_write_deck_converts_ppm_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.ppm\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+            (media_root / "front.ppm").write_bytes(
+                b"P6\n2 1\n255\n" +
+                bytes([255, 0, 0, 0, 255, 0])
+            )
+
+            write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
+            self.assertEqual(line.split("\t")[5], "front.a3i")
+            media = (output / "media" / "front.a3i").read_bytes()
+            self.assertEqual(media[:8], b"A3I1\x02\x00\x01\x00")
+            self.assertEqual(media[8:12], b"\x00\xf8\xe0\x07")
+
+    def test_write_deck_rejects_media_output_collision(self):
+        cards = convert_lines(
+            [
+                "front 1\tback 1\ttag\timage.ppm",
+                "front 2\tback 2\ttag\timage.png",
+            ],
+            0,
+            1,
+            2,
+            front_media_field=3,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+
+            with self.assertRaisesRegex(ValueError, "collision"):
+                write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+    def test_write_a3i_image_writes_header_and_pixels(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "image.a3i"
+
+            write_a3i_image(output, 1, 1, bytes([0, 0, 255]))
+
+            self.assertEqual(output.read_bytes(), b"A3I1\x01\x00\x01\x00\x1f\x00")
 
     def test_write_deck_rejects_invalid_folder_id(self):
         cards = convert_lines(["front\tback"], 0, 1, None)

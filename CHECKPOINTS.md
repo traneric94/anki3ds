@@ -161,8 +161,9 @@ Pass condition:
 Acceptance test:
 
 1. Convert a deck with small images.
-2. Review cards on hardware.
-3. Confirm images fit the screen and text remains readable.
+2. Install `sample-decks/media-demo` or the converted deck to SD.
+3. Review cards on hardware.
+4. Confirm images fit the screen and text remains readable.
 
 Pass condition:
 
