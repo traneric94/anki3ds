@@ -849,7 +849,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[3;1HA: open selected deck");
 			printf("\x1b[5;1HD-pad Up/Down: choose");
 			printf("\x1b[7;1HSELECT: rescan decks");
-			printf("\x1b[9;1HSTART: exit");
+			printf("\x1b[9;1HSTART: confirm exit");
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
@@ -871,14 +871,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		else
 		{
 			printf("\x1b[3;1HSELECT: rescan decks");
-			printf("\x1b[5;1HSTART: exit");
+			printf("\x1b[5;1HSTART: confirm exit");
 		}
 		printf("\x1b[27;1HFound: %lu", (unsigned long)app->deck_index.count);
 		break;
 	case APP_MODE_LOAD_ERROR:
 		printf("\x1b[1;1HLoad error");
 		printf("\x1b[3;1HB or SELECT: deck list");
-		printf("\x1b[5;1HSTART: exit");
+		printf("\x1b[5;1HSTART: confirm exit");
 		break;
 	case APP_MODE_REVIEW:
 	{
@@ -908,7 +908,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[10;1HL: undo last action");
 			printf("\x1b[12;1HR: suspend card");
 			printf("\x1b[14;1HSELECT: actions");
-			printf("\x1b[16;1HSTART: exit");
+			printf("\x1b[16;1HSTART: confirm exit");
 		}
 		else
 		{
@@ -917,7 +917,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[10;1HL: undo last action");
 			printf("\x1b[12;1HR: suspend card");
 			printf("\x1b[14;1HSELECT: actions");
-			printf("\x1b[16;1HSTART: exit");
+			printf("\x1b[16;1HSTART: confirm exit");
 		}
 		printf(
 			"\x1b[27;1HSettings: %s",
@@ -936,7 +936,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1HB: deck list");
 		printf("\x1b[5;1HL: undo last action");
 		printf("\x1b[7;1HSELECT: actions");
-		printf("\x1b[9;1HSTART: exit");
+		printf("\x1b[9;1HSTART: confirm exit");
 		printf(
 			"\x1b[11;1HNew %u/%s  Review %u/%s",
 			app->session.new_count_today,
@@ -956,7 +956,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1HA: confirm selected");
 		printf("\x1b[5;1HD-pad Up/Down: choose");
 		printf("\x1b[7;1HB or SELECT: cancel");
-		printf("\x1b[9;1HSTART: exit");
+		printf("\x1b[9;1HSTART: confirm exit");
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[1;1HDaily limits");
@@ -964,7 +964,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HD-pad Left/Right: value");
 		printf("\x1b[7;1HA: save limits");
 		printf("\x1b[9;1HB or SELECT: cancel");
-		printf("\x1b[11;1HSTART: exit");
+		printf("\x1b[11;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		printf("\x1b[1;1HConfirm reset");
