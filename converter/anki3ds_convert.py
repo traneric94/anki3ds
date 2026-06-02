@@ -308,11 +308,22 @@ def resize_rgb_nearest(
     return output_width, output_height, bytes(output)
 
 
+def validate_rgb_image(width: int, height: int, pixels: bytes) -> None:
+    if width <= 0 or height <= 0:
+        raise ValueError("image dimensions must be positive")
+    if width > MEDIA_IMAGE_MAX_WIDTH or height > MEDIA_IMAGE_MAX_HEIGHT:
+        raise ValueError("image exceeds anki3ds media bounds")
+    if len(pixels) != width * height * 3:
+        raise ValueError("pixel data length does not match dimensions")
+
+
 def rgb_to_rgb565(red: int, green: int, blue: int) -> int:
     return ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
 
 
 def write_a3i_image(path: Path, width: int, height: int, pixels: bytes) -> None:
+    validate_rgb_image(width, height, pixels)
+
     with path.open("wb") as file:
         file.write(b"A3I1")
         file.write(width.to_bytes(2, "little"))

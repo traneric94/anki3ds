@@ -7,11 +7,14 @@ from pathlib import Path
 from unittest import mock
 
 from converter.anki3ds_convert import (
+    MEDIA_IMAGE_MAX_HEIGHT,
+    MEDIA_IMAGE_MAX_WIDTH,
     convert_lines,
     deck_id_is_valid,
     escape_tsv_field,
     main,
     normalize_text,
+    resize_rgb_nearest,
     write_a3i_image,
     write_deck,
 )
@@ -231,6 +234,39 @@ class ConverterTests(unittest.TestCase):
             write_a3i_image(output, 1, 1, bytes([0, 0, 255]))
 
             self.assertEqual(output.read_bytes(), b"A3I1\x01\x00\x01\x00\x1f\x00")
+
+    def test_write_a3i_image_rejects_invalid_image_data(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "image.a3i"
+
+            with self.assertRaisesRegex(ValueError, "positive"):
+                write_a3i_image(output, 0, 1, b"")
+
+            with self.assertRaisesRegex(ValueError, "bounds"):
+                write_a3i_image(
+                    output,
+                    MEDIA_IMAGE_MAX_WIDTH + 1,
+                    1,
+                    bytes((MEDIA_IMAGE_MAX_WIDTH + 1) * 3),
+                )
+
+            with self.assertRaisesRegex(ValueError, "length"):
+                write_a3i_image(output, 1, 1, bytes([0, 0]))
+
+    def test_resize_rgb_nearest_keeps_large_images_within_media_bounds(self):
+        source_width = MEDIA_IMAGE_MAX_WIDTH * 2
+        source_height = MEDIA_IMAGE_MAX_HEIGHT * 2
+        source_pixels = bytes(source_width * source_height * 3)
+
+        width, height, pixels = resize_rgb_nearest(
+            source_width,
+            source_height,
+            source_pixels,
+        )
+
+        self.assertLessEqual(width, MEDIA_IMAGE_MAX_WIDTH)
+        self.assertLessEqual(height, MEDIA_IMAGE_MAX_HEIGHT)
+        self.assertEqual(len(pixels), width * height * 3)
 
     def test_write_deck_rejects_invalid_folder_id(self):
         cards = convert_lines(["front\tback"], 0, 1, None)
