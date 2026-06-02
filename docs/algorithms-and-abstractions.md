@@ -156,8 +156,9 @@ area without introducing a graphics framework yet.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
-When the screen is unchanged, the app waits for HID input with a short timeout
-before scanning controls again, which avoids busy redraw/poll loops while still
+When the screen is unchanged, the app waits for HID input with an adaptive
+timeout before scanning controls again. The wait starts short for responsive
+input, then backs off while idle to avoid busy redraw/poll loops while still
 letting `aptMainLoop` run regularly.
 
 Review algorithm:

@@ -15,7 +15,12 @@
 
 #define APP_VERSION "0.5.0-dev"
 #define SECONDS_PER_DAY 86400
-#define IDLE_INPUT_WAIT_NS 100000000LL
+#define IDLE_INPUT_WAIT_INITIAL_NS 100000000LL
+#define IDLE_INPUT_WAIT_MID_NS 250000000LL
+#define IDLE_INPUT_WAIT_MAX_NS 500000000LL
+#define IDLE_INPUT_FAST_WAIT_COUNT 10
+#define IDLE_INPUT_MID_WAIT_COUNT 30
+#define IDLE_INPUT_MAX_WAIT_COUNT 60
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 #define MEDIA_TEXT_WIDTH 25
@@ -308,9 +313,19 @@ static void copy_string(char *destination, size_t destination_size, const char *
 	snprintf(destination, destination_size, "%s", source);
 }
 
-static void wait_for_idle_input(void)
+static long long idle_input_wait_ns(unsigned int idle_wait_count)
 {
-	hidWaitForAnyEvent(true, 0, IDLE_INPUT_WAIT_NS);
+	if (idle_wait_count < IDLE_INPUT_FAST_WAIT_COUNT)
+		return IDLE_INPUT_WAIT_INITIAL_NS;
+	if (idle_wait_count < IDLE_INPUT_MID_WAIT_COUNT)
+		return IDLE_INPUT_WAIT_MID_NS;
+
+	return IDLE_INPUT_WAIT_MAX_NS;
+}
+
+static void wait_for_idle_input(unsigned int idle_wait_count)
+{
+	hidWaitForAnyEvent(true, 0, idle_input_wait_ns(idle_wait_count));
 }
 
 static unsigned char rgb565_red(uint16_t pixel)
@@ -1425,6 +1440,7 @@ int main(int argc, char *argv[])
 
 	static struct app_state app;
 	bool frame_dirty = true;
+	unsigned int idle_wait_count = 0;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &top_screen);
@@ -1441,15 +1457,20 @@ int main(int argc, char *argv[])
 			gspWaitForVBlank();
 			gfxSwapBuffers();
 			frame_dirty = false;
+			idle_wait_count = 0;
 		}
 		else
 		{
-			wait_for_idle_input();
+			wait_for_idle_input(idle_wait_count);
+			if (idle_wait_count < IDLE_INPUT_MAX_WAIT_COUNT)
+				idle_wait_count++;
 		}
 
 		hidScanInput();
 
 		u32 keys_down = hidKeysDown();
+		if (keys_down != 0)
+			idle_wait_count = 0;
 
 		if (app_handle_input(&app, keys_down))
 		{
