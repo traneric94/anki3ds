@@ -70,8 +70,8 @@ Algorithm:
    `card_id`, `note_id`, `front`, `back`, `tags`.
 6. Unescape supported sequences into fixed buffers.
 7. Skip empty lines.
-8. Reject malformed lines, missing required `card_id`/`front`/`back`, or too
-   many cards.
+8. Reject malformed lines, duplicate `card_id` values, missing required
+   `card_id`/`front`/`back`, or too many cards.
 9. Commit the temporary deck to the caller only after a successful full load.
 
 The parser currently accepts `\n`, `\t`, and `\\` escapes. The deck owns card

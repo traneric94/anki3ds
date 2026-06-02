@@ -112,6 +112,17 @@ static enum deck_parse_result copy_card_field(
 	}
 }
 
+static bool deck_has_card_id(const struct deck *deck, const char *card_id)
+{
+	for (size_t index = 0; index < deck->card_count; index++)
+	{
+		if (strcmp(deck->cards[index].card_id, card_id) == 0)
+			return true;
+	}
+
+	return false;
+}
+
 void deck_init(struct deck *deck, const char *name)
 {
 	memset(deck, 0, sizeof(*deck));
@@ -203,6 +214,11 @@ enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 		{
 			fclose(file);
 			return DECK_LOAD_TOO_LARGE;
+		}
+		if (deck_has_card_id(&loaded, card.card_id))
+		{
+			fclose(file);
+			return DECK_LOAD_BAD_FORMAT;
 		}
 
 		loaded.cards[loaded.card_count] = card;

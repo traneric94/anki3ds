@@ -14,6 +14,7 @@
 #define TEST_STATE_TEMP_PATH TEST_STATE_PATH ".tmp"
 #define TEST_STATE_BACKUP_PATH TEST_STATE_PATH ".bak"
 #define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
+#define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 
@@ -66,6 +67,25 @@ static void test_reject_bad_card_line(void)
 			DECK_PARSE_BAD_ESCAPE,
 		"bad escape rejected"
 	);
+}
+
+static void test_deck_load_rejects_duplicate_card_ids(void)
+{
+	struct deck deck;
+
+	write_file(
+		TEST_CARDS_PATH,
+		"card-1\tnote-1\tfront 1\tback 1\ttag\n"
+		"card-1\tnote-2\tfront 2\tback 2\ttag\n"
+	);
+	deck_init(&deck, "duplicate-test");
+
+	check(
+		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_BAD_FORMAT,
+		"duplicate card ids are rejected"
+	);
+
+	remove(TEST_CARDS_PATH);
 }
 
 static void test_scheduler_schedules_due_days(void)
@@ -791,6 +811,7 @@ int main(void)
 {
 	test_parse_card_line();
 	test_reject_bad_card_line();
+	test_deck_load_rejects_duplicate_card_ids();
 	test_scheduler_schedules_due_days();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();

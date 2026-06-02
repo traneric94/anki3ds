@@ -65,6 +65,7 @@ Rules:
 - UTF-8 text
 - one card per line
 - tabs separate fields
+- `card_id` values must be unique within the deck
 - converter-generated `card_id` and `note_id` values are stable hashes of the
   normalized export fields, with numeric suffixes for exact duplicates
 - embedded newlines are encoded as `\n`
