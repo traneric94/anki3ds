@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
+DECK_MAX_CARDS = 64
 MEDIA_IMAGE_MAX_WIDTH = 160
 MEDIA_IMAGE_MAX_HEIGHT = 72
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
@@ -367,6 +368,8 @@ def write_deck(
         raise ValueError("deck id must use letters, numbers, '_' or '-'")
     if deck_id != output_dir.name:
         raise ValueError("deck id must match output deck folder name")
+    if len(cards) > DECK_MAX_CARDS:
+        raise ValueError(f"deck has more than {DECK_MAX_CARDS} cards")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 

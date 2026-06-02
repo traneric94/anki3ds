@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from converter.anki3ds_convert import (
+    DECK_MAX_CARDS,
     MEDIA_IMAGE_MAX_HEIGHT,
     MEDIA_IMAGE_MAX_WIDTH,
     convert_lines,
@@ -158,6 +159,36 @@ class ConverterTests(unittest.TestCase):
                 (output / "settings.tsv").read_text(encoding="utf-8"),
                 "new_limit\t20\nreview_limit\t200\n",
             )
+
+    def test_write_deck_rejects_cards_beyond_device_limit(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}\ttag" for index in range(DECK_MAX_CARDS + 1)],
+            0,
+            1,
+            2,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "more than 64 cards"):
+                write_deck(output, "sample", "Sample", cards)
+
+    def test_write_deck_accepts_device_card_limit(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}\ttag" for index in range(DECK_MAX_CARDS)],
+            0,
+            1,
+            2,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            write_deck(output, "sample", "Sample", cards)
+
+            deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
+            self.assertEqual(deck_json["card_count"], DECK_MAX_CARDS)
 
     def test_write_deck_writes_existing_media_names(self):
         cards = convert_lines(
