@@ -73,6 +73,8 @@ Rules:
 - tabs separate fields
 - `card_id` values must be unique within the deck
 - current 3DS builds support at most 256 cards per deck
+- `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
+- `tags` may use at most 127 UTF-8 bytes after unescaping
 - converter-generated `card_id` and `note_id` values are stable hashes of the
   normalized export fields, with numeric suffixes for exact duplicates
 - embedded newlines are encoded as `\n`
@@ -81,6 +83,8 @@ Rules:
 - `front_media` and `back_media` are optional plain filenames under `media/`
 - media filenames may use only letters, numbers, `_`, `-`, and `.`, and may not
   start with `.`
+- media filenames may use at most 95 UTF-8 bytes
+- each physical `cards.tsv` row must fit in the current 1024-byte parser buffer
 
 Example:
 

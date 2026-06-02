@@ -12,6 +12,12 @@ from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
 DECK_MAX_CARDS = 256
+DECK_MAX_ID_LENGTH = 32
+DECK_MAX_TEXT_LENGTH = 384
+DECK_MAX_TAGS_LENGTH = 128
+DECK_MAX_MEDIA_NAME_LENGTH = 96
+DECK_MAX_LINE_LENGTH = 1024
+DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 MEDIA_IMAGE_MAX_WIDTH = 160
 MEDIA_IMAGE_MAX_HEIGHT = 72
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
@@ -153,6 +159,8 @@ def deck_id_is_valid(value: str) -> bool:
 def media_name_is_valid(value: str) -> bool:
     if not value:
         return True
+    if len(value.encode("utf-8")) >= DECK_MAX_MEDIA_NAME_LENGTH:
+        return False
     if value.startswith("."):
         return False
 
@@ -166,8 +174,80 @@ def media_name_is_valid(value: str) -> bool:
 def normalize_media_name(value: str) -> str:
     name = " ".join(value.split())
     if not media_name_is_valid(name):
-        raise ValueError("media filenames must be plain filenames")
+        raise ValueError(
+            "media filenames must be plain filenames under 96 UTF-8 bytes"
+        )
     return name
+
+
+def validate_device_field(
+    card_number: int,
+    label: str,
+    value: str,
+    max_length: int,
+) -> None:
+    if len(value.encode("utf-8")) >= max_length:
+        raise ValueError(
+            f"card {card_number}: {label} exceeds {max_length - 1} UTF-8 bytes"
+        )
+
+
+def card_output_fields(
+    card: ConvertedCard,
+    media_names: dict[str, str],
+    has_media: bool,
+) -> list[str]:
+    fields = [
+        escape_tsv_field(card.card_id),
+        escape_tsv_field(card.note_id),
+        escape_tsv_field(card.front),
+        escape_tsv_field(card.back),
+        escape_tsv_field(card.tags),
+    ]
+    if has_media:
+        fields.extend(
+            [
+                escape_tsv_field(media_names.get(card.front_media, card.front_media)),
+                escape_tsv_field(media_names.get(card.back_media, card.back_media)),
+            ]
+        )
+
+    return fields
+
+
+def validate_device_cards(
+    cards: list[ConvertedCard],
+    media_names: dict[str, str],
+    has_media: bool,
+) -> None:
+    for card_number, card in enumerate(cards, start=1):
+        front_media = media_names.get(card.front_media, card.front_media)
+        back_media = media_names.get(card.back_media, card.back_media)
+
+        validate_device_field(card_number, "card_id", card.card_id, DECK_MAX_ID_LENGTH)
+        validate_device_field(card_number, "note_id", card.note_id, DECK_MAX_ID_LENGTH)
+        validate_device_field(card_number, "front", card.front, DECK_MAX_TEXT_LENGTH)
+        validate_device_field(card_number, "back", card.back, DECK_MAX_TEXT_LENGTH)
+        validate_device_field(card_number, "tags", card.tags, DECK_MAX_TAGS_LENGTH)
+        validate_device_field(
+            card_number,
+            "front_media",
+            front_media,
+            DECK_MAX_MEDIA_NAME_LENGTH,
+        )
+        validate_device_field(
+            card_number,
+            "back_media",
+            back_media,
+            DECK_MAX_MEDIA_NAME_LENGTH,
+        )
+
+        fields = card_output_fields(card, media_names, has_media)
+        row = "\t".join(fields)
+        if len(row.encode("utf-8")) > DECK_MAX_ROW_BYTES:
+            raise ValueError(
+                f"card {card_number}: row exceeds {DECK_MAX_ROW_BYTES} UTF-8 bytes"
+            )
 
 
 def convert_lines(
@@ -368,23 +448,10 @@ def write_deck(
         raise ValueError("deck id must use letters, numbers, '_' or '-'")
     if deck_id != output_dir.name:
         raise ValueError("deck id must match output deck folder name")
+    if not cards:
+        raise ValueError("deck must contain at least one card")
     if len(cards) > DECK_MAX_CARDS:
         raise ValueError(f"deck has more than {DECK_MAX_CARDS} cards")
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    deck_json = {
-        "format_version": 1,
-        "deck_id": deck_id,
-        "name": deck_name,
-        "created_by": "anki3ds-converter",
-        "card_count": len(cards),
-    }
-
-    (output_dir / "deck.json").write_text(
-        json.dumps(deck_json, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
 
     media_names: dict[str, str] = {}
     media_outputs: dict[str, str] = {}
@@ -403,30 +470,37 @@ def write_deck(
                     media_outputs[output_name] = source_name
 
         for source_name in media_outputs.values():
+            media_names[source_name] = converted_media_name(source_name)
+
+    has_media = any(card.front_media or card.back_media for card in cards)
+    validate_device_cards(cards, media_names, has_media)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    deck_json = {
+        "format_version": 1,
+        "deck_id": deck_id,
+        "name": deck_name,
+        "created_by": "anki3ds-converter",
+        "card_count": len(cards),
+    }
+
+    (output_dir / "deck.json").write_text(
+        json.dumps(deck_json, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    if media_root is not None:
+        for source_name in media_outputs.values():
             media_names[source_name] = convert_media_file(
                 media_root,
                 source_name,
                 output_dir / "media",
             )
 
-    has_media = any(card.front_media or card.back_media for card in cards)
-
     with (output_dir / "cards.tsv").open("w", encoding="utf-8", newline="\n") as file:
         for card in cards:
-            fields = [
-                escape_tsv_field(card.card_id),
-                escape_tsv_field(card.note_id),
-                escape_tsv_field(card.front),
-                escape_tsv_field(card.back),
-                escape_tsv_field(card.tags),
-            ]
-            if has_media:
-                fields.extend(
-                    [
-                        escape_tsv_field(media_names.get(card.front_media, card.front_media)),
-                        escape_tsv_field(media_names.get(card.back_media, card.back_media)),
-                    ]
-                )
+            fields = card_output_fields(card, media_names, has_media)
             file.write("\t".join(fields))
             file.write("\n")
 

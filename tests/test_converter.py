@@ -8,6 +8,8 @@ from unittest import mock
 
 from converter.anki3ds_convert import (
     DECK_MAX_CARDS,
+    DECK_MAX_MEDIA_NAME_LENGTH,
+    DECK_MAX_TEXT_LENGTH,
     MEDIA_IMAGE_MAX_HEIGHT,
     MEDIA_IMAGE_MAX_WIDTH,
     convert_lines,
@@ -189,6 +191,75 @@ class ConverterTests(unittest.TestCase):
 
             deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
             self.assertEqual(deck_json["card_count"], DECK_MAX_CARDS)
+
+    def test_write_deck_rejects_empty_direct_card_list(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "at least one card"):
+                write_deck(output, "sample", "Sample", [])
+
+    def test_write_deck_rejects_text_beyond_device_limit(self):
+        cards = convert_lines(
+            ["a" * DECK_MAX_TEXT_LENGTH + "\tback\ttag"],
+            0,
+            1,
+            2,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "front exceeds"):
+                write_deck(output, "sample", "Sample", cards)
+
+    def test_write_deck_validates_utf8_byte_lengths(self):
+        valid_cards = convert_lines(
+            ["é" * ((DECK_MAX_TEXT_LENGTH - 2) // 2) + "\tback\ttag"],
+            0,
+            1,
+            2,
+        )
+        invalid_cards = convert_lines(
+            ["é" * (DECK_MAX_TEXT_LENGTH // 2) + "\tback\ttag"],
+            0,
+            1,
+            2,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            write_deck(root / "valid", "valid", "Valid", valid_cards)
+            with self.assertRaisesRegex(ValueError, "UTF-8 bytes"):
+                write_deck(root / "invalid", "invalid", "Invalid", invalid_cards)
+
+    def test_write_deck_rejects_escaped_row_beyond_device_line_limit(self):
+        cards = convert_lines(
+            ["\\" * (DECK_MAX_TEXT_LENGTH - 1) + "\t" +
+             "\\" * (DECK_MAX_TEXT_LENGTH - 1) + "\ttag"],
+            0,
+            1,
+            2,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "row exceeds"):
+                write_deck(output, "sample", "Sample", cards)
+
+    def test_convert_lines_rejects_media_name_beyond_device_limit(self):
+        long_media_name = "a" * (DECK_MAX_MEDIA_NAME_LENGTH - len(".ppm")) + ".ppm"
+
+        with self.assertRaisesRegex(ValueError, "under 96"):
+            convert_lines(
+                [f"front\tback\ttag\t{long_media_name}"],
+                0,
+                1,
+                2,
+                front_media_field=3,
+            )
 
     def test_write_deck_writes_existing_media_names(self):
         cards = convert_lines(
