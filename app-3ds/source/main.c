@@ -25,7 +25,7 @@
 #define MEDIA_FRONT_Y 72
 #define MEDIA_BACK_Y 160
 #define DECK_NAME_HEADER_WIDTH 42
-#define DECK_NAME_SELECTOR_WIDTH 32
+#define DECK_NAME_SELECTOR_WIDTH 22
 #define DECK_SELECTOR_FIRST_ROW 5
 #define DECK_SELECTOR_VISIBLE_ROWS 16
 
@@ -632,9 +632,10 @@ static void draw_deck_select_screen(const struct app_state *app)
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
-					" D:%lu N:%lu S:%lu",
-					(unsigned long)summary->due_count,
+					" N:%lu L:%lu R:%lu S:%lu",
 					(unsigned long)summary->new_due_count,
+					(unsigned long)summary->learning_due_count,
+					(unsigned long)summary->review_due_count,
 					(unsigned long)summary->suspended_count
 				);
 			}
@@ -878,12 +879,17 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
-					"\x1b[12;1HSelected: Due %lu  New %lu",
-					(unsigned long)summary->due_count,
-					(unsigned long)summary->new_due_count
+					"\x1b[12;1HDue: N %lu  L %lu  R %lu",
+					(unsigned long)summary->new_due_count,
+					(unsigned long)summary->learning_due_count,
+					(unsigned long)summary->review_due_count
 				);
 				printf(
-					"\x1b[14;1HCards: %lu  Suspended: %lu",
+					"\x1b[14;1HTotal due: %lu",
+					(unsigned long)summary->due_count
+				);
+				printf(
+					"\x1b[16;1HCards: %lu  Suspended: %lu",
 					(unsigned long)summary->card_count,
 					(unsigned long)summary->suspended_count
 				);

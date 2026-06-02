@@ -16,6 +16,8 @@ struct deck_summary
 	size_t card_count;
 	size_t due_count;
 	size_t new_due_count;
+	size_t learning_due_count;
+	size_t review_due_count;
 	size_t suspended_count;
 };
 

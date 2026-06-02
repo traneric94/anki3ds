@@ -1374,6 +1374,7 @@ static void test_deck_summary_counts_due_cards(void)
 		"card-2\tnote-2\tfront 2\tback 2\ttag\n"
 		"card-3\tnote-3\tfront 3\tback 3\ttag\n"
 		"card-4\tnote-4\tfront 4\tback 4\ttag\n"
+		"card-5\tnote-5\tfront 5\tback 5\ttag\n"
 	);
 	write_file(entry.settings_path, "new_limit\t1\nreview_limit\t0\n");
 	write_file(
@@ -1381,6 +1382,7 @@ static void test_deck_summary_counts_due_cards(void)
 		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t19999\t19999\n"
 		"card-2\t1\t2\t20000\t1\t2500\t0\t0\t19999\t19999\n"
 		"card-3\t0\t2\t20000\t0\t2500\t0\t1\t0\t0\n"
+		"card-5\t1\t0\t20000\t0\t2300\t0\t0\t19999\t19999\n"
 	);
 
 	deck_summary_load(&summary, &entry, TEST_TODAY);
@@ -1388,9 +1390,11 @@ static void test_deck_summary_counts_due_cards(void)
 	check(summary.deck_load_result == DECK_LOAD_OK, "summary deck loads");
 	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "summary settings load");
 	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "summary state loads");
-	check(summary.card_count == 4, "summary card count");
-	check(summary.due_count == 2, "summary due count includes review and limited new");
+	check(summary.card_count == 5, "summary card count");
+	check(summary.due_count == 3, "summary due count includes review, learning, and limited new");
 	check(summary.new_due_count == 1, "summary new due count honors new limit");
+	check(summary.learning_due_count == 1, "summary learning due count");
+	check(summary.review_due_count == 1, "summary review due count");
 	check(summary.suspended_count == 1, "summary suspended count includes saved state");
 
 	cleanup_deck_index_test_root();
