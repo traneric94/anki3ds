@@ -4,12 +4,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "app_settings.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "review_state.h"
 #include "scheduler.h"
 
 #define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
+#define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 
@@ -146,7 +148,9 @@ static void test_scheduler_scales_review_intervals(void)
 			10,
 			2500,
 			0,
-			false
+			false,
+			0,
+			0
 		),
 		"review card restores"
 	);
@@ -167,7 +171,9 @@ static void test_scheduler_scales_review_intervals(void)
 			10,
 			2500,
 			0,
-			false
+			false,
+			0,
+			0
 		),
 		"review card restores again"
 	);
@@ -240,6 +246,90 @@ static void test_scheduler_suspend_last_due_card(void)
 	check(scheduler_current_index(&session) == 0, "undo last suspend restores current index");
 }
 
+static void test_scheduler_limits_new_cards(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 3, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 1, 0);
+
+	check(session.due_count == 1, "new limit exposes one new card");
+	check(scheduler_current_index(&session) == 0, "new limit starts first card");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.new_count_today == 1, "new limit counts introduced card");
+	check(session.review_count_today == 0, "new limit does not count review");
+	check(session.due_count == 0, "new limit hides remaining new cards");
+	check(scheduler_is_complete(&session), "new limit completes visible queue");
+}
+
+static void test_scheduler_allows_started_new_card_after_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 1, 0);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	check(session.new_count_today == 1, "again counts first new card");
+	check(session.due_count == 1, "started new card stays due after limit");
+	check(scheduler_current_index(&session) == 0, "started new card stays current");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.due_count == 0, "finished started new card clears visible queue");
+}
+
+static void test_scheduler_limits_review_cards(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			100,
+			TEST_TODAY - 10
+		),
+		"first review card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			100,
+			TEST_TODAY - 10
+		),
+		"second review card restores"
+	);
+	scheduler_set_daily_limits(&session, 0, 1);
+
+	check(session.due_count == 1, "review limit exposes one review card");
+	check(scheduler_current_index(&session) == 0, "review limit starts first review card");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	check(session.review_count_today == 1, "review limit counts reviewed card");
+	check(session.due_count == 1, "started review card stays due after limit");
+	check(scheduler_current_index(&session) == 0, "started review card stays current");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.due_count == 0, "review limit hides remaining review cards");
+}
+
 static void build_test_deck(struct deck *deck)
 {
 	deck_init(deck, "state-test");
@@ -296,12 +386,17 @@ static void test_review_state_round_trip(void)
 	check(loaded.cards[0].interval_days == 0, "again interval loads");
 	check(loaded.cards[0].review_count == 1, "again review count loads");
 	check(loaded.cards[0].last_rating == SCHEDULER_RATING_AGAIN, "again rating loads");
+	check(loaded.cards[0].first_review_day == TEST_TODAY, "again first review day loads");
+	check(loaded.cards[0].last_review_day == TEST_TODAY, "again last review day loads");
 	check(!scheduler_card_is_due(&loaded, 1), "good card is scheduled after load");
 	check(loaded.cards[1].due_day == TEST_TODAY + 1, "good due day loads");
 	check(loaded.cards[1].interval_days == 1, "good interval loads");
 	check(loaded.cards[1].review_count == 1, "good review count loads");
 	check(loaded.cards[1].last_rating == SCHEDULER_RATING_GOOD, "good rating loads");
 	check(!loaded.cards[1].suspended, "saved active card loads unsuspended");
+	check(loaded.cards[1].first_review_day == TEST_TODAY, "good first review day loads");
+	check(loaded.cards[1].last_review_day == TEST_TODAY, "good last review day loads");
+	check(loaded.new_count_today == 2, "loaded state recounts new cards today");
 	check(loaded.due_count == 1, "due count recalculates on load");
 	check(scheduler_current_index(&loaded) == 0, "first due card selected after load");
 
@@ -351,7 +446,30 @@ static void test_review_state_loads_previous_current_format(void)
 		"previous current state format loads"
 	);
 	check(!session.cards[0].suspended, "previous state format defaults unsuspended");
+	check(session.cards[0].first_review_day == 0, "previous state format defaults first day");
+	check(session.cards[0].last_review_day == 0, "previous state format defaults last day");
 	check(!scheduler_card_is_due(&session, 0), "previous state due day loads");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_loads_suspended_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t1\t2\t20001\t1\t2500\t0\t1\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"suspended state format loads"
+	);
+	check(session.cards[0].suspended, "suspended state format loads flag");
+	check(session.cards[0].first_review_day == 0, "suspended state format defaults first day");
+	check(session.cards[0].last_review_day == 0, "suspended state format defaults last day");
+	check(!scheduler_card_is_due(&session, 0), "suspended state format hides due card");
 
 	remove(TEST_STATE_PATH);
 }
@@ -397,6 +515,58 @@ static void test_review_state_bad_load_does_not_mutate_session(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_app_settings_missing_file_uses_defaults(void)
+{
+	struct app_settings settings;
+
+	remove(TEST_SETTINGS_PATH);
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_NOT_FOUND,
+		"missing settings reports defaults"
+	);
+	check(settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT, "missing settings new default");
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"missing settings review default"
+	);
+}
+
+static void test_app_settings_loads_limits(void)
+{
+	struct app_settings settings;
+
+	write_file(TEST_SETTINGS_PATH, "# limits\nnew_limit\t1\nreview_limit\t2\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"settings load"
+	);
+	check(settings.new_limit == 1, "settings new limit loads");
+	check(settings.review_limit == 2, "settings review limit loads");
+
+	remove(TEST_SETTINGS_PATH);
+}
+
+static void test_app_settings_bad_file_uses_defaults(void)
+{
+	struct app_settings settings;
+
+	write_file(TEST_SETTINGS_PATH, "new_limit\tbad\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_BAD_FORMAT,
+		"bad settings reports ignored"
+	);
+	check(settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT, "bad settings new default");
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"bad settings review default"
+	);
+
+	remove(TEST_SETTINGS_PATH);
+}
+
 static void write_file(const char *path, const char *content)
 {
 	FILE *file = fopen(path, "w");
@@ -420,6 +590,10 @@ static void test_deck_index_builds_paths(void)
 	check(strcmp(entry.id, "sample") == 0, "deck index stores id");
 	check(strcmp(entry.cards_path, "/root/sample/cards.tsv") == 0, "cards path builds");
 	check(strcmp(entry.state_path, "/root/sample/state.tsv") == 0, "state path builds");
+	check(
+		strcmp(entry.settings_path, "/root/sample/settings.tsv") == 0,
+		"settings path builds"
+	);
 	check(!deck_index_build_entry(&entry, "/root", ".hidden"), "hidden id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
@@ -523,12 +697,19 @@ int main(void)
 	test_scheduler_undo_last_rating();
 	test_scheduler_suspend_current();
 	test_scheduler_suspend_last_due_card();
+	test_scheduler_limits_new_cards();
+	test_scheduler_allows_started_new_card_after_limit();
+	test_scheduler_limits_review_cards();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
 	test_review_state_loads_previous_current_format();
+	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
+	test_app_settings_missing_file_uses_defaults();
+	test_app_settings_loads_limits();
+	test_app_settings_bad_file_uses_defaults();
 	test_deck_index_builds_paths();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_reports_overflow();

@@ -86,17 +86,17 @@ Current persistence is in `review_state.c`.
 `state.tsv` columns are:
 
 ```text
-card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses<TAB>suspended
+card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses<TAB>suspended<TAB>first_review_day<TAB>last_review_day
 ```
 
 Load algorithm:
 
 1. Treat a missing file as normal new-deck state.
 2. Read bounded lines.
-3. Parse the current eight-field row, previous seven-field row, or old
+3. Parse the current ten-field row, previous eight- or seven-field row, or old
    four-field row.
 4. Validate review count, numeric rating, due day, interval, ease, lapses, and
-   suspended flag.
+   suspended/review-day fields.
 5. Find the matching card by `card_id`.
 6. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
@@ -167,6 +167,18 @@ the app leaves the current session in place and shows `reset failed`.
 `rating_counts` are live session counters. Restored state contributes to
 per-card `review_count`, but not to the current session's rating-count totals.
 
+## Settings
+
+Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use
+defaults of `new_limit=20` and `review_limit=200`. A value of `0` means
+unlimited.
+
+The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
+daily limits survive relaunch. New-card limits apply to unstarted new cards.
+Review limits apply to unstarted review cards. A card already started today is
+allowed to remain due, which lets same-day Again loops finish instead of hiding
+half-reviewed cards behind a limit.
+
 ## Scheduler
 
 The first spaced repetition algorithm is day-level and SM-2 inspired, not FSRS.
@@ -204,13 +216,15 @@ Algorithm:
 7. Write `deck.json` with format version, deck id, deck name, creator, and
    card count.
 8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
+9. Write default `settings.tsv` if it does not already exist.
 
-The converter deliberately does not open or rewrite `state.tsv`, so existing
-review progress survives re-imports into the same deck folder. The folder id is
-the runtime deck id on the 3DS, so the converter defaults `deck_id` from the
-output folder name and rejects mismatches. Current converter support is
-text-only; media, HTML/template rendering, and Anki collection parsing belong on
-the desktop side rather than on the 3DS.
+The converter deliberately does not open or rewrite existing `state.tsv` or
+`settings.tsv`, so review progress and deck-specific daily limits survive
+re-imports into the same deck folder. The folder id is the runtime deck id on
+the 3DS, so the converter defaults `deck_id` from the output folder name and
+rejects mismatches. Current converter support is text-only; media,
+HTML/template rendering, and Anki collection parsing belong on the desktop side
+rather than on the 3DS.
 
 ## C Boundaries We Want
 

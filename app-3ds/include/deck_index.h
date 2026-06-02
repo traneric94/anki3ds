@@ -15,6 +15,7 @@ struct deck_entry
 	char id[DECK_MAX_NAME_LENGTH];
 	char cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char state_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char settings_path[DECK_INDEX_MAX_PATH_LENGTH];
 };
 
 struct deck_index

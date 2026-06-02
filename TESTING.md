@@ -50,13 +50,21 @@ The tracked sample deck installs to:
 
 ```text
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
+local/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ```
 
 The app writes review progress beside the selected deck:
 
 ```text
 sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
+```
+
+Deck settings live beside the selected deck:
+
+```text
+sdmc:/3ds/anki3ds/decks/<deck-id>/settings.tsv
 ```
 
 Default Azahar keyboard controls used by the reviewer:

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
+DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,10 @@ def write_deck(
                 )
             )
             file.write("\n")
+
+    settings_path = output_dir / "settings.tsv"
+    if not settings_path.exists():
+        settings_path.write_text(DEFAULT_SETTINGS, encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:

@@ -107,11 +107,12 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
 
 Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
-reveals answers, records ratings, schedules cards with a day-level spaced
-repetition algorithm, saves local `state.tsv` progress beside that deck, and can
-undo the last rating or suspend action with `L`, suspend cards with `R`, or
-reset saved progress from the `SELECT` actions screen. The top screen shows
-deck/card content, while the bottom screen shows controls and review status.
+loads optional per-deck `settings.tsv` daily limits, reveals answers, records
+ratings, schedules cards with a day-level spaced repetition algorithm, saves
+local `state.tsv` progress beside that deck, and can undo the last rating or
+suspend action with `L`, suspend cards with `R`, or reset saved progress from
+the `SELECT` actions screen. The top screen shows deck/card content, while the
+bottom screen shows controls and review status.
 
 See:
 

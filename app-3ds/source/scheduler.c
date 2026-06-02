@@ -77,6 +77,112 @@ static unsigned int multiply_interval(
 	return (unsigned int)scaled;
 }
 
+static unsigned int scheduler_remaining_limit(unsigned int count, unsigned int limit)
+{
+	if (limit == 0)
+		return DECK_MAX_CARDS;
+	if (count >= limit)
+		return 0;
+
+	return limit - count;
+}
+
+static bool scheduler_card_calendar_due(const struct scheduler_session *session, size_t index)
+{
+	if (index >= session->card_count)
+		return false;
+	if (session->cards[index].suspended)
+		return false;
+
+	return session->cards[index].due_day <= session->today;
+}
+
+static bool scheduler_card_started_new_today(
+	const struct scheduler_session *session,
+	const struct scheduler_card *card
+)
+{
+	return card->first_review_day != 0 && card->first_review_day == session->today;
+}
+
+static bool scheduler_card_started_review_today(
+	const struct scheduler_session *session,
+	const struct scheduler_card *card
+)
+{
+	return (
+		card->last_review_day != 0 &&
+		card->last_review_day == session->today &&
+		!scheduler_card_started_new_today(session, card)
+	);
+}
+
+static bool scheduler_card_is_unstarted_new(
+	const struct scheduler_session *session,
+	size_t index
+)
+{
+	return (
+		scheduler_card_calendar_due(session, index) &&
+		session->cards[index].review_count == 0
+	);
+}
+
+static bool scheduler_card_is_unstarted_review(
+	const struct scheduler_session *session,
+	size_t index
+)
+{
+	const struct scheduler_card *card;
+
+	if (!scheduler_card_calendar_due(session, index))
+		return false;
+
+	card = &session->cards[index];
+	return (
+		card->review_count > 0 &&
+		!scheduler_card_started_new_today(session, card) &&
+		!scheduler_card_started_review_today(session, card)
+	);
+}
+
+static unsigned int scheduler_count_unstarted_due_before(
+	const struct scheduler_session *session,
+	size_t index,
+	bool count_new
+)
+{
+	unsigned int count = 0;
+
+	for (size_t due_index = 0; due_index < index; due_index++)
+	{
+		bool due = count_new ?
+			scheduler_card_is_unstarted_new(session, due_index) :
+			scheduler_card_is_unstarted_review(session, due_index);
+
+		if (due)
+			count++;
+	}
+
+	return count;
+}
+
+static void scheduler_recount_daily(struct scheduler_session *session)
+{
+	session->new_count_today = 0;
+	session->review_count_today = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		const struct scheduler_card *card = &session->cards[index];
+
+		if (scheduler_card_started_new_today(session, card))
+			session->new_count_today++;
+		else if (scheduler_card_started_review_today(session, card))
+			session->review_count_today++;
+	}
+}
+
 static void scheduler_recount_due(struct scheduler_session *session)
 {
 	session->due_count = 0;
@@ -86,6 +192,12 @@ static void scheduler_recount_due(struct scheduler_session *session)
 		if (scheduler_card_is_due(session, index))
 			session->due_count++;
 	}
+}
+
+static void scheduler_recount(struct scheduler_session *session)
+{
+	scheduler_recount_daily(session);
+	scheduler_recount_due(session);
 }
 
 static void scheduler_advance(struct scheduler_session *session)
@@ -119,7 +231,7 @@ void scheduler_init(struct scheduler_session *session, size_t card_count, unsign
 		session->cards[index].ease_permille = SCHEDULER_DEFAULT_EASE_PERMILLE;
 	}
 
-	scheduler_recount_due(session);
+	scheduler_recount(session);
 }
 
 bool scheduler_has_current(const struct scheduler_session *session)
@@ -139,12 +251,30 @@ size_t scheduler_current_index(const struct scheduler_session *session)
 
 bool scheduler_card_is_due(const struct scheduler_session *session, size_t index)
 {
-	if (index >= session->card_count)
-		return false;
-	if (session->cards[index].suspended)
+	unsigned int remaining;
+
+	if (!scheduler_card_calendar_due(session, index))
 		return false;
 
-	return session->cards[index].due_day <= session->today;
+	if (session->cards[index].review_count == 0)
+	{
+		remaining = scheduler_remaining_limit(
+			session->new_count_today,
+			session->new_limit
+		);
+		return scheduler_count_unstarted_due_before(session, index, true) < remaining;
+	}
+
+	if (scheduler_card_started_new_today(session, &session->cards[index]))
+		return true;
+	if (scheduler_card_started_review_today(session, &session->cards[index]))
+		return true;
+
+	remaining = scheduler_remaining_limit(
+		session->review_count_today,
+		session->review_limit
+	);
+	return scheduler_count_unstarted_due_before(session, index, false) < remaining;
 }
 
 bool scheduler_restore_card(
@@ -156,7 +286,9 @@ bool scheduler_restore_card(
 	unsigned int interval_days,
 	unsigned int ease_permille,
 	unsigned int lapses,
-	bool suspended
+	bool suspended,
+	unsigned int first_review_day,
+	unsigned int last_review_day
 )
 {
 	struct scheduler_card *card;
@@ -166,6 +298,10 @@ bool scheduler_restore_card(
 	if (!scheduler_rating_is_valid(last_rating))
 		return false;
 	if (due_day > SCHEDULER_MAX_DAY)
+		return false;
+	if (first_review_day > SCHEDULER_MAX_DAY)
+		return false;
+	if (last_review_day > SCHEDULER_MAX_DAY)
 		return false;
 	if (interval_days > SCHEDULER_MAX_INTERVAL_DAYS)
 		return false;
@@ -180,6 +316,8 @@ bool scheduler_restore_card(
 	card = &session->cards[index];
 	card->review_count = review_count;
 	card->last_rating = last_rating;
+	card->first_review_day = first_review_day;
+	card->last_review_day = last_review_day;
 	card->due_day = due_day;
 	card->interval_days = interval_days;
 	card->ease_permille = ease_permille;
@@ -187,8 +325,20 @@ bool scheduler_restore_card(
 	card->suspended = suspended;
 	session->undo.available = false;
 	session->undo.kind = SCHEDULER_UNDO_NONE;
-	scheduler_recount_due(session);
+	scheduler_recount(session);
 	return true;
+}
+
+void scheduler_set_daily_limits(
+	struct scheduler_session *session,
+	unsigned int new_limit,
+	unsigned int review_limit
+)
+{
+	session->new_limit = new_limit;
+	session->review_limit = review_limit;
+	scheduler_recount(session);
+	scheduler_reposition(session);
 }
 
 void scheduler_reposition(struct scheduler_session *session)
@@ -290,6 +440,8 @@ static void scheduler_save_undo(
 	session->undo.current_index = session->current_index;
 	session->undo.due_count = session->due_count;
 	session->undo.reviewed_count = session->reviewed_count;
+	session->undo.new_count_today = session->new_count_today;
+	session->undo.review_count_today = session->review_count_today;
 	session->undo.rating = rating;
 	session->undo.card = session->cards[index];
 }
@@ -309,6 +461,9 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 
 	use_initial_schedule = scheduler_card_is_in_initial_learning(card);
 	card->last_rating = rating;
+	if (card->review_count == 0 && card->first_review_day == 0)
+		card->first_review_day = session->today;
+	card->last_review_day = session->today;
 	session->rating_counts[rating]++;
 	session->reviewed_count++;
 
@@ -319,7 +474,7 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 
 	card->review_count++;
 	card->ease_permille = clamp_ease(card->ease_permille);
-	scheduler_recount_due(session);
+	scheduler_recount(session);
 
 	scheduler_advance(session);
 }
@@ -334,7 +489,7 @@ bool scheduler_suspend_current(struct scheduler_session *session)
 	scheduler_save_undo(session, SCHEDULER_UNDO_SUSPEND, SCHEDULER_RATING_COUNT);
 	card = &session->cards[session->current_index];
 	card->suspended = true;
-	scheduler_recount_due(session);
+	scheduler_recount(session);
 	scheduler_advance(session);
 	return true;
 }
@@ -354,6 +509,8 @@ bool scheduler_undo_last(struct scheduler_session *session)
 	session->current_index = session->undo.current_index;
 	session->due_count = session->undo.due_count;
 	session->reviewed_count = session->undo.reviewed_count;
+	session->new_count_today = session->undo.new_count_today;
+	session->review_count_today = session->undo.review_count_today;
 	if (
 		session->undo.kind == SCHEDULER_UNDO_RATING &&
 		scheduler_rating_is_valid(session->undo.rating) &&

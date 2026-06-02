@@ -60,7 +60,9 @@ class ConverterTests(unittest.TestCase):
             output = Path(temp_dir) / "sample"
             output.mkdir()
             state = output / "state.tsv"
+            settings = output / "settings.tsv"
             state.write_text("existing-state\n", encoding="utf-8")
+            settings.write_text("new_limit\t1\nreview_limit\t2\n", encoding="utf-8")
 
             write_deck(output, "sample", "Sample", cards)
 
@@ -71,6 +73,23 @@ class ConverterTests(unittest.TestCase):
                 (output / "cards.tsv").read_text(encoding="utf-8").startswith("card-")
             )
             self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertEqual(
+                settings.read_text(encoding="utf-8"),
+                "new_limit\t1\nreview_limit\t2\n",
+            )
+
+    def test_write_deck_creates_default_settings(self):
+        cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            write_deck(output, "sample", "Sample", cards)
+
+            self.assertEqual(
+                (output / "settings.tsv").read_text(encoding="utf-8"),
+                "new_limit\t20\nreview_limit\t200\n",
+            )
 
     def test_write_deck_rejects_invalid_folder_id(self):
         cards = convert_lines(["front\tback"], 0, 1, None)

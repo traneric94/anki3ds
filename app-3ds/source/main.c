@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "app_settings.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "review_state.h"
@@ -30,12 +31,15 @@ struct app_state
 	enum app_mode action_return_mode;
 	bool revealed;
 	enum deck_load_result load_result;
+	enum app_settings_load_result settings_load_result;
 	enum review_state_load_result state_load_result;
 	enum review_state_save_result state_save_result;
 	const char *state_message;
 	size_t selected_deck_index;
 	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
+	struct app_settings settings;
 	struct deck_index deck_index;
 	struct deck deck;
 	struct scheduler_session session;
@@ -148,6 +152,14 @@ static size_t scheduler_new_due_count(const struct scheduler_session *session)
 	return count;
 }
 
+static void format_daily_limit(char *destination, size_t destination_size, unsigned int limit)
+{
+	if (limit == 0)
+		snprintf(destination, destination_size, "%s", "all");
+	else
+		snprintf(destination, destination_size, "%u", limit);
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -194,8 +206,15 @@ static void app_load_selected_deck(struct app_state *app)
 
 	copy_string(app->active_cards_path, sizeof(app->active_cards_path), entry->cards_path);
 	copy_string(app->active_state_path, sizeof(app->active_state_path), entry->state_path);
+	copy_string(
+		app->active_settings_path,
+		sizeof(app->active_settings_path),
+		entry->settings_path
+	);
 	deck_init(&app->deck, entry->id);
 	app->revealed = false;
+	app_settings_default(&app->settings);
+	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
 	app->state_message = "State: not loaded";
@@ -203,7 +222,16 @@ static void app_load_selected_deck(struct app_state *app)
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
+		app->settings_load_result = app_settings_load(
+			&app->settings,
+			app->active_settings_path
+		);
 		scheduler_init(&app->session, app->deck.card_count, current_day());
+		scheduler_set_daily_limits(
+			&app->session,
+			app->settings.new_limit,
+			app->settings.review_limit
+		);
 		app->state_load_result = review_state_load(
 			&app->deck,
 			&app->session,
@@ -412,11 +440,24 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HSTART: exit");
 		break;
 	case APP_MODE_REVIEW:
+	{
+		char new_limit[16];
+		char review_limit[16];
+
+		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
+		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
 		printf("\x1b[1;1HReview");
 		printf(
 			"\x1b[3;1HDue %lu   New %lu",
 			(unsigned long)app->session.due_count,
 			(unsigned long)scheduler_new_due_count(&app->session)
+		);
+		printf(
+			"\x1b[4;1HNew %u/%s  Review %u/%s",
+			app->session.new_count_today,
+			new_limit,
+			app->session.review_count_today,
+			review_limit
 		);
 
 		if (app->revealed)
@@ -437,15 +478,38 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: exit");
 		}
+		printf(
+			"\x1b[27;1HSettings: %s",
+			app_settings_load_result_name(app->settings_load_result)
+		);
 		break;
+	}
 	case APP_MODE_SUMMARY:
+	{
+		char new_limit[16];
+		char review_limit[16];
+
+		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
+		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
 		printf("\x1b[1;1HNo cards due now");
 		printf("\x1b[3;1HB: deck list");
 		printf("\x1b[5;1HL: undo last action");
 		printf("\x1b[7;1HSELECT: actions");
 		printf("\x1b[9;1HSTART: exit");
+		printf(
+			"\x1b[11;1HNew %u/%s  Review %u/%s",
+			app->session.new_count_today,
+			new_limit,
+			app->session.review_count_today,
+			review_limit
+		);
+		printf(
+			"\x1b[13;1HSettings: %s",
+			app_settings_load_result_name(app->settings_load_result)
+		);
 		printf("\x1b[27;1HReviewed this session: %u", app->session.reviewed_count);
 		break;
+	}
 	case APP_MODE_ACTIONS:
 		printf("\x1b[1;1HActions");
 		printf("\x1b[3;1HA: confirm reset");

@@ -8,7 +8,8 @@
 
 #define STATE_LEGACY_FIELD_COUNT 4
 #define STATE_PREVIOUS_FIELD_COUNT 7
-#define STATE_CURRENT_FIELD_COUNT 8
+#define STATE_SUSPENDED_FIELD_COUNT 8
+#define STATE_CURRENT_FIELD_COUNT 10
 #define STATE_MAX_LINE_LENGTH 192
 #define STATE_MAX_PATH_LENGTH 256
 
@@ -18,6 +19,8 @@ struct parsed_state
 	bool suspended;
 	unsigned int review_count;
 	enum scheduler_rating last_rating;
+	unsigned int first_review_day;
+	unsigned int last_review_day;
 	unsigned int due_day;
 	unsigned int interval_days;
 	unsigned int ease_permille;
@@ -146,6 +149,8 @@ static bool parse_legacy_state_fields(
 	state->card_id = fields[0];
 	state->last_rating = (enum scheduler_rating)rating_value;
 	state->suspended = false;
+	state->first_review_day = 0;
+	state->last_review_day = 0;
 	state->due_day = done_value && today < SCHEDULER_MAX_DAY ? today + 1 : today;
 	state->interval_days = done_value ? 1 : 0;
 	state->ease_permille = SCHEDULER_DEFAULT_EASE_PERMILLE;
@@ -161,6 +166,8 @@ static bool parse_current_state_fields(
 {
 	unsigned int rating_value;
 	unsigned int suspended_value = 0;
+	unsigned int first_review_day = 0;
+	unsigned int last_review_day = 0;
 
 	if (fields[0][0] == '\0')
 		return false;
@@ -187,8 +194,18 @@ static bool parse_current_state_fields(
 	if (!parse_unsigned_field(fields[6], 1000000, &state->lapses))
 		return false;
 	if (
-		field_count == STATE_CURRENT_FIELD_COUNT &&
+		(field_count == STATE_SUSPENDED_FIELD_COUNT || field_count == STATE_CURRENT_FIELD_COUNT) &&
 		!parse_unsigned_field(fields[7], 1, &suspended_value)
+	)
+	{
+		return false;
+	}
+	if (
+		field_count == STATE_CURRENT_FIELD_COUNT &&
+		(
+			!parse_unsigned_field(fields[8], SCHEDULER_MAX_DAY, &first_review_day) ||
+			!parse_unsigned_field(fields[9], SCHEDULER_MAX_DAY, &last_review_day)
+		)
 	)
 	{
 		return false;
@@ -197,6 +214,8 @@ static bool parse_current_state_fields(
 	state->card_id = fields[0];
 	state->last_rating = (enum scheduler_rating)rating_value;
 	state->suspended = suspended_value != 0;
+	state->first_review_day = first_review_day;
+	state->last_review_day = last_review_day;
 	return true;
 }
 
@@ -222,6 +241,7 @@ static bool parse_state_line(
 		return parse_legacy_state_fields(fields, state, today);
 	if (
 		field_count == STATE_PREVIOUS_FIELD_COUNT ||
+		field_count == STATE_SUSPENDED_FIELD_COUNT ||
 		field_count == STATE_CURRENT_FIELD_COUNT
 	)
 	{
@@ -290,7 +310,9 @@ enum review_state_load_result review_state_load(
 				state.interval_days,
 				state.ease_permille,
 				state.lapses,
-				state.suspended
+				state.suspended,
+				state.first_review_day,
+				state.last_review_day
 			)
 		)
 		{
@@ -333,7 +355,7 @@ enum review_state_save_result review_state_save(
 
 		if (fprintf(
 			file,
-			"%s\t%u\t%s\t%u\t%u\t%u\t%u\t%u\n",
+			"%s\t%u\t%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n",
 			deck->cards[index].card_id,
 			state->review_count,
 			rating_to_field(state->last_rating),
@@ -341,7 +363,9 @@ enum review_state_save_result review_state_save(
 			state->interval_days,
 			state->ease_permille,
 			state->lapses,
-			state->suspended ? 1u : 0u
+			state->suspended ? 1u : 0u,
+			state->first_review_day,
+			state->last_review_day
 		) < 0)
 		{
 			fclose(file);

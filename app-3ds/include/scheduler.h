@@ -33,6 +33,8 @@ struct scheduler_card
 	bool suspended;
 	enum scheduler_rating last_rating;
 	unsigned int review_count;
+	unsigned int first_review_day;
+	unsigned int last_review_day;
 	unsigned int due_day;
 	unsigned int interval_days;
 	unsigned int ease_permille;
@@ -47,6 +49,8 @@ struct scheduler_undo
 	size_t current_index;
 	size_t due_count;
 	unsigned int reviewed_count;
+	unsigned int new_count_today;
+	unsigned int review_count_today;
 	enum scheduler_rating rating;
 	struct scheduler_card card;
 };
@@ -58,6 +62,10 @@ struct scheduler_session
 	unsigned int today;
 	size_t due_count;
 	unsigned int reviewed_count;
+	unsigned int new_limit;
+	unsigned int review_limit;
+	unsigned int new_count_today;
+	unsigned int review_count_today;
 	unsigned int rating_counts[SCHEDULER_RATING_COUNT];
 	struct scheduler_undo undo;
 	struct scheduler_card cards[DECK_MAX_CARDS];
@@ -77,7 +85,14 @@ bool scheduler_restore_card(
 	unsigned int interval_days,
 	unsigned int ease_permille,
 	unsigned int lapses,
-	bool suspended
+	bool suspended,
+	unsigned int first_review_day,
+	unsigned int last_review_day
+);
+void scheduler_set_daily_limits(
+	struct scheduler_session *session,
+	unsigned int new_limit,
+	unsigned int review_limit
 );
 void scheduler_reposition(struct scheduler_session *session);
 void scheduler_rate_current(struct scheduler_session *session, enum scheduler_rating rating);

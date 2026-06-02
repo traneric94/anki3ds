@@ -122,6 +122,18 @@ bool deck_index_build_entry(struct deck_entry *entry, const char *root_path, con
 		return false;
 	if (!path_join_deck_file(entry->state_path, sizeof(entry->state_path), root_path, deck_id, "state.tsv"))
 		return false;
+	if (
+		!path_join_deck_file(
+			entry->settings_path,
+			sizeof(entry->settings_path),
+			root_path,
+			deck_id,
+			"settings.tsv"
+		)
+	)
+	{
+		return false;
+	}
 
 	copy_string(entry->id, sizeof(entry->id), deck_id);
 	return true;
