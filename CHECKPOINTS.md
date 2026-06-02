@@ -148,7 +148,7 @@ Acceptance test:
 3. Suspend one card.
 4. Undo one rating.
 5. Restore suspended cards from the actions screen.
-6. Set `new_limit` and `review_limit` in `settings.tsv`.
+6. Set `new_limit` and `review_limit` from the actions screen.
 7. Relaunch and confirm state and daily limits persisted.
 
 Pass condition:

@@ -15,6 +15,8 @@
 #define TEST_STATE_TEMP_PATH TEST_STATE_PATH ".tmp"
 #define TEST_STATE_BACKUP_PATH TEST_STATE_PATH ".bak"
 #define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
+#define TEST_SETTINGS_TEMP_PATH TEST_SETTINGS_PATH ".tmp"
+#define TEST_SETTINGS_BACKUP_PATH TEST_SETTINGS_PATH ".bak"
 #define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
@@ -625,6 +627,23 @@ static void test_app_settings_loads_limits(void)
 	remove(TEST_SETTINGS_PATH);
 }
 
+static void test_app_settings_loads_backup_when_primary_missing(void)
+{
+	struct app_settings settings;
+
+	remove(TEST_SETTINGS_PATH);
+	write_file(TEST_SETTINGS_BACKUP_PATH, "new_limit\t9\nreview_limit\t10\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"backup settings load when primary is missing"
+	);
+	check(settings.new_limit == 9, "backup settings new limit loads");
+	check(settings.review_limit == 10, "backup settings review limit loads");
+
+	remove(TEST_SETTINGS_BACKUP_PATH);
+}
+
 static void test_app_settings_bad_file_uses_defaults(void)
 {
 	struct app_settings settings;
@@ -640,6 +659,61 @@ static void test_app_settings_bad_file_uses_defaults(void)
 		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
 		"bad settings review default"
 	);
+
+	remove(TEST_SETTINGS_PATH);
+}
+
+static void test_app_settings_save_round_trip(void)
+{
+	struct app_settings settings;
+	struct app_settings loaded;
+
+	remove(TEST_SETTINGS_PATH);
+	remove(TEST_SETTINGS_TEMP_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+
+	settings.new_limit = 3;
+	settings.review_limit = 7;
+
+	check(
+		app_settings_save(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_SAVE_OK,
+		"settings save succeeds"
+	);
+	check(
+		app_settings_load(&loaded, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"saved settings load"
+	);
+	check(loaded.new_limit == 3, "saved settings new limit loads");
+	check(loaded.review_limit == 7, "saved settings review limit loads");
+	check(access(TEST_SETTINGS_TEMP_PATH, F_OK) != 0, "settings save removes temp");
+	check(access(TEST_SETTINGS_BACKUP_PATH, F_OK) != 0, "settings save removes backup");
+
+	remove(TEST_SETTINGS_PATH);
+}
+
+static void test_app_settings_save_replaces_existing_file(void)
+{
+	struct app_settings settings;
+	struct app_settings loaded;
+
+	remove(TEST_SETTINGS_TEMP_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+	write_file(TEST_SETTINGS_PATH, "new_limit\t1\nreview_limit\t2\n");
+
+	settings.new_limit = 0;
+	settings.review_limit = 50;
+
+	check(
+		app_settings_save(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_SAVE_OK,
+		"settings save replaces existing file"
+	);
+	check(
+		app_settings_load(&loaded, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"replaced settings load"
+	);
+	check(loaded.new_limit == 0, "replaced settings new limit loads");
+	check(loaded.review_limit == 50, "replaced settings review limit loads");
+	check(access(TEST_SETTINGS_BACKUP_PATH, F_OK) != 0, "settings save removes old backup");
 
 	remove(TEST_SETTINGS_PATH);
 }
@@ -911,7 +985,10 @@ int main(void)
 	test_review_state_delete_removes_save_artifacts();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
+	test_app_settings_loads_backup_when_primary_missing();
 	test_app_settings_bad_file_uses_defaults();
+	test_app_settings_save_round_trip();
+	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_loads_display_names();

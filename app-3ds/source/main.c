@@ -19,6 +19,18 @@
 #define DECK_NAME_HEADER_WIDTH 42
 #define DECK_NAME_SELECTOR_WIDTH 32
 
+static const unsigned int daily_limit_presets[] = {
+	5,
+	10,
+	20,
+	50,
+	100,
+	200,
+	500,
+	1000,
+	0,
+};
+
 enum app_mode
 {
 	APP_MODE_DECK_SELECT,
@@ -26,12 +38,22 @@ enum app_mode
 	APP_MODE_REVIEW,
 	APP_MODE_SUMMARY,
 	APP_MODE_ACTIONS,
+	APP_MODE_SETTINGS,
 };
 
 enum action_item
 {
 	ACTION_ITEM_UNSUSPEND_ALL,
+	ACTION_ITEM_DAILY_LIMITS,
 	ACTION_ITEM_RESET_PROGRESS,
+	ACTION_ITEM_COUNT,
+};
+
+enum setting_item
+{
+	SETTING_ITEM_NEW_LIMIT,
+	SETTING_ITEM_REVIEW_LIMIT,
+	SETTING_ITEM_COUNT,
 };
 
 struct app_state
@@ -42,14 +64,18 @@ struct app_state
 	bool revealed;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
+	enum app_settings_save_result settings_save_result;
 	enum review_state_load_result state_load_result;
 	enum review_state_save_result state_save_result;
 	const char *state_message;
+	const char *settings_message;
+	enum setting_item selected_setting;
 	size_t selected_deck_index;
 	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
 	struct app_settings settings;
+	struct app_settings edited_settings;
 	struct deck_index deck_index;
 	struct deck_summary deck_summaries[DECK_INDEX_MAX_DECKS];
 	struct deck deck;
@@ -193,6 +219,58 @@ static void format_daily_limit(char *destination, size_t destination_size, unsig
 		snprintf(destination, destination_size, "%u", limit);
 }
 
+static size_t daily_limit_preset_count(void)
+{
+	return sizeof(daily_limit_presets) / sizeof(daily_limit_presets[0]);
+}
+
+static unsigned int adjusted_daily_limit(unsigned int current, bool increase)
+{
+	size_t preset_count = daily_limit_preset_count();
+
+	for (size_t index = 0; index < preset_count; index++)
+	{
+		if (daily_limit_presets[index] == current)
+		{
+			if (increase)
+				return daily_limit_presets[(index + 1) % preset_count];
+			if (index == 0)
+				return daily_limit_presets[preset_count - 1];
+
+			return daily_limit_presets[index - 1];
+		}
+	}
+
+	if (increase)
+	{
+		for (size_t index = 0; index < preset_count; index++)
+		{
+			if (daily_limit_presets[index] != 0 && daily_limit_presets[index] > current)
+				return daily_limit_presets[index];
+		}
+
+		return 0;
+	}
+
+	for (size_t offset = 0; offset < preset_count; offset++)
+	{
+		size_t index = preset_count - offset - 1;
+
+		if (daily_limit_presets[index] != 0 && daily_limit_presets[index] < current)
+			return daily_limit_presets[index];
+	}
+
+	return 0;
+}
+
+static unsigned int *selected_daily_limit(struct app_state *app)
+{
+	if (app->selected_setting == SETTING_ITEM_NEW_LIMIT)
+		return &app->edited_settings.new_limit;
+
+	return &app->edited_settings.review_limit;
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -272,9 +350,11 @@ static void app_load_selected_deck(struct app_state *app)
 	app->revealed = false;
 	app_settings_default(&app->settings);
 	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
+	app->settings_save_result = APP_SETTINGS_SAVE_OK;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
 	app->state_message = "State: not loaded";
+	app->settings_message = "settings not saved";
 	app->load_result = deck_load_cards(&app->deck, app->active_cards_path);
 
 	if (app->load_result == DECK_LOAD_OK)
@@ -313,6 +393,14 @@ static void app_open_actions(struct app_state *app)
 	app->action_return_mode = app->mode;
 	app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
 	app->mode = APP_MODE_ACTIONS;
+}
+
+static void app_open_settings(struct app_state *app)
+{
+	app->edited_settings = app->settings;
+	app->selected_setting = SETTING_ITEM_NEW_LIMIT;
+	app->settings_message = "settings not saved";
+	app->mode = APP_MODE_SETTINGS;
 }
 
 static void app_init(struct app_state *app)
@@ -472,6 +560,8 @@ static void draw_actions_screen(const struct app_state *app)
 {
 	const char *unsuspend_marker =
 		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? ">" : " ";
+	const char *settings_marker =
+		app->selected_action == ACTION_ITEM_DAILY_LIMITS ? ">" : " ";
 	const char *reset_marker =
 		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? ">" : " ";
 
@@ -479,22 +569,63 @@ static void draw_actions_screen(const struct app_state *app)
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[3;1HActions");
 	printf("\x1b[6;1H%s Restore suspended cards", unsuspend_marker);
-	printf("\x1b[8;1H%s Reset deck progress", reset_marker);
-	printf("\x1b[11;1HDeck: ");
+	printf("\x1b[8;1H%s Daily limits", settings_marker);
+	printf("\x1b[10;1H%s Reset deck progress", reset_marker);
+	printf("\x1b[13;1HDeck: ");
 	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
 
 	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 	{
-		printf("\x1b[14;1HClears all suspended flags");
-		printf("\x1b[15;1Hfor the active deck.");
+		printf("\x1b[16;1HClears all suspended flags");
+		printf("\x1b[17;1Hfor the active deck.");
+	}
+	else if (app->selected_action == ACTION_ITEM_DAILY_LIMITS)
+	{
+		printf("\x1b[16;1HChange new and review");
+		printf("\x1b[17;1Hlimits for this deck.");
 	}
 	else
 	{
-		printf("\x1b[14;1HRemoves saved progress for");
-		printf("\x1b[15;1Hthe active deck, then reloads.");
+		printf("\x1b[16;1HRemoves saved progress for");
+		printf("\x1b[17;1Hthe active deck, then reloads.");
 	}
 
-	printf("\x1b[18;1HState: %s", app->state_message);
+	printf("\x1b[21;1HState: %s", app->state_message);
+}
+
+static void draw_settings_screen(const struct app_state *app)
+{
+	const char *new_marker =
+		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? ">" : " ";
+	const char *review_marker =
+		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? ">" : " ";
+	char new_limit[16];
+	char review_limit[16];
+
+	format_daily_limit(
+		new_limit,
+		sizeof(new_limit),
+		app->edited_settings.new_limit
+	);
+	format_daily_limit(
+		review_limit,
+		sizeof(review_limit),
+		app->edited_settings.review_limit
+	);
+
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds Review");
+	printf("\x1b[3;1HDaily limits");
+	printf("\x1b[5;1HDeck: ");
+	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	printf("\x1b[8;1H%s New cards:    %s", new_marker, new_limit);
+	printf("\x1b[10;1H%s Review cards: %s", review_marker, review_limit);
+	printf("\x1b[13;1H0 means all available cards.");
+	printf(
+		"\x1b[16;1HCurrent source: %s",
+		app_settings_load_result_name(app->settings_load_result)
+	);
+	printf("\x1b[18;1HSave: %s", app->settings_message);
 }
 
 static void draw_bottom_controls_screen(const struct app_state *app)
@@ -618,6 +749,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[7;1HB or SELECT: cancel");
 		printf("\x1b[9;1HSTART: exit");
 		break;
+	case APP_MODE_SETTINGS:
+		printf("\x1b[1;1HDaily limits");
+		printf("\x1b[3;1HD-pad Up/Down: field");
+		printf("\x1b[5;1HD-pad Left/Right: value");
+		printf("\x1b[7;1HA: save limits");
+		printf("\x1b[9;1HB or SELECT: cancel");
+		printf("\x1b[11;1HSTART: exit");
+		break;
 	}
 }
 
@@ -641,6 +780,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_ACTIONS:
 		draw_actions_screen(app);
+		break;
+	case APP_MODE_SETTINGS:
+		draw_settings_screen(app);
 		break;
 	}
 
@@ -764,6 +906,35 @@ static bool unsuspend_all_cards(struct app_state *app)
 	return true;
 }
 
+static bool save_daily_limits(struct app_state *app)
+{
+	app->settings_save_result = app_settings_save(
+		&app->edited_settings,
+		app->active_settings_path
+	);
+	app->settings_message = app_settings_save_result_name(app->settings_save_result);
+	app->state_message = app->settings_message;
+
+	if (app->settings_save_result != APP_SETTINGS_SAVE_OK)
+		return true;
+
+	app->settings = app->edited_settings;
+	app->settings_load_result = APP_SETTINGS_LOAD_OK;
+	scheduler_set_daily_limits(
+		&app->session,
+		app->settings.new_limit,
+		app->settings.review_limit
+	);
+	app->revealed = false;
+
+	if (scheduler_is_complete(&app->session))
+		app->mode = APP_MODE_SUMMARY;
+	else
+		app->mode = APP_MODE_REVIEW;
+
+	return true;
+}
+
 static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 {
 	if (keys_down & KEY_SELECT)
@@ -802,12 +973,19 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 
 static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
 {
-	if (keys_down & (KEY_DUP | KEY_DDOWN))
+	if (keys_down & KEY_DUP)
 	{
 		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
-			app->selected_action = ACTION_ITEM_RESET_PROGRESS;
+			app->selected_action = ACTION_ITEM_COUNT - 1;
 		else
-			app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
+			app->selected_action--;
+		return true;
+	}
+
+	if (keys_down & KEY_DDOWN)
+	{
+		app->selected_action =
+			(enum action_item)((app->selected_action + 1) % ACTION_ITEM_COUNT);
 		return true;
 	}
 
@@ -815,11 +993,47 @@ static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
 	{
 		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 			return unsuspend_all_cards(app);
+		if (app->selected_action == ACTION_ITEM_DAILY_LIMITS)
+		{
+			app_open_settings(app);
+			return true;
+		}
 
 		if (!reset_progress(app))
 			app->mode = APP_MODE_ACTIONS;
 		return true;
 	}
+
+	if (keys_down & (KEY_B | KEY_SELECT))
+	{
+		app->mode = app->action_return_mode;
+		return true;
+	}
+
+	return false;
+}
+
+static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & (KEY_DUP | KEY_DDOWN))
+	{
+		if (app->selected_setting == SETTING_ITEM_NEW_LIMIT)
+			app->selected_setting = SETTING_ITEM_REVIEW_LIMIT;
+		else
+			app->selected_setting = SETTING_ITEM_NEW_LIMIT;
+		return true;
+	}
+
+	if (keys_down & (KEY_DLEFT | KEY_DRIGHT))
+	{
+		unsigned int *limit = selected_daily_limit(app);
+
+		*limit = adjusted_daily_limit(*limit, (keys_down & KEY_DRIGHT) != 0);
+		return true;
+	}
+
+	if (keys_down & KEY_A)
+		return save_daily_limits(app);
 
 	if (keys_down & (KEY_B | KEY_SELECT))
 	{
@@ -836,6 +1050,8 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return app_handle_deck_select_input(app, keys_down);
 	if (app->mode == APP_MODE_ACTIONS)
 		return app_handle_actions_input(app, keys_down);
+	if (app->mode == APP_MODE_SETTINGS)
+		return app_handle_settings_input(app, keys_down);
 
 	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
 	{

@@ -100,6 +100,10 @@ new_limit	20
 review_limit	200
 ```
 
+The app may briefly create `settings.tsv.tmp` and `settings.tsv.bak` while
+saving daily limits from the actions screen. If `settings.tsv` is missing after
+an interrupted save, the app can load `settings.tsv.bak`.
+
 ## state.tsv
 
 Current columns:

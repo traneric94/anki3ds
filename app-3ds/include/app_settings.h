@@ -12,6 +12,12 @@ enum app_settings_load_result
 	APP_SETTINGS_LOAD_BAD_FORMAT,
 };
 
+enum app_settings_save_result
+{
+	APP_SETTINGS_SAVE_OK,
+	APP_SETTINGS_SAVE_FAILED,
+};
+
 struct app_settings
 {
 	unsigned int new_limit;
@@ -20,6 +26,11 @@ struct app_settings
 
 void app_settings_default(struct app_settings *settings);
 enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path);
+enum app_settings_save_result app_settings_save(
+	const struct app_settings *settings,
+	const char *path
+);
 const char *app_settings_load_result_name(enum app_settings_load_result result);
+const char *app_settings_save_result_name(enum app_settings_save_result result);
 
 #endif

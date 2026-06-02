@@ -171,7 +171,8 @@ included in total card counts.
 
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset
-progress. Reset remains available by moving the action selection first.
+progress. Daily limits can be edited from the same actions screen. Reset
+remains available by moving the action selection first.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
@@ -190,7 +191,8 @@ per-card `review_count`, but not to the current session's rating-count totals.
 
 Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use
 defaults of `new_limit=20` and `review_limit=200`. A value of `0` means
-unlimited.
+unlimited. The app can write `settings.tsv` from the daily limits screen using
+the same temp/backup save pattern as review state.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards.
