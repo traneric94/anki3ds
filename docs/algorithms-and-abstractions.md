@@ -112,12 +112,15 @@ Save algorithm:
 1. Build `state.tsv.tmp`.
 2. Write one state row per loaded card.
 3. Close the temp file and check close errors.
-4. Remove the old `state.tsv`.
-5. Rename the temp file to `state.tsv`.
+4. Remove stale `state.tsv.bak` when present.
+5. Rename the old `state.tsv` to `state.tsv.bak` when present.
+6. Rename the temp file to `state.tsv`.
+7. Remove `state.tsv.bak` after the new state is in place.
 
-This is temp-file backed and simple to inspect on the SD card. Because the
-current code removes the old file before rename, power-loss behavior should be
-tested on hardware before calling the save fully atomic.
+If the main state file is missing on load, the app tries `state.tsv.bak`. Reset
+removes `state.tsv`, `state.tsv.tmp`, and `state.tsv.bak` for the active deck.
+This remains simple to inspect on the SD card while avoiding the known
+remove-before-rename data-loss window.
 
 ## Review Loop
 

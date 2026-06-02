@@ -27,6 +27,7 @@ enum review_state_save_result review_state_save(
 	const struct scheduler_session *session,
 	const char *path
 );
+bool review_state_delete(const char *path);
 const char *review_state_load_result_name(enum review_state_load_result result);
 const char *review_state_save_result_name(enum review_state_save_result result);
 

@@ -1,5 +1,4 @@
 #include <3ds.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -622,8 +621,7 @@ static bool reset_progress(struct app_state *app)
 		return false;
 	}
 
-	errno = 0;
-	if (remove(app->active_state_path) != 0 && errno != ENOENT)
+	if (!review_state_delete(app->active_state_path))
 	{
 		app->state_message = "reset failed";
 		return false;

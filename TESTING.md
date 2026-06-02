@@ -61,6 +61,8 @@ The app writes review progress beside the selected deck:
 sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
 
+During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
+
 Deck settings live beside the selected deck:
 
 ```text

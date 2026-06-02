@@ -11,6 +11,8 @@
 #include "scheduler.h"
 
 #define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
+#define TEST_STATE_TEMP_PATH TEST_STATE_PATH ".tmp"
+#define TEST_STATE_BACKUP_PATH TEST_STATE_PATH ".bak"
 #define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
@@ -399,8 +401,10 @@ static void test_review_state_round_trip(void)
 	check(loaded.new_count_today == 2, "loaded state recounts new cards today");
 	check(loaded.due_count == 1, "due count recalculates on load");
 	check(scheduler_current_index(&loaded) == 0, "first due card selected after load");
+	check(access(TEST_STATE_BACKUP_PATH, F_OK) != 0, "state save removes backup");
 
 	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
 }
 
 static void test_review_state_round_trip_suspended_card(void)
@@ -430,6 +434,29 @@ static void test_review_state_round_trip_suspended_card(void)
 	check(scheduler_current_index(&loaded) == 1, "loaded suspended state picks next card");
 
 	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_loads_backup_when_primary_missing(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_BACKUP_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"backup state loads when primary is missing"
+	);
+	check(session.cards[0].review_count == 1, "backup state card loads");
+	check(!scheduler_card_is_due(&session, 0), "backup state due day loads");
+
+	remove(TEST_STATE_BACKUP_PATH);
 }
 
 static void test_review_state_loads_previous_current_format(void)
@@ -494,6 +521,18 @@ static void test_review_state_loads_legacy_done_format(void)
 	check(session.due_count == 1, "legacy due count recalculates");
 
 	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_delete_removes_save_artifacts(void)
+{
+	write_file(TEST_STATE_PATH, "state\n");
+	write_file(TEST_STATE_TEMP_PATH, "temp\n");
+	write_file(TEST_STATE_BACKUP_PATH, "backup\n");
+
+	check(review_state_delete(TEST_STATE_PATH), "review state delete succeeds");
+	check(access(TEST_STATE_PATH, F_OK) != 0, "review state delete removes primary");
+	check(access(TEST_STATE_TEMP_PATH, F_OK) != 0, "review state delete removes temp");
+	check(access(TEST_STATE_BACKUP_PATH, F_OK) != 0, "review state delete removes backup");
 }
 
 static void test_review_state_bad_load_does_not_mutate_session(void)
@@ -703,10 +742,12 @@ int main(void)
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
+	test_review_state_loads_backup_when_primary_missing();
 	test_review_state_loads_previous_current_format();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
+	test_review_state_delete_removes_save_artifacts();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_bad_file_uses_defaults();
