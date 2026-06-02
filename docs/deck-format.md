@@ -20,16 +20,17 @@ the folder id as the stable runtime id and reads:
 sdmc:/3ds/anki3ds/decks/<deck-id>/cards.tsv
 ```
 
-The tracked text-only sample deck lives in `sample-decks/sample/` and installs
-to:
+The tracked text-only sample decks live in `sample-decks/` and install to:
 
 ```text
+sdmc:/3ds/anki3ds/decks/limits-demo/cards.tsv
 sdmc:/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
-The sample deck also includes:
+Each sample deck also includes:
 
 ```text
+sdmc:/3ds/anki3ds/decks/limits-demo/settings.tsv
 sdmc:/3ds/anki3ds/decks/sample/settings.tsv
 ```
 

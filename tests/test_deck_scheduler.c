@@ -91,6 +91,40 @@ static void test_deck_load_rejects_duplicate_card_ids(void)
 	remove(TEST_CARDS_PATH);
 }
 
+static void test_tracked_sample_decks_load(void)
+{
+	struct deck deck;
+	struct app_settings settings;
+
+	deck_init(&deck, "sample");
+	check(
+		deck_load_cards(&deck, "sample-decks/sample/cards.tsv") == DECK_LOAD_OK,
+		"tracked sample deck loads"
+	);
+	check(deck.card_count == 10, "tracked sample deck card count");
+	check(
+		app_settings_load(&settings, "sample-decks/sample/settings.tsv") ==
+			APP_SETTINGS_LOAD_OK,
+		"tracked sample settings load"
+	);
+	check(settings.new_limit == 20, "tracked sample new limit");
+	check(settings.review_limit == 200, "tracked sample review limit");
+
+	deck_init(&deck, "limits-demo");
+	check(
+		deck_load_cards(&deck, "sample-decks/limits-demo/cards.tsv") == DECK_LOAD_OK,
+		"tracked limits demo deck loads"
+	);
+	check(deck.card_count == 6, "tracked limits demo deck card count");
+	check(
+		app_settings_load(&settings, "sample-decks/limits-demo/settings.tsv") ==
+			APP_SETTINGS_LOAD_OK,
+		"tracked limits demo settings load"
+	);
+	check(settings.new_limit == 2, "tracked limits demo new limit");
+	check(settings.review_limit == 5, "tracked limits demo review limit");
+}
+
 static void test_scheduler_schedules_due_days(void)
 {
 	struct scheduler_session session;
@@ -963,6 +997,7 @@ int main(void)
 	test_parse_card_line();
 	test_reject_bad_card_line();
 	test_deck_load_rejects_duplicate_card_ids();
+	test_tracked_sample_decks_load();
 	test_scheduler_schedules_due_days();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();

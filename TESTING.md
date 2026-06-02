@@ -36,7 +36,9 @@ make test-host
 make test-converter
 make install-local-sd
 make install-local-sample-deck
+make install-local-sample-decks
 make install-azahar-sample-deck
+make install-azahar-sample-decks
 make run-emulator
 ```
 
@@ -46,11 +48,15 @@ The local SD mirror lives at:
 local/sdmc/3ds/anki3ds/
 ```
 
-The tracked sample deck installs to:
+The tracked sample decks install to:
 
 ```text
+local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
+local/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/settings.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ```
@@ -164,7 +170,7 @@ Save files should be tested with:
 Before any tagged checkpoint:
 
 - docs match the current artifact
-- sample deck is tiny and original
+- sample decks are tiny and original
 - no personal Anki data is committed
 - no copyrighted media is committed
 - build instructions are current

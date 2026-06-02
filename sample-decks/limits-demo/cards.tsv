@@ -1,0 +1,6 @@
+limit-0001	limit-note-0001	What does new_limit control?	How many unstarted new cards can appear today.	limits daily-use
+limit-0002	limit-note-0002	What does review_limit control?	How many unstarted review cards can appear today.	limits daily-use
+limit-0003	limit-note-0003	What value means no daily limit?	0 means all available cards.	limits settings
+limit-0004	limit-note-0004	Where does anki3ds save deck limits?	settings.tsv beside cards.tsv.	limits settings
+limit-0005	limit-note-0005	How do you open deck actions during review?	Press SELECT.	controls actions
+limit-0006	limit-note-0006	Why ship more than one sample deck?	To test multi-deck selection and due counts without personal data.	workflow samples

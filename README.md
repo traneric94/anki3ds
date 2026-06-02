@@ -56,19 +56,20 @@ To run host-side parser, scheduler, and review-state tests:
 make test
 ```
 
-To copy the build into the gitignored local SD mirror:
+To copy the build and tracked sample decks into the gitignored local SD mirror:
 
 ```sh
 make install-local-sd
 ```
 
-This also installs the tracked sample text deck to:
+This also installs the tracked sample text decks to:
 
 ```text
+local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
-To install only the sample deck into Azahar's SD card data directory:
+To install the sample decks into Azahar's SD card data directory:
 
 ```sh
 make install-azahar-sample-deck
@@ -77,6 +78,7 @@ make install-azahar-sample-deck
 By default this uses:
 
 ```text
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 

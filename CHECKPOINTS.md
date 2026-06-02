@@ -143,7 +143,8 @@ Pass condition:
 
 Acceptance test:
 
-1. Copy two or more decks to the SD card.
+1. Copy two or more decks to the SD card with `make install-local-sd` or the
+   equivalent real SD copy.
 2. Review due cards from each deck.
 3. Suspend one card.
 4. Undo one rating.

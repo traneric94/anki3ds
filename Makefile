@@ -3,11 +3,10 @@ AZAHAR_SDMC ?= $(HOME)/Library/Application Support/Azahar/sdmc
 LOCAL_SDMC ?= local/sdmc
 
 APP_SD_DIR := 3ds/anki3ds
-SAMPLE_DECK := sample
-SAMPLE_DECK_SRC := sample-decks/$(SAMPLE_DECK)
-SAMPLE_DECK_SD_DIR := $(APP_SD_DIR)/decks/$(SAMPLE_DECK)
+SAMPLE_DECKS := limits-demo sample
+SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 
-.PHONY: all app-3ds clean test test-host test-converter install-local-sd install-local-sample-deck install-azahar-sample-deck check-emulator run-emulator
+.PHONY: all app-3ds clean test test-host test-converter install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator
 
 all: app-3ds
 
@@ -34,18 +33,28 @@ test-host:
 test-converter:
 	python3 -m unittest tests/test_converter.py
 
-install-local-sd: app-3ds install-local-sample-deck
+install-local-sd: app-3ds install-local-sample-decks
 	mkdir -p "$(LOCAL_SDMC)/$(APP_SD_DIR)"
 	cp app-3ds/anki3ds.3dsx "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.3dsx"
 	cp app-3ds/anki3ds.smdh "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.smdh"
 
-install-local-sample-deck:
-	mkdir -p "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_DIR)"
-	cp -R "$(SAMPLE_DECK_SRC)/." "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_DIR)/"
+install-local-sample-deck: install-local-sample-decks
 
-install-azahar-sample-deck:
-	mkdir -p "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_DIR)"
-	cp -R "$(SAMPLE_DECK_SRC)/." "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_DIR)/"
+install-local-sample-decks:
+	set -e; \
+	for deck in $(SAMPLE_DECKS); do \
+		mkdir -p "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+		cp -R "sample-decks/$$deck/." "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck/"; \
+	done
+
+install-azahar-sample-deck: install-azahar-sample-decks
+
+install-azahar-sample-decks:
+	set -e; \
+	for deck in $(SAMPLE_DECKS); do \
+		mkdir -p "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+		cp -R "sample-decks/$$deck/." "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck/"; \
+	done
 
 check-emulator:
 	@test -d "$(AZAHAR_APP)" || \
