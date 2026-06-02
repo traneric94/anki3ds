@@ -63,6 +63,8 @@ Rules:
 - UTF-8 text
 - one card per line
 - tabs separate fields
+- converter-generated `card_id` and `note_id` values are stable hashes of the
+  normalized export fields, with numeric suffixes for exact duplicates
 - embedded newlines are encoded as `\n`
 - literal backslashes are escaped as `\\`
 - converter output simplifies simple HTML to text before writing these fields

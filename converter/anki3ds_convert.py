@@ -125,6 +125,16 @@ def stable_id(prefix: str, *parts: str) -> str:
     return f"{prefix}-{digest[:12]}"
 
 
+def unique_id(base_id: str, seen_counts: dict[str, int]) -> str:
+    count = seen_counts.get(base_id, 0) + 1
+    seen_counts[base_id] = count
+
+    if count == 1:
+        return base_id
+
+    return f"{base_id}-{count}"
+
+
 def deck_id_is_valid(value: str) -> bool:
     if not value or len(value) >= DECK_ID_MAX_LENGTH:
         return False
@@ -142,6 +152,8 @@ def convert_lines(
     tags_field: int | None,
 ) -> list[ConvertedCard]:
     cards: list[ConvertedCard] = []
+    seen_card_ids: dict[str, int] = {}
+    seen_note_ids: dict[str, int] = {}
 
     for line_number, raw_line in enumerate(lines, start=1):
         line = raw_line.rstrip("\n\r")
@@ -163,8 +175,10 @@ def convert_lines(
         if not back:
             raise ValueError(f"line {line_number}: back field is empty")
 
-        note_id = stable_id("note", front, back, tags)
-        card_id = stable_id("card", note_id, front, back)
+        base_note_id = stable_id("note", front, back, tags)
+        base_card_id = stable_id("card", base_note_id, front, back)
+        note_id = unique_id(base_note_id, seen_note_ids)
+        card_id = unique_id(base_card_id, seen_card_ids)
         cards.append(ConvertedCard(card_id, note_id, front, back, tags))
 
     if not cards:

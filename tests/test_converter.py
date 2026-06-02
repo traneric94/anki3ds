@@ -65,6 +65,23 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(cards[0].front, "front\nline")
         self.assertEqual(cards[0].back, "back text")
 
+    def test_convert_lines_disambiguates_duplicate_ids(self):
+        cards = convert_lines(
+            [
+                "front\tback\ttag",
+                "front\tback\ttag",
+                "front\tback\ttag",
+            ],
+            front_field=0,
+            back_field=1,
+            tags_field=2,
+        )
+
+        self.assertEqual(cards[1].note_id, f"{cards[0].note_id}-2")
+        self.assertEqual(cards[2].note_id, f"{cards[0].note_id}-3")
+        self.assertEqual(cards[1].card_id, f"{cards[0].card_id}-2")
+        self.assertEqual(cards[2].card_id, f"{cards[0].card_id}-3")
+
     def test_rejects_missing_or_empty_fields(self):
         with self.assertRaisesRegex(ValueError, "expected at least"):
             convert_lines(["front only"], front_field=0, back_field=1, tags_field=None)
