@@ -3,10 +3,12 @@
 #include <stdio.h>
 
 #include "deck.h"
+#include "review_state.h"
 #include "scheduler.h"
 
-#define APP_VERSION "0.2.0-dev"
+#define APP_VERSION "0.3.0-dev"
 #define SAMPLE_DECK_PATH "sdmc:/3ds/anki3ds/decks/sample/cards.tsv"
+#define SAMPLE_STATE_PATH "sdmc:/3ds/anki3ds/decks/sample/state.tsv"
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 
@@ -22,6 +24,9 @@ struct app_state
 	enum app_mode mode;
 	bool revealed;
 	enum deck_load_result load_result;
+	enum review_state_load_result state_load_result;
+	enum review_state_save_result state_save_result;
+	const char *state_message;
 	struct deck deck;
 	struct scheduler_session session;
 };
@@ -91,10 +96,8 @@ static unsigned int review_count_total(const struct scheduler_session *session)
 {
 	unsigned int total = 0;
 
-	total += session->rating_counts[SCHEDULER_RATING_AGAIN];
-	total += session->rating_counts[SCHEDULER_RATING_HARD];
-	total += session->rating_counts[SCHEDULER_RATING_GOOD];
-	total += session->rating_counts[SCHEDULER_RATING_EASY];
+	for (size_t index = 0; index < session->card_count; index++)
+		total += session->cards[index].review_count;
 
 	return total;
 }
@@ -111,12 +114,21 @@ static void app_init(struct app_state *app)
 {
 	deck_init(&app->deck, "sample");
 	app->revealed = false;
+	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
+	app->state_save_result = REVIEW_STATE_SAVE_OK;
+	app->state_message = "State: not loaded";
 	app->load_result = deck_load_cards(&app->deck, SAMPLE_DECK_PATH);
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
 		scheduler_init(&app->session, app->deck.card_count);
-		app->mode = APP_MODE_REVIEW;
+		app->state_load_result = review_state_load(&app->deck, &app->session, SAMPLE_STATE_PATH);
+		app->state_message = review_state_load_result_name(app->state_load_result);
+
+		if (scheduler_is_complete(&app->session))
+			app->mode = APP_MODE_SUMMARY;
+		else
+			app->mode = APP_MODE_REVIEW;
 	}
 	else
 	{
@@ -134,6 +146,7 @@ static void draw_header(const struct app_state *app)
 		(unsigned long)app->session.done_count,
 		(unsigned long)app->session.card_count
 	);
+	printf("\x1b[3;1HState: %s", app->state_message);
 }
 
 static void draw_load_error_screen(const struct app_state *app)
@@ -161,11 +174,11 @@ static void draw_review_screen(const struct app_state *app)
 		return;
 	}
 
-	printf("\x1b[4;1HFront:");
+	printf("\x1b[5;1HFront:");
 
 	if (app->revealed)
 	{
-		draw_wrapped_text(card->front, 5, 8);
+		draw_wrapped_text(card->front, 6, 7);
 		printf("\x1b[14;1HBack:");
 		draw_wrapped_text(card->back, 15, 9);
 		printf("\x1b[27;1HRate: Y Again  X Hard  B Good  A Easy");
@@ -173,7 +186,7 @@ static void draw_review_screen(const struct app_state *app)
 	}
 	else
 	{
-		draw_wrapped_text(card->front, 5, 18);
+		draw_wrapped_text(card->front, 6, 17);
 		printf("\x1b[27;1HA: show answer");
 		printf("\x1b[28;1HSTART/M: exit");
 	}
@@ -188,20 +201,21 @@ static void draw_summary_screen(const struct app_state *app)
 	printf("\x1b[3;1HSession complete");
 	printf("\x1b[5;1HCards:   %lu", (unsigned long)session->card_count);
 	printf("\x1b[6;1HReviews: %u", review_count_total(session));
+	printf("\x1b[7;1HState:   %s", app->state_message);
 	printf(
-		"\x1b[8;1HY Again: %u",
+		"\x1b[9;1HY Again: %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[9;1HX Hard:  %u",
+		"\x1b[10;1HX Hard:  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[10;1HB Good:  %u",
+		"\x1b[11;1HB Good:  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[11;1HA Easy:  %u",
+		"\x1b[12;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 	printf("\x1b[28;1HSTART/M: exit");
@@ -229,6 +243,8 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		return false;
 
 	scheduler_rate_current(&app->session, rating);
+	app->state_save_result = review_state_save(&app->deck, &app->session, SAMPLE_STATE_PATH);
+	app->state_message = review_state_save_result_name(app->state_save_result);
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))

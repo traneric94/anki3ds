@@ -31,6 +31,7 @@ Current build commands:
 
 ```sh
 make
+make test-host
 make install-local-sd
 make install-local-sample-deck
 make install-azahar-sample-deck
@@ -48,6 +49,12 @@ The tracked sample deck installs to:
 ```text
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
+```
+
+The app writes review progress to:
+
+```text
+sdmc:/3ds/anki3ds/decks/sample/state.tsv
 ```
 
 Record emulator runs in `docs/emulator-test-log.md`.
@@ -78,6 +85,12 @@ Notes:
 ```
 
 ## Desktop Tests
+
+Run current host-side C tests with:
+
+```sh
+make test-host
+```
 
 The converter should have automated tests because it handles user data.
 

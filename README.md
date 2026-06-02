@@ -37,7 +37,7 @@ anki3ds/
 
 ## Build
 
-The 3DS app currently builds a minimal toolchain proof.
+The 3DS app currently builds a text-only sample deck reviewer.
 
 ```sh
 make
@@ -48,6 +48,12 @@ This produces:
 ```text
 app-3ds/anki3ds.3dsx
 app-3ds/anki3ds.smdh
+```
+
+To run host-side parser, scheduler, and review-state tests:
+
+```sh
+make test-host
 ```
 
 To copy the build into the gitignored local SD mirror:
@@ -91,7 +97,8 @@ By default this expects Azahar at:
 
 ## Current Status
 
-M1 toolchain proof builds locally. Emulator and hardware verification are next.
+Sample deck review works at build level: the app loads `cards.tsv`, reveals
+answers, records ratings, and saves local `state.tsv` progress.
 
 See:
 

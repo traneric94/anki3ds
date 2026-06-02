@@ -7,7 +7,7 @@ SAMPLE_DECK := sample
 SAMPLE_DECK_SRC := sample-decks/$(SAMPLE_DECK)
 SAMPLE_DECK_SD_DIR := $(APP_SD_DIR)/decks/$(SAMPLE_DECK)
 
-.PHONY: all app-3ds clean install-local-sd install-local-sample-deck install-azahar-sample-deck check-emulator run-emulator
+.PHONY: all app-3ds clean test-host install-local-sd install-local-sample-deck install-azahar-sample-deck check-emulator run-emulator
 
 all: app-3ds
 
@@ -16,6 +16,15 @@ app-3ds:
 
 clean:
 	$(MAKE) -C app-3ds clean
+
+test-host:
+	cc -std=c99 -Wall -Wextra -Werror -Iapp-3ds/include \
+		tests/test_deck_scheduler.c \
+		app-3ds/source/deck.c \
+		app-3ds/source/review_state.c \
+		app-3ds/source/scheduler.c \
+		-o /private/tmp/anki3ds-test-deck-scheduler
+	/private/tmp/anki3ds-test-deck-scheduler
 
 install-local-sd: app-3ds install-local-sample-deck
 	mkdir -p "$(LOCAL_SDMC)/$(APP_SD_DIR)"

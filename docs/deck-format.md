@@ -59,21 +59,25 @@ card-0002	note-0002	What is 2 + 2?	4	math
 
 ## state.tsv
 
-Draft columns:
+Current sample-app columns:
 
 ```text
-card_id<TAB>state<TAB>due<TAB>interval<TAB>ease<TAB>lapses<TAB>reviews<TAB>last_review
+card_id<TAB>done<TAB>review_count<TAB>last_rating
 ```
 
-State values:
+Rules:
 
-- `new`
-- `learning`
-- `review`
-- `suspended`
+- `done` is `0` or `1`
+- `review_count` is a non-negative integer
+- `last_rating` is numeric: `0` Again, `1` Hard, `2` Good, `3` Easy
+- unknown card IDs are ignored when loading state
 
 `state.tsv` is owned by the 3DS app. The converter should preserve it when
 updating card content.
+
+This is an early persistence format for the sample reviewer. Full spaced
+repetition fields such as due date, interval, ease, lapses, and review log are
+planned later.
 
 ## Review Log
 

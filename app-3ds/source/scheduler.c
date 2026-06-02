@@ -54,6 +54,49 @@ size_t scheduler_current_index(const struct scheduler_session *session)
 	return session->current_index;
 }
 
+bool scheduler_restore_card(
+	struct scheduler_session *session,
+	size_t index,
+	bool done,
+	unsigned int review_count,
+	enum scheduler_rating last_rating
+)
+{
+	struct scheduler_card *card;
+
+	if (index >= session->card_count)
+		return false;
+	if (!scheduler_rating_is_valid(last_rating))
+		return false;
+
+	card = &session->cards[index];
+
+	if (done && !card->done)
+		session->done_count++;
+	else if (!done && card->done && session->done_count > 0)
+		session->done_count--;
+
+	card->done = done;
+	card->review_count = review_count;
+	card->last_rating = last_rating;
+	return true;
+}
+
+void scheduler_reposition(struct scheduler_session *session)
+{
+	if (scheduler_is_complete(session))
+		return;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (!session->cards[index].done)
+		{
+			session->current_index = index;
+			return;
+		}
+	}
+}
+
 void scheduler_rate_current(struct scheduler_session *session, enum scheduler_rating rating)
 {
 	struct scheduler_card *card;

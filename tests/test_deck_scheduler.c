@@ -3,7 +3,10 @@
 #include <string.h>
 
 #include "deck.h"
+#include "review_state.h"
 #include "scheduler.h"
+
+#define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
 
 static int failures;
 
@@ -92,12 +95,77 @@ static void test_scheduler_rejects_invalid_rating(void)
 	check(session.rating_counts[SCHEDULER_RATING_AGAIN] == 0, "invalid rating does not count");
 }
 
+static void build_test_deck(struct deck *deck)
+{
+	deck_init(deck, "state-test");
+	deck->card_count = 2;
+	snprintf(deck->cards[0].card_id, sizeof(deck->cards[0].card_id), "card-1");
+	snprintf(deck->cards[0].front, sizeof(deck->cards[0].front), "front 1");
+	snprintf(deck->cards[0].back, sizeof(deck->cards[0].back), "back 1");
+	snprintf(deck->cards[1].card_id, sizeof(deck->cards[1].card_id), "card-2");
+	snprintf(deck->cards[1].front, sizeof(deck->cards[1].front), "front 2");
+	snprintf(deck->cards[1].back, sizeof(deck->cards[1].back), "back 2");
+}
+
+static void test_review_state_missing_file(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_NOT_FOUND,
+		"missing state is reported"
+	);
+	check(session.done_count == 0, "missing state leaves scheduler unchanged");
+}
+
+static void test_review_state_round_trip(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"state saves"
+	);
+
+	scheduler_init(&loaded, deck.card_count);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"state loads"
+	);
+	check(!loaded.cards[0].done, "again card stays due after load");
+	check(loaded.cards[0].review_count == 1, "again review count loads");
+	check(loaded.cards[0].last_rating == SCHEDULER_RATING_AGAIN, "again rating loads");
+	check(loaded.cards[1].done, "good card done loads");
+	check(loaded.cards[1].review_count == 1, "good review count loads");
+	check(loaded.cards[1].last_rating == SCHEDULER_RATING_GOOD, "good rating loads");
+	check(loaded.done_count == 1, "done count recalculates on load");
+	check(scheduler_current_index(&loaded) == 0, "first due card selected after load");
+
+	remove(TEST_STATE_PATH);
+}
+
 int main(void)
 {
 	test_parse_card_line();
 	test_reject_bad_card_line();
 	test_scheduler_repeats_again();
 	test_scheduler_rejects_invalid_rating();
+	test_review_state_missing_file();
+	test_review_state_round_trip();
 
 	if (failures != 0)
 	{

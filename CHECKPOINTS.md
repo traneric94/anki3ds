@@ -107,6 +107,12 @@ Pass condition:
 
 ## M5: Save State
 
+Host test:
+
+```sh
+make test-host
+```
+
 Acceptance test:
 
 1. Review several cards.
