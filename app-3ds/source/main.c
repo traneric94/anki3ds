@@ -15,6 +15,8 @@
 #define IDLE_INPUT_WAIT_NS 100000000LL
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
+#define DECK_NAME_HEADER_WIDTH 42
+#define DECK_NAME_SELECTOR_WIDTH 46
 
 enum app_mode
 {
@@ -134,6 +136,28 @@ static void draw_wrapped_text(const char *text, int row, int max_rows)
 		console_move(row + max_rows - 1, TEXT_LEFT + TEXT_WIDTH - 3);
 		printf("...");
 	}
+}
+
+static void print_truncated(const char *text, size_t max_columns)
+{
+	size_t length = strlen(text);
+
+	if (length <= max_columns)
+	{
+		printf("%s", text);
+		return;
+	}
+
+	if (max_columns <= 3)
+	{
+		for (size_t index = 0; index < max_columns; index++)
+			putchar(text[index]);
+		return;
+	}
+
+	for (size_t index = 0; index < max_columns - 3; index++)
+		putchar(text[index]);
+	printf("...");
 }
 
 static unsigned int review_count_total(const struct scheduler_session *session)
@@ -280,10 +304,8 @@ static void app_init(struct app_state *app)
 static void draw_header(const struct app_state *app)
 {
 	printf("\x1b[1;1Hanki3ds Review");
-	printf(
-		"\x1b[2;1HDeck: %s",
-		app->deck.name
-	);
+	printf("\x1b[2;1HDeck: ");
+	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[3;1HDue: %lu  New: %lu  Reviewed: %u",
 		(unsigned long)app->session.due_count,
@@ -328,11 +350,10 @@ static void draw_deck_select_screen(const struct app_state *app)
 		{
 			const char *marker = index == app->selected_deck_index ? ">" : " ";
 
-			printf(
-				"\x1b[%lu;1H%s %s",
-				(unsigned long)(5 + index),
-				marker,
-				app->deck_index.entries[index].display_name
+			printf("\x1b[%lu;1H%s ", (unsigned long)(5 + index), marker);
+			print_truncated(
+				app->deck_index.entries[index].display_name,
+				DECK_NAME_SELECTOR_WIDTH
 			);
 		}
 
@@ -425,7 +446,8 @@ static void draw_actions_screen(const struct app_state *app)
 	printf("\x1b[3;1HActions");
 	printf("\x1b[6;1H%s Restore suspended cards", unsuspend_marker);
 	printf("\x1b[8;1H%s Reset deck progress", reset_marker);
-	printf("\x1b[11;1HDeck: %s", app->deck.name);
+	printf("\x1b[11;1HDeck: ");
+	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
 
 	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 	{
