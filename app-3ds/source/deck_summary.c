@@ -38,6 +38,28 @@ void deck_summary_init(struct deck_summary *summary)
 	summary->suspended_count = 0;
 }
 
+void deck_summary_from_session(
+	struct deck_summary *summary,
+	enum deck_load_result deck_load_result,
+	enum app_settings_load_result settings_load_result,
+	enum review_state_load_result state_load_result,
+	const struct scheduler_session *session
+)
+{
+	deck_summary_init(summary);
+	summary->deck_load_result = deck_load_result;
+	summary->settings_load_result = settings_load_result;
+	summary->state_load_result = state_load_result;
+
+	if (deck_load_result != DECK_LOAD_OK || session == NULL)
+		return;
+
+	summary->card_count = session->card_count;
+	summary->due_count = session->due_count;
+	count_due_card_types(summary, session);
+	summary->suspended_count = scheduler_suspended_count(session);
+}
+
 void deck_summary_load(
 	struct deck_summary *summary,
 	const struct deck_entry *entry,
@@ -77,9 +99,13 @@ void deck_summary_load(
 	scheduler_init(session, deck->card_count, today);
 	scheduler_set_daily_limits(session, settings.new_limit, settings.review_limit);
 	summary->state_load_result = review_state_load(deck, session, entry->state_path);
-	summary->due_count = session->due_count;
-	count_due_card_types(summary, session);
-	summary->suspended_count = scheduler_suspended_count(session);
+	deck_summary_from_session(
+		summary,
+		summary->deck_load_result,
+		summary->settings_load_result,
+		summary->state_load_result,
+		session
+	);
 
 	free(session);
 	free(deck);

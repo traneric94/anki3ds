@@ -50,8 +50,10 @@ Current practical constraints:
 - The app only reads the `name` string from deck metadata during deck scanning.
 - The selector stores at most `DECK_INDEX_MAX_DECKS` decks, shows a bounded
   scroll window, and reports overflow.
-- Rescan is explicit from the deck selector with `SELECT`.
+- SD rescan is explicit from the deck selector with `SELECT`.
 - Rescan keeps the selected folder id highlighted when that deck still exists.
+- Returning from review, summary, or load-error screens reuses the cached deck
+  list and refreshes only the active deck's summary from the in-memory session.
 - Missing deck root or zero valid decks is a recoverable deck-selector state.
 
 This boundary is small enough to host-test without libctru: build one entry,

@@ -7,6 +7,7 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "review_state.h"
+#include "scheduler.h"
 
 struct deck_summary
 {
@@ -22,6 +23,13 @@ struct deck_summary
 };
 
 void deck_summary_init(struct deck_summary *summary);
+void deck_summary_from_session(
+	struct deck_summary *summary,
+	enum deck_load_result deck_load_result,
+	enum app_settings_load_result settings_load_result,
+	enum review_state_load_result state_load_result,
+	const struct scheduler_session *session
+);
 void deck_summary_load(
 	struct deck_summary *summary,
 	const struct deck_entry *entry,

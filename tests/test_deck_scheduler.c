@@ -1431,6 +1431,76 @@ static void test_deck_summary_counts_due_cards(void)
 	cleanup_deck_index_test_root();
 }
 
+static void test_deck_summary_from_session_counts_due_cards(void)
+{
+	struct scheduler_session session;
+	struct deck_summary summary;
+
+	scheduler_init(&session, 4, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 1, 0);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			1,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			0,
+			false,
+			TEST_TODAY,
+			TEST_TODAY
+		),
+		"summary session learning card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			2,
+			3,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			5,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 10,
+			TEST_TODAY - 5
+		),
+		"summary session review card restores"
+	);
+	check(scheduler_suspend_current(&session), "summary session suspends current card");
+
+	deck_summary_from_session(
+		&summary,
+		DECK_LOAD_OK,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+
+	check(summary.deck_load_result == DECK_LOAD_OK, "summary session deck result");
+	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "summary session settings result");
+	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "summary session state result");
+	check(summary.card_count == 4, "summary session card count");
+	check(summary.due_count == 2, "summary session due count");
+	check(summary.new_due_count == 0, "summary session new count after suspend");
+	check(summary.learning_due_count == 1, "summary session learning count");
+	check(summary.review_due_count == 1, "summary session review count");
+	check(summary.suspended_count == 1, "summary session suspended count");
+
+	deck_summary_from_session(
+		&summary,
+		DECK_LOAD_BAD_FORMAT,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(summary.card_count == 0, "bad session summary clears card count");
+	check(summary.due_count == 0, "bad session summary clears due count");
+}
+
 static void test_deck_summary_reports_load_error(void)
 {
 	struct deck_entry entry;
@@ -1698,6 +1768,7 @@ int main(void)
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
 	test_deck_summary_counts_due_cards();
+	test_deck_summary_from_session_counts_due_cards();
 	test_deck_summary_reports_load_error();
 	test_daily_use_workflow_persists_two_decks();
 

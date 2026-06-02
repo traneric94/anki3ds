@@ -468,6 +468,26 @@ static void app_scan_decks(struct app_state *app)
 		deck_index_find(&app->deck_index, selected_deck_id, &app->selected_deck_index);
 }
 
+static void app_refresh_selected_deck_summary(struct app_state *app)
+{
+	if (app->selected_deck_index >= app->deck_index.count)
+		return;
+
+	deck_summary_from_session(
+		&app->deck_summaries[app->selected_deck_index],
+		app->load_result,
+		app->settings_load_result,
+		app->state_load_result,
+		&app->session
+	);
+}
+
+static void app_return_to_deck_select(struct app_state *app)
+{
+	app_refresh_selected_deck_summary(app);
+	app->mode = APP_MODE_DECK_SELECT;
+}
+
 static void app_load_selected_deck(struct app_state *app)
 {
 	const struct deck_entry *entry;
@@ -539,6 +559,8 @@ static void app_load_selected_deck(struct app_state *app)
 		app->mode = APP_MODE_LOAD_ERROR;
 		scheduler_init(&app->session, 0, current_day());
 	}
+
+	app_refresh_selected_deck_summary(app);
 }
 
 static void app_open_actions(struct app_state *app)
@@ -1372,8 +1394,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
 	{
-		app_scan_decks(app);
-		app->mode = APP_MODE_DECK_SELECT;
+		app_return_to_deck_select(app);
 		return true;
 	}
 
@@ -1382,8 +1403,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		(app->mode == APP_MODE_REVIEW && !app->revealed && (keys_down & KEY_B))
 	)
 	{
-		app_scan_decks(app);
-		app->mode = APP_MODE_DECK_SELECT;
+		app_return_to_deck_select(app);
 		return true;
 	}
 
