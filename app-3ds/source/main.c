@@ -181,12 +181,14 @@ static void draw_review_screen(const struct app_state *app)
 		draw_wrapped_text(card->front, 6, 7);
 		printf("\x1b[14;1HBack:");
 		draw_wrapped_text(card->back, 15, 9);
+		printf("\x1b[26;1HSELECT/N: reset progress");
 		printf("\x1b[27;1HRate: Y Again  X Hard  B Good  A Easy");
 		printf("\x1b[28;1HSTART/M: exit");
 	}
 	else
 	{
 		draw_wrapped_text(card->front, 6, 17);
+		printf("\x1b[26;1HSELECT/N: reset progress");
 		printf("\x1b[27;1HA: show answer");
 		printf("\x1b[28;1HSTART/M: exit");
 	}
@@ -218,6 +220,7 @@ static void draw_summary_screen(const struct app_state *app)
 		"\x1b[12;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
+	printf("\x1b[27;1HSELECT/N: reset progress");
 	printf("\x1b[28;1HSTART/M: exit");
 }
 
@@ -253,8 +256,20 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	return true;
 }
 
+static void reset_progress(struct app_state *app)
+{
+	remove(SAMPLE_STATE_PATH);
+	app_init(app);
+}
+
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
+	if (app->mode != APP_MODE_LOAD_ERROR && (keys_down & KEY_SELECT))
+	{
+		reset_progress(app);
+		return true;
+	}
+
 	if (app->mode != APP_MODE_REVIEW)
 		return false;
 

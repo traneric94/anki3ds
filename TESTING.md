@@ -59,6 +59,17 @@ The app writes review progress to:
 sdmc:/3ds/anki3ds/decks/sample/state.tsv
 ```
 
+Default Azahar keyboard controls used by the sample reviewer:
+
+```text
+A key = reveal / Easy
+S key = Good
+Z key = Hard
+X key = Again
+N key = reset progress
+M key = exit
+```
+
 Record emulator runs in `docs/emulator-test-log.md`.
 
 ## Initial Target Device

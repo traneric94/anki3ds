@@ -119,10 +119,12 @@ Acceptance test:
 2. Exit the app.
 3. Relaunch the app.
 4. Confirm reviewed cards are no longer immediately due unless rated Again.
+5. Press `SELECT` to reset progress.
 
 Pass condition:
 
 - local progress survives restart
+- reset removes saved progress and starts the sample deck again
 
 ## M6: Converter MVP
 

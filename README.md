@@ -106,7 +106,8 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
 ## Current Status
 
 Sample deck review works at build level: the app loads `cards.tsv`, reveals
-answers, records ratings, and saves local `state.tsv` progress.
+answers, records ratings, saves local `state.tsv` progress, and can reset saved
+progress with `SELECT` (`N` in Azahar's default keyboard mapping).
 
 See:
 
