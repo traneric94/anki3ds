@@ -146,7 +146,9 @@ cards with `R`, see suspended-card counts in deck, action, and summary views,
 restore suspended cards from the actions screen, or reset saved progress after
 opening the reset action and confirming with `X`. Cards may optionally reference
 bounded `.a3i` images under the deck's `media/` folder. The top screen shows
-deck/card content, while the bottom screen shows controls and review status.
+deck/card content, while the bottom screen shows controls, review status, and a
+low-battery warning when the system reports `1/5` battery or lower while not
+charging.
 
 See:
 

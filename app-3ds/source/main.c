@@ -33,6 +33,8 @@
 #define DECK_NAME_SELECTOR_WIDTH 22
 #define DECK_SELECTOR_FIRST_ROW 5
 #define DECK_SELECTOR_VISIBLE_ROWS 16
+#define BATTERY_LOW_LEVEL 1
+#define BATTERY_POLL_INTERVAL_LOOPS 120
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -81,6 +83,10 @@ struct app_state
 	enum action_item selected_action;
 	bool revealed;
 	bool exit_requested;
+	bool battery_service_available;
+	bool battery_status_available;
+	bool battery_low;
+	u8 battery_level;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
 	enum app_settings_save_result settings_save_result;
@@ -469,6 +475,39 @@ static void app_scan_decks(struct app_state *app)
 		deck_index_find(&app->deck_index, selected_deck_id, &app->selected_deck_index);
 }
 
+static bool app_sample_battery(struct app_state *app)
+{
+	u8 level;
+	u8 charge_state;
+	bool status_available;
+	bool charging;
+	bool low;
+	bool changed;
+	bool old_visible;
+	bool new_visible;
+
+	if (!app->battery_service_available)
+		return false;
+
+	status_available =
+		R_SUCCEEDED(PTMU_GetBatteryLevel(&level)) &&
+		R_SUCCEEDED(PTMU_GetBatteryChargeState(&charge_state));
+	charging = status_available && charge_state != 0;
+	low = status_available && !charging && level <= BATTERY_LOW_LEVEL;
+	old_visible = app->battery_status_available && app->battery_low;
+	new_visible = status_available && low;
+	changed =
+		old_visible != new_visible ||
+		(new_visible && app->battery_level != level);
+
+	app->battery_status_available = status_available;
+	app->battery_low = low;
+	if (status_available)
+		app->battery_level = level;
+
+	return changed;
+}
+
 static void app_refresh_selected_deck_summary(struct app_state *app)
 {
 	if (app->selected_deck_index >= app->deck_index.count)
@@ -593,6 +632,8 @@ static void app_open_exit_confirmation(struct app_state *app)
 static void app_init(struct app_state *app)
 {
 	memset(app, 0, sizeof(*app));
+	app->battery_service_available = R_SUCCEEDED(ptmuInit());
+	app_sample_battery(app);
 	media_cache_init(&media_cache);
 	app_scan_decks(app);
 	app->mode = APP_MODE_DECK_SELECT;
@@ -897,6 +938,17 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	printf("\x1b[12;1HUse B or SELECT to cancel.");
 }
 
+static void draw_battery_warning(const struct app_state *app)
+{
+	if (!app->battery_status_available || !app->battery_low)
+		return;
+
+	printf(
+		"\x1b[29;1HBattery low: %u/5. Charge soon.",
+		(unsigned int)app->battery_level
+	);
+}
+
 static void draw_bottom_controls_screen(const struct app_state *app)
 {
 	consoleClear();
@@ -1047,6 +1099,8 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HB or SELECT: cancel");
 		break;
 	}
+
+	draw_battery_warning(app);
 }
 
 static void draw_app(const struct app_state *app)
@@ -1484,6 +1538,7 @@ int main(int argc, char *argv[])
 	static struct app_state app;
 	bool frame_dirty = true;
 	unsigned int idle_wait_count = 0;
+	unsigned int battery_poll_count = 0;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &top_screen);
@@ -1513,7 +1568,21 @@ int main(int argc, char *argv[])
 
 		u32 keys_down = hidKeysDown();
 		if (keys_down != 0)
+		{
 			idle_wait_count = 0;
+			battery_poll_count = 0;
+		}
+		else if (battery_poll_count < BATTERY_POLL_INTERVAL_LOOPS)
+		{
+			battery_poll_count++;
+		}
+
+		bool battery_changed =
+			keys_down != 0 || battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS ?
+			app_sample_battery(&app) :
+			false;
+		if (battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS)
+			battery_poll_count = 0;
 
 		if (app_handle_input(&app, keys_down))
 		{
@@ -1523,8 +1592,15 @@ int main(int argc, char *argv[])
 			draw_app(&app);
 			frame_dirty = true;
 		}
+		else if (battery_changed)
+		{
+			draw_app(&app);
+			frame_dirty = true;
+		}
 	}
 
+	if (app.battery_service_available)
+		ptmuExit();
 	gfxExit();
 	return 0;
 }
