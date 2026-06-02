@@ -59,9 +59,9 @@ reject invalid ids, scan a temporary root, and verify only folders containing
 
 After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
-session, then records card count, due count, and new-due count for the selector.
-This keeps the deck list useful for daily study while preserving the fixed
-`DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits.
+session, then records card count, due count, new-due count, and suspended-card
+count for the selector. This keeps the deck list useful for daily study while
+preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits.
 
 ## Deck Loading
 
@@ -168,7 +168,8 @@ Review algorithm:
 
 `R` suspends the current card without counting a review. Suspended cards are
 saved in `state.tsv`, treated as not due, skipped by queue advancement, and
-included in total card counts.
+included in total card counts. The selector, actions screen, and summary screen
+show suspended-card counts so a hidden queue is visible before restoring cards.
 
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset

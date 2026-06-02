@@ -28,6 +28,7 @@ void deck_summary_init(struct deck_summary *summary)
 	summary->card_count = 0;
 	summary->due_count = 0;
 	summary->new_due_count = 0;
+	summary->suspended_count = 0;
 }
 
 void deck_summary_load(
@@ -57,4 +58,5 @@ void deck_summary_load(
 	summary->state_load_result = review_state_load(&deck, &session, entry->state_path);
 	summary->due_count = session.due_count;
 	summary->new_due_count = count_new_due_cards(&session);
+	summary->suspended_count = scheduler_suspended_count(&session);
 }

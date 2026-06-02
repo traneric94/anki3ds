@@ -119,10 +119,10 @@ shows due/new counts in the deck selector, loads optional per-deck
 actions screen, reveals answers, records ratings, schedules cards with a
 day-level spaced repetition algorithm, saves local `state.tsv` progress beside
 that deck, and can undo the last rating or suspend action with `L`, suspend
-cards with `R`, restore suspended cards from the actions screen, or reset saved
-progress after opening the reset action and confirming with `X`. The top screen
-shows deck/card content, while the bottom screen shows controls and review
-status.
+cards with `R`, see suspended-card counts in deck, action, and summary views,
+restore suspended cards from the actions screen, or reset saved progress after
+opening the reset action and confirming with `X`. The top screen shows
+deck/card content, while the bottom screen shows controls and review status.
 
 See:
 

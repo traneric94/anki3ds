@@ -276,6 +276,7 @@ static void test_scheduler_suspend_current(void)
 
 	check(scheduler_suspend_current(&session), "suspend succeeds");
 	check(session.cards[0].suspended, "suspend marks current card");
+	check(scheduler_suspended_count(&session) == 1, "suspend count includes suspended card");
 	check(!scheduler_card_is_due(&session, 0), "suspended card is not due");
 	check(session.due_count == 1, "suspend drops due count");
 	check(scheduler_current_index(&session) == 1, "suspend advances to next due card");
@@ -283,6 +284,7 @@ static void test_scheduler_suspend_current(void)
 
 	check(scheduler_undo_last(&session), "undo suspend succeeds");
 	check(!session.cards[0].suspended, "undo suspend restores card");
+	check(scheduler_suspended_count(&session) == 0, "undo suspend clears suspended count");
 	check(session.due_count == 2, "undo suspend restores due count");
 	check(scheduler_current_index(&session) == 0, "undo suspend restores current index");
 }
@@ -953,12 +955,14 @@ static void test_deck_summary_counts_due_cards(void)
 		"card-1\tnote-1\tfront 1\tback 1\ttag\n"
 		"card-2\tnote-2\tfront 2\tback 2\ttag\n"
 		"card-3\tnote-3\tfront 3\tback 3\ttag\n"
+		"card-4\tnote-4\tfront 4\tback 4\ttag\n"
 	);
 	write_file(entry.settings_path, "new_limit\t1\nreview_limit\t0\n");
 	write_file(
 		entry.state_path,
 		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t19999\t19999\n"
 		"card-2\t1\t2\t20000\t1\t2500\t0\t0\t19999\t19999\n"
+		"card-3\t0\t2\t20000\t0\t2500\t0\t1\t0\t0\n"
 	);
 
 	deck_summary_load(&summary, &entry, TEST_TODAY);
@@ -966,9 +970,10 @@ static void test_deck_summary_counts_due_cards(void)
 	check(summary.deck_load_result == DECK_LOAD_OK, "summary deck loads");
 	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "summary settings load");
 	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "summary state loads");
-	check(summary.card_count == 3, "summary card count");
+	check(summary.card_count == 4, "summary card count");
 	check(summary.due_count == 2, "summary due count includes review and limited new");
 	check(summary.new_due_count == 1, "summary new due count honors new limit");
+	check(summary.suspended_count == 1, "summary suspended count includes saved state");
 
 	cleanup_deck_index_test_root();
 }
@@ -995,6 +1000,7 @@ static void test_deck_summary_reports_load_error(void)
 	check(summary.card_count == 0, "bad summary has zero cards");
 	check(summary.due_count == 0, "bad summary has zero due cards");
 	check(summary.new_due_count == 0, "bad summary has zero new cards");
+	check(summary.suspended_count == 0, "bad summary has zero suspended cards");
 
 	cleanup_deck_index_test_root();
 }

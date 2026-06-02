@@ -75,6 +75,7 @@ void scheduler_init(struct scheduler_session *session, size_t card_count, unsign
 bool scheduler_has_current(const struct scheduler_session *session);
 bool scheduler_is_complete(const struct scheduler_session *session);
 size_t scheduler_current_index(const struct scheduler_session *session);
+size_t scheduler_suspended_count(const struct scheduler_session *session);
 bool scheduler_card_is_due(const struct scheduler_session *session, size_t index);
 bool scheduler_restore_card(
 	struct scheduler_session *session,

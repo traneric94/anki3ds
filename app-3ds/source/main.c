@@ -483,9 +483,10 @@ static void draw_deck_select_screen(const struct app_state *app)
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
-					" D:%lu N:%lu",
+					" D:%lu N:%lu S:%lu",
 					(unsigned long)summary->due_count,
-					(unsigned long)summary->new_due_count
+					(unsigned long)summary->new_due_count,
+					(unsigned long)summary->suspended_count
 				);
 			}
 			else
@@ -552,21 +553,25 @@ static void draw_summary_screen(const struct app_state *app)
 	printf("\x1b[5;1HCards:    %lu", (unsigned long)session->card_count);
 	printf("\x1b[6;1HReviewed: %u", session->reviewed_count);
 	printf("\x1b[7;1HTotal rev:%u", review_count_total(session));
-	printf("\x1b[8;1HState:    %s", app->state_message);
 	printf(
-		"\x1b[10;1HY Again: %u",
+		"\x1b[8;1HSuspended:%lu",
+		(unsigned long)scheduler_suspended_count(session)
+	);
+	printf("\x1b[9;1HState:    %s", app->state_message);
+	printf(
+		"\x1b[11;1HY Again: %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[11;1HX Hard:  %u",
+		"\x1b[12;1HX Hard:  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[12;1HB Good:  %u",
+		"\x1b[13;1HB Good:  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[13;1HA Easy:  %u",
+		"\x1b[14;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 }
@@ -591,8 +596,12 @@ static void draw_actions_screen(const struct app_state *app)
 
 	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 	{
-		printf("\x1b[16;1HClears all suspended flags");
-		printf("\x1b[17;1Hfor the active deck.");
+		printf(
+			"\x1b[16;1HSuspended cards: %lu",
+			(unsigned long)scheduler_suspended_count(&app->session)
+		);
+		printf("\x1b[17;1HClears all suspended flags");
+		printf("\x1b[18;1Hfor the active deck.");
 	}
 	else if (app->selected_action == ACTION_ITEM_DAILY_LIMITS)
 	{
@@ -681,7 +690,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					(unsigned long)summary->due_count,
 					(unsigned long)summary->new_due_count
 				);
-				printf("\x1b[14;1HCards: %lu", (unsigned long)summary->card_count);
+				printf(
+					"\x1b[14;1HCards: %lu  Suspended: %lu",
+					(unsigned long)summary->card_count,
+					(unsigned long)summary->suspended_count
+				);
 			}
 			else
 			{
