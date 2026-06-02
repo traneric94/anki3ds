@@ -12,6 +12,7 @@
 
 #define APP_VERSION "0.5.0-dev"
 #define SECONDS_PER_DAY 86400
+#define IDLE_INPUT_WAIT_NS 100000000LL
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 
@@ -180,6 +181,11 @@ static void copy_string(char *destination, size_t destination_size, const char *
 		return;
 
 	snprintf(destination, destination_size, "%s", source);
+}
+
+static void wait_for_idle_input(void)
+{
+	hidWaitForAnyEvent(true, 0, IDLE_INPUT_WAIT_NS);
 }
 
 static void app_scan_decks(struct app_state *app)
@@ -840,14 +846,15 @@ int main(int argc, char *argv[])
 	while (aptMainLoop())
 	{
 		if (frame_dirty)
-			gfxFlushBuffers();
-
-		gspWaitForVBlank();
-
-		if (frame_dirty)
 		{
+			gfxFlushBuffers();
+			gspWaitForVBlank();
 			gfxSwapBuffers();
 			frame_dirty = false;
+		}
+		else
+		{
+			wait_for_idle_input();
 		}
 
 		hidScanInput();
