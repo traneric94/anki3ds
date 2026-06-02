@@ -68,9 +68,12 @@ T key = selector up
 G key = selector down
 Z key = Hard
 X key = Again
-N key = rescan decks / reset progress
+N key = rescan decks / actions
 M key = exit
 ```
+
+In review and summary modes, `N` opens the actions screen. Press `A` there to
+confirm reset, or `S`/`N` to cancel.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.

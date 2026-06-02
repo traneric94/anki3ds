@@ -125,10 +125,15 @@ The app loop is a small mode machine:
 - `LOAD_ERROR`: show the active path and load result, return to deck list.
 - `REVIEW`: show front, reveal back, accept a rating.
 - `SUMMARY`: show counts when no cards are due today.
+- `ACTIONS`: confirm destructive actions such as progress reset.
 
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls. This keeps button prompts out of the review card
 area without introducing a graphics framework yet.
+
+To avoid unnecessary screen work, the main loop only flushes and swaps
+framebuffers after drawing a changed screen. Idle frames still wait for VBlank
+and scan input, but they do not redraw unchanged console content.
 
 Review algorithm:
 
@@ -143,9 +148,9 @@ Review algorithm:
 9. Advance to the next due card, wrapping through the fixed card array.
 10. Enter summary when no cards remain due today.
 
-`SELECT` resets progress for the active deck by removing the active `state.tsv`
-and reloading the selected deck. If removal fails, the app leaves the current
-session in place and shows `reset failed`.
+`SELECT` opens an actions screen from review and summary modes. Confirming reset
+removes the active `state.tsv` and reloads the selected deck. If removal fails,
+the app leaves the current session in place and shows `reset failed`.
 
 `rating_counts` are live session counters. Restored state contributes to
 per-card `review_count`, but not to the current session's rating-count totals.

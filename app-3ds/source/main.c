@@ -21,11 +21,13 @@ enum app_mode
 	APP_MODE_LOAD_ERROR,
 	APP_MODE_REVIEW,
 	APP_MODE_SUMMARY,
+	APP_MODE_ACTIONS,
 };
 
 struct app_state
 {
 	enum app_mode mode;
+	enum app_mode action_return_mode;
 	bool revealed;
 	enum deck_load_result load_result;
 	enum review_state_load_result state_load_result;
@@ -221,6 +223,12 @@ static void app_load_selected_deck(struct app_state *app)
 	}
 }
 
+static void app_open_actions(struct app_state *app)
+{
+	app->action_return_mode = app->mode;
+	app->mode = APP_MODE_ACTIONS;
+}
+
 static void app_init(struct app_state *app)
 {
 	memset(app, 0, sizeof(*app));
@@ -364,6 +372,18 @@ static void draw_summary_screen(const struct app_state *app)
 	);
 }
 
+static void draw_actions_screen(const struct app_state *app)
+{
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds Review");
+	printf("\x1b[3;1HActions");
+	printf("\x1b[6;1H> Reset deck progress");
+	printf("\x1b[8;1HDeck: %s", app->deck.name);
+	printf("\x1b[10;1HThis removes state.tsv for");
+	printf("\x1b[11;1Hthe active deck, then reloads.");
+	printf("\x1b[14;1HState: %s", app->state_message);
+}
+
 static void draw_bottom_controls_screen(const struct app_state *app)
 {
 	consoleClear();
@@ -403,23 +423,29 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		{
 			printf("\x1b[6;1HY: Again      X: Hard");
 			printf("\x1b[8;1HB: Good       A: Easy");
-			printf("\x1b[12;1HSELECT: reset progress");
+			printf("\x1b[12;1HSELECT: actions");
 			printf("\x1b[14;1HSTART: exit");
 		}
 		else
 		{
 			printf("\x1b[6;1HA: show answer");
 			printf("\x1b[8;1HB: deck list");
-			printf("\x1b[10;1HSELECT: reset progress");
+			printf("\x1b[10;1HSELECT: actions");
 			printf("\x1b[12;1HSTART: exit");
 		}
 		break;
 	case APP_MODE_SUMMARY:
 		printf("\x1b[1;1HNo cards due now");
 		printf("\x1b[3;1HB: deck list");
-		printf("\x1b[5;1HSELECT: reset progress");
+		printf("\x1b[5;1HSELECT: actions");
 		printf("\x1b[7;1HSTART: exit");
 		printf("\x1b[27;1HReviewed this session: %u", app->session.reviewed_count);
+		break;
+	case APP_MODE_ACTIONS:
+		printf("\x1b[1;1HActions");
+		printf("\x1b[3;1HA: confirm reset");
+		printf("\x1b[5;1HB or SELECT: cancel");
+		printf("\x1b[7;1HSTART: exit");
 		break;
 	}
 }
@@ -441,6 +467,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_SUMMARY:
 		draw_summary_screen(app);
+		break;
+	case APP_MODE_ACTIONS:
+		draw_actions_screen(app);
 		break;
 	}
 
@@ -469,22 +498,23 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	return true;
 }
 
-static void reset_progress(struct app_state *app)
+static bool reset_progress(struct app_state *app)
 {
 	if (app->active_state_path[0] == '\0')
 	{
 		app->state_message = "reset failed";
-		return;
+		return false;
 	}
 
 	errno = 0;
 	if (remove(app->active_state_path) != 0 && errno != ENOENT)
 	{
 		app->state_message = "reset failed";
-		return;
+		return false;
 	}
 
 	app_load_selected_deck(app);
+	return true;
 }
 
 static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
@@ -523,10 +553,30 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 	return false;
 }
 
+static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & KEY_A)
+	{
+		if (!reset_progress(app))
+			app->mode = APP_MODE_ACTIONS;
+		return true;
+	}
+
+	if (keys_down & (KEY_B | KEY_SELECT))
+	{
+		app->mode = app->action_return_mode;
+		return true;
+	}
+
+	return false;
+}
+
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
 	if (app->mode == APP_MODE_DECK_SELECT)
 		return app_handle_deck_select_input(app, keys_down);
+	if (app->mode == APP_MODE_ACTIONS)
+		return app_handle_actions_input(app, keys_down);
 
 	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
 	{
@@ -545,9 +595,12 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return true;
 	}
 
-	if (app->mode != APP_MODE_LOAD_ERROR && (keys_down & KEY_SELECT))
+	if (
+		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
+		(keys_down & KEY_SELECT)
+	)
 	{
-		reset_progress(app);
+		app_open_actions(app);
 		return true;
 	}
 
@@ -583,6 +636,7 @@ int main(int argc, char *argv[])
 	(void)argv;
 
 	static struct app_state app;
+	bool frame_dirty = true;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &top_screen);
@@ -593,9 +647,17 @@ int main(int argc, char *argv[])
 
 	while (aptMainLoop())
 	{
-		gfxFlushBuffers();
+		if (frame_dirty)
+			gfxFlushBuffers();
+
 		gspWaitForVBlank();
-		gfxSwapBuffers();
+
+		if (frame_dirty)
+		{
+			gfxSwapBuffers();
+			frame_dirty = false;
+		}
+
 		hidScanInput();
 
 		u32 keys_down = hidKeysDown();
@@ -603,7 +665,10 @@ int main(int argc, char *argv[])
 			break;
 
 		if (app_handle_input(&app, keys_down))
+		{
 			draw_app(&app);
+			frame_dirty = true;
+		}
 	}
 
 	gfxExit();
