@@ -7,6 +7,7 @@
 #include "app_settings.h"
 #include "deck.h"
 #include "deck_index.h"
+#include "deck_summary.h"
 #include "review_state.h"
 #include "scheduler.h"
 
@@ -16,7 +17,7 @@
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 #define DECK_NAME_HEADER_WIDTH 42
-#define DECK_NAME_SELECTOR_WIDTH 46
+#define DECK_NAME_SELECTOR_WIDTH 32
 
 enum app_mode
 {
@@ -50,6 +51,7 @@ struct app_state
 	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
 	struct app_settings settings;
 	struct deck_index deck_index;
+	struct deck_summary deck_summaries[DECK_INDEX_MAX_DECKS];
 	struct deck deck;
 	struct scheduler_session session;
 };
@@ -214,7 +216,26 @@ static void wait_for_idle_input(void)
 
 static void app_scan_decks(struct app_state *app)
 {
+	unsigned int today = current_day();
+
 	deck_index_scan(&app->deck_index, DECK_INDEX_ROOT_PATH);
+
+	for (size_t index = 0; index < DECK_INDEX_MAX_DECKS; index++)
+	{
+		if (index < app->deck_index.count)
+		{
+			deck_summary_load(
+				&app->deck_summaries[index],
+				&app->deck_index.entries[index],
+				today
+			);
+		}
+		else
+		{
+			deck_summary_init(&app->deck_summaries[index]);
+		}
+	}
+
 	app->selected_deck_index = 0;
 }
 
@@ -349,12 +370,25 @@ static void draw_deck_select_screen(const struct app_state *app)
 		for (size_t index = 0; index < app->deck_index.count; index++)
 		{
 			const char *marker = index == app->selected_deck_index ? ">" : " ";
+			const struct deck_summary *summary = &app->deck_summaries[index];
 
 			printf("\x1b[%lu;1H%s ", (unsigned long)(5 + index), marker);
 			print_truncated(
 				app->deck_index.entries[index].display_name,
 				DECK_NAME_SELECTOR_WIDTH
 			);
+			if (summary->deck_load_result == DECK_LOAD_OK)
+			{
+				printf(
+					" D:%lu N:%lu",
+					(unsigned long)summary->due_count,
+					(unsigned long)summary->new_due_count
+				);
+			}
+			else
+			{
+				printf(" load error");
+			}
 		}
 
 		if (app->deck_index.overflowed)
@@ -473,10 +507,26 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[1;1HDecks");
 		if (app->deck_index.count > 0)
 		{
+			const struct deck_summary *summary =
+				&app->deck_summaries[app->selected_deck_index];
+
 			printf("\x1b[3;1HA: open selected deck");
 			printf("\x1b[5;1HD-pad Up/Down: choose");
 			printf("\x1b[7;1HSELECT: rescan decks");
 			printf("\x1b[9;1HSTART: exit");
+			if (summary->deck_load_result == DECK_LOAD_OK)
+			{
+				printf(
+					"\x1b[12;1HSelected: Due %lu  New %lu",
+					(unsigned long)summary->due_count,
+					(unsigned long)summary->new_due_count
+				);
+				printf("\x1b[14;1HCards: %lu", (unsigned long)summary->card_count);
+			}
+			else
+			{
+				printf("\x1b[12;1HSelected deck load error");
+			}
 		}
 		else
 		{

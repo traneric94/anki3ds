@@ -7,6 +7,7 @@
 #include "app_settings.h"
 #include "deck.h"
 #include "deck_index.h"
+#include "deck_summary.h"
 #include "review_state.h"
 #include "scheduler.h"
 
@@ -686,6 +687,14 @@ static void remove_test_deck_dir(const char *deck_id)
 	remove(path);
 	snprintf(path, sizeof(path), "%s/%s/deck.json", TEST_DECK_ROOT, deck_id);
 	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/settings.tsv", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/state.tsv", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/state.tsv.tmp", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/state.tsv.bak", TEST_DECK_ROOT, deck_id);
+	remove(path);
 	snprintf(path, sizeof(path), "%s/%s", TEST_DECK_ROOT, deck_id);
 	rmdir(path);
 }
@@ -694,7 +703,9 @@ static void cleanup_deck_index_test_root(void)
 {
 	remove_test_deck_dir("alpha");
 	remove_test_deck_dir("beta");
+	remove_test_deck_dir("broken");
 	remove_test_deck_dir("empty");
+	remove_test_deck_dir("summary");
 	remove_test_deck_dir("zeta");
 
 	for (unsigned int deck_number = 0; deck_number < 18; deck_number++)
@@ -807,6 +818,72 @@ static void test_deck_index_reports_overflow(void)
 	cleanup_deck_index_test_root();
 }
 
+static void test_deck_summary_counts_due_cards(void)
+{
+	struct deck_entry entry;
+	struct deck_summary summary;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/summary", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+
+	check(
+		deck_index_build_entry(&entry, TEST_DECK_ROOT, "summary"),
+		"summary deck entry builds"
+	);
+	write_file(
+		entry.cards_path,
+		"card-1\tnote-1\tfront 1\tback 1\ttag\n"
+		"card-2\tnote-2\tfront 2\tback 2\ttag\n"
+		"card-3\tnote-3\tfront 3\tback 3\ttag\n"
+	);
+	write_file(entry.settings_path, "new_limit\t1\nreview_limit\t0\n");
+	write_file(
+		entry.state_path,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t19999\t19999\n"
+		"card-2\t1\t2\t20000\t1\t2500\t0\t0\t19999\t19999\n"
+	);
+
+	deck_summary_load(&summary, &entry, TEST_TODAY);
+
+	check(summary.deck_load_result == DECK_LOAD_OK, "summary deck loads");
+	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "summary settings load");
+	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "summary state loads");
+	check(summary.card_count == 3, "summary card count");
+	check(summary.due_count == 2, "summary due count includes review and limited new");
+	check(summary.new_due_count == 1, "summary new due count honors new limit");
+
+	cleanup_deck_index_test_root();
+}
+
+static void test_deck_summary_reports_load_error(void)
+{
+	struct deck_entry entry;
+	struct deck_summary summary;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/broken", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+
+	check(
+		deck_index_build_entry(&entry, TEST_DECK_ROOT, "broken"),
+		"broken summary entry builds"
+	);
+
+	deck_summary_load(&summary, &entry, TEST_TODAY);
+
+	check(summary.deck_load_result == DECK_LOAD_NOT_FOUND, "summary reports missing cards");
+	check(summary.card_count == 0, "bad summary has zero cards");
+	check(summary.due_count == 0, "bad summary has zero due cards");
+	check(summary.new_due_count == 0, "bad summary has zero new cards");
+
+	cleanup_deck_index_test_root();
+}
+
 int main(void)
 {
 	test_parse_card_line();
@@ -839,6 +916,8 @@ int main(void)
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
+	test_deck_summary_counts_due_cards();
+	test_deck_summary_reports_load_error();
 
 	if (failures != 0)
 	{

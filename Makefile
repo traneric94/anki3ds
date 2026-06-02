@@ -25,6 +25,7 @@ test-host:
 		app-3ds/source/app_settings.c \
 		app-3ds/source/deck.c \
 		app-3ds/source/deck_index.c \
+		app-3ds/source/deck_summary.c \
 		app-3ds/source/review_state.c \
 		app-3ds/source/scheduler.c \
 		-o /private/tmp/anki3ds-test-deck-scheduler

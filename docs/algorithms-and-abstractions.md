@@ -56,6 +56,12 @@ This boundary is small enough to host-test without libctru: build one entry,
 reject invalid ids, scan a temporary root, and verify only folders containing
 `cards.tsv` are listed.
 
+After discovery, the app builds a `deck_summary` for each visible deck. The
+summary loads the deck, settings, and saved state into a temporary scheduler
+session, then records card count, due count, and new-due count for the selector.
+This keeps the deck list useful for daily study while preserving the fixed
+`DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits.
+
 ## Deck Loading
 
 Current loading is in `deck_load_cards`.

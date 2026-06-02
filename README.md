@@ -112,13 +112,14 @@ dropped.
 
 Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
-loads optional per-deck `settings.tsv` daily limits, reveals answers, records
-ratings, schedules cards with a day-level spaced repetition algorithm, saves
-local `state.tsv` progress beside that deck, and can undo the last rating or
-suspend action with `L`, suspend cards with `R`, restore suspended cards from
-the `SELECT` actions screen, or reset saved progress after selecting reset from
-that actions screen. The top screen shows deck/card content, while the bottom
-screen shows controls and review status.
+shows due/new counts in the deck selector, loads optional per-deck
+`settings.tsv` daily limits, reveals answers, records ratings, schedules cards
+with a day-level spaced repetition algorithm, saves local `state.tsv` progress
+beside that deck, and can undo the last rating or suspend action with `L`,
+suspend cards with `R`, restore suspended cards from the `SELECT` actions
+screen, or reset saved progress after selecting reset from that actions screen.
+The top screen shows deck/card content, while the bottom screen shows controls
+and review status.
 
 See:
 
