@@ -198,6 +198,12 @@ counters before applying the action. Undo restores that snapshot, clears the
 undo slot, returns to review mode, and saves the restored `state.tsv`. Loading a
 deck or restoring saved card state clears the undo slot.
 
+The app keeps a scheduler rollback snapshot before review actions that mutate
+state and then save `state.tsv`. If the save fails after a rating, suspend,
+undo, or restore-suspended action, the app restores that snapshot and leaves the
+user on the current workflow screen with the save error visible. This keeps the
+in-memory review queue from advancing past the durable SD-card state.
+
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
 opens a confirmation screen. Pressing `X` there removes the active `state.tsv`
 and reloads the selected deck. If removal fails, the app leaves the current

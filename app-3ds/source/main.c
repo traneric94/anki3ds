@@ -100,6 +100,7 @@ struct app_state
 	struct deck_summary deck_summaries[DECK_INDEX_MAX_DECKS];
 	struct deck deck;
 	struct scheduler_session session;
+	struct scheduler_session save_rollback_session;
 };
 
 static PrintConsole top_screen;
@@ -1085,18 +1086,42 @@ static void draw_app(const struct app_state *app)
 	select_top_screen();
 }
 
-static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
+static void save_session_rollback(struct app_state *app)
 {
-	if (!app->revealed)
-		return false;
+	app->save_rollback_session = app->session;
+}
 
-	scheduler_rate_current(&app->session, rating);
+static void restore_session_rollback(struct app_state *app)
+{
+	app->session = app->save_rollback_session;
+	app->state_message = review_state_save_result_name(app->state_save_result);
+}
+
+static bool save_review_state(struct app_state *app)
+{
 	app->state_save_result = review_state_save(
 		&app->deck,
 		&app->session,
 		app->active_state_path
 	);
 	app->state_message = review_state_save_result_name(app->state_save_result);
+	return app->state_save_result == REVIEW_STATE_SAVE_OK;
+}
+
+static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
+{
+	if (!app->revealed)
+		return false;
+
+	save_session_rollback(app);
+	scheduler_rate_current(&app->session, rating);
+	if (!save_review_state(app))
+	{
+		restore_session_rollback(app);
+		app->mode = APP_MODE_REVIEW;
+		return true;
+	}
+
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
@@ -1107,21 +1132,20 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 
 static bool undo_last_action(struct app_state *app)
 {
+	save_session_rollback(app);
 	if (!scheduler_undo_last(&app->session))
 	{
 		app->state_message = "nothing to undo";
 		return true;
 	}
 
-	app->state_save_result = review_state_save(
-		&app->deck,
-		&app->session,
-		app->active_state_path
-	);
-	app->state_message =
-		app->state_save_result == REVIEW_STATE_SAVE_OK ?
-		"undone" :
-		review_state_save_result_name(app->state_save_result);
+	if (!save_review_state(app))
+	{
+		restore_session_rollback(app);
+		return true;
+	}
+
+	app->state_message = "undone";
 	app->revealed = false;
 	app->mode = APP_MODE_REVIEW;
 	return true;
@@ -1129,21 +1153,20 @@ static bool undo_last_action(struct app_state *app)
 
 static bool suspend_current_card(struct app_state *app)
 {
+	save_session_rollback(app);
 	if (!scheduler_suspend_current(&app->session))
 	{
 		app->state_message = "nothing to suspend";
 		return true;
 	}
 
-	app->state_save_result = review_state_save(
-		&app->deck,
-		&app->session,
-		app->active_state_path
-	);
-	app->state_message =
-		app->state_save_result == REVIEW_STATE_SAVE_OK ?
-		"suspended" :
-		review_state_save_result_name(app->state_save_result);
+	if (!save_review_state(app))
+	{
+		restore_session_rollback(app);
+		return true;
+	}
+
+	app->state_message = "suspended";
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
@@ -1172,8 +1195,10 @@ static bool reset_progress(struct app_state *app)
 
 static bool unsuspend_all_cards(struct app_state *app)
 {
-	unsigned int unsuspended_count = scheduler_unsuspend_all(&app->session);
+	unsigned int unsuspended_count;
 
+	save_session_rollback(app);
+	unsuspended_count = scheduler_unsuspend_all(&app->session);
 	if (unsuspended_count == 0)
 	{
 		app->state_message = "nothing suspended";
@@ -1181,15 +1206,13 @@ static bool unsuspend_all_cards(struct app_state *app)
 		return true;
 	}
 
-	app->state_save_result = review_state_save(
-		&app->deck,
-		&app->session,
-		app->active_state_path
-	);
-	app->state_message =
-		app->state_save_result == REVIEW_STATE_SAVE_OK ?
-		"unsuspended" :
-		review_state_save_result_name(app->state_save_result);
+	if (!save_review_state(app))
+	{
+		restore_session_rollback(app);
+		return true;
+	}
+
+	app->state_message = "unsuspended";
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
