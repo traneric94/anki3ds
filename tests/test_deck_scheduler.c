@@ -139,6 +139,10 @@ static void test_deck_load_card_limit(void)
 		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_TOO_LARGE,
 		"deck load rejects beyond card limit"
 	);
+	check(
+		strcmp(deck_load_result_name(DECK_LOAD_OUT_OF_MEMORY), "out of memory") == 0,
+		"deck load out-of-memory result names"
+	);
 
 	remove(TEST_CARDS_PATH);
 }

@@ -72,7 +72,8 @@ Current loading is in `deck_load_cards`.
 Algorithm:
 
 1. Open the active `cards.tsv`.
-2. Initialize a temporary `struct deck` using the selected deck name.
+2. Allocate and initialize a temporary `struct deck` using the selected deck
+   name.
 3. Read one bounded line at a time.
 4. Reject an overlong physical line and consume the remainder.
 5. Parse exactly five tab-separated fields:
@@ -86,7 +87,8 @@ Algorithm:
 The parser currently accepts `\n`, `\t`, and `\\` escapes. The deck owns card
 text in fixed-size buffers, with `DECK_MAX_CARDS` as the current hard limit.
 Load errors are returned as small enums so the app can show concise on-device
-messages.
+messages. The staged deck is heap allocated so the supported card limit does
+not create a large stack frame while loading a deck.
 
 The deck module should stay about deck data and card parsing. It should not know
 about 3DS input, screens, review progress, or SD-card discovery.

@@ -46,6 +46,7 @@ enum deck_load_result
 	DECK_LOAD_NOT_FOUND,
 	DECK_LOAD_BAD_FORMAT,
 	DECK_LOAD_TOO_LARGE,
+	DECK_LOAD_OUT_OF_MEMORY,
 };
 
 void deck_init(struct deck *deck, const char *name);

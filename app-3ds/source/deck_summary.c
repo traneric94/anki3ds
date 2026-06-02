@@ -54,7 +54,7 @@ void deck_summary_load(
 	{
 		free(session);
 		free(deck);
-		summary->deck_load_result = DECK_LOAD_TOO_LARGE;
+		summary->deck_load_result = DECK_LOAD_OUT_OF_MEMORY;
 		return;
 	}
 

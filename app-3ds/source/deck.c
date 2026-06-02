@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define CARD_MIN_FIELD_COUNT 5
@@ -225,62 +226,73 @@ enum deck_parse_result deck_parse_card_line(struct card *card, const char *line)
 
 enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 {
-	FILE *file = fopen(path, "r");
-	struct deck loaded;
+	FILE *file;
+	struct deck *loaded;
 	char line[DECK_MAX_LINE_LENGTH];
+	enum deck_load_result result = DECK_LOAD_OK;
 
+	if (deck == NULL || path == NULL)
+		return DECK_LOAD_BAD_FORMAT;
+
+	file = fopen(path, "r");
 	if (file == NULL)
 		return DECK_LOAD_NOT_FOUND;
 
-	deck_init(&loaded, deck->name);
+	loaded = malloc(sizeof(*loaded));
+	if (loaded == NULL)
+	{
+		fclose(file);
+		return DECK_LOAD_OUT_OF_MEMORY;
+	}
+
+	deck_init(loaded, deck->name);
 
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
 		struct card card;
-		enum deck_parse_result result = deck_parse_card_line(&card, line);
+		enum deck_parse_result parse_result = deck_parse_card_line(&card, line);
 
 		if (!line_has_complete_read(line))
 		{
 			consume_line_remainder(file);
-			fclose(file);
-			return DECK_LOAD_BAD_FORMAT;
+			result = DECK_LOAD_BAD_FORMAT;
+			break;
 		}
 
-		if (result == DECK_PARSE_EMPTY)
+		if (parse_result == DECK_PARSE_EMPTY)
 			continue;
-		if (result != DECK_PARSE_OK)
+		if (parse_result != DECK_PARSE_OK)
 		{
-			fclose(file);
-			return DECK_LOAD_BAD_FORMAT;
+			result = DECK_LOAD_BAD_FORMAT;
+			break;
 		}
-		if (loaded.card_count >= DECK_MAX_CARDS)
+		if (loaded->card_count >= DECK_MAX_CARDS)
 		{
-			fclose(file);
-			return DECK_LOAD_TOO_LARGE;
+			result = DECK_LOAD_TOO_LARGE;
+			break;
 		}
-		if (deck_has_card_id(&loaded, card.card_id))
+		if (deck_has_card_id(loaded, card.card_id))
 		{
-			fclose(file);
-			return DECK_LOAD_BAD_FORMAT;
+			result = DECK_LOAD_BAD_FORMAT;
+			break;
 		}
 
-		loaded.cards[loaded.card_count] = card;
-		loaded.card_count++;
+		loaded->cards[loaded->card_count] = card;
+		loaded->card_count++;
 	}
 
-	if (ferror(file))
-	{
-		fclose(file);
-		return DECK_LOAD_BAD_FORMAT;
-	}
+	if (result == DECK_LOAD_OK && ferror(file))
+		result = DECK_LOAD_BAD_FORMAT;
 
 	fclose(file);
 
-	if (loaded.card_count == 0)
-		return DECK_LOAD_BAD_FORMAT;
+	if (result == DECK_LOAD_OK && loaded->card_count == 0)
+		result = DECK_LOAD_BAD_FORMAT;
+	if (result == DECK_LOAD_OK)
+		*deck = *loaded;
 
-	*deck = loaded;
-	return DECK_LOAD_OK;
+	free(loaded);
+	return result;
 }
 
 const char *deck_parse_result_name(enum deck_parse_result result)
@@ -318,6 +330,8 @@ const char *deck_load_result_name(enum deck_load_result result)
 		return "bad format";
 	case DECK_LOAD_TOO_LARGE:
 		return "too large";
+	case DECK_LOAD_OUT_OF_MEMORY:
+		return "out of memory";
 	}
 
 	return "unknown";
