@@ -73,6 +73,8 @@ Rules:
 - tabs separate fields
 - `card_id` values must be unique within the deck
 - current 3DS builds support at most 256 cards per deck
+- converter `--split-large-decks` writes oversized exports as numbered sibling
+  deck folders within this limit
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
 - `tags` may use at most 127 UTF-8 bytes after unescaping
 - converter-generated `card_id` and `note_id` values are stable hashes of the

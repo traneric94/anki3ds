@@ -111,6 +111,16 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
+Current 3DS builds support 256 cards per deck folder. To split a larger export
+into numbered sibling decks such as `my-deck-01` and `my-deck-02`:
+
+```sh
+python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
+  --deck-id my-deck \
+  --deck-name "My Deck" \
+  --split-large-decks
+```
+
 Optional media fields can be converted from binary PPM `P6` images into the
 device-side `.a3i` format:
 

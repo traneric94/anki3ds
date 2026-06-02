@@ -509,6 +509,64 @@ def write_deck(
         settings_path.write_text(DEFAULT_SETTINGS, encoding="utf-8")
 
 
+def split_deck_id(base_deck_id: str, chunk_index: int, chunk_count: int) -> str:
+    width = max(2, len(str(chunk_count)))
+    deck_id = f"{base_deck_id}-{chunk_index:0{width}d}"
+
+    if not deck_id_is_valid(deck_id):
+        raise ValueError(f"split deck id is too long: {deck_id}")
+
+    return deck_id
+
+
+def split_deck_name(deck_name: str, chunk_index: int, chunk_count: int) -> str:
+    return f"{deck_name} {chunk_index}/{chunk_count}"
+
+
+def write_split_decks(
+    output_dir: Path,
+    deck_id: str,
+    deck_name: str,
+    cards: list[ConvertedCard],
+    media_root: Path | None = None,
+) -> list[Path]:
+    if len(cards) <= DECK_MAX_CARDS:
+        write_deck(output_dir, deck_id, deck_name, cards, media_root)
+        return [output_dir]
+
+    if not deck_id_is_valid(output_dir.name):
+        raise ValueError(
+            "output deck folder name must use letters, numbers, '_' or '-'"
+        )
+    if not deck_id_is_valid(deck_id):
+        raise ValueError("deck id must use letters, numbers, '_' or '-'")
+    if deck_id != output_dir.name:
+        raise ValueError("deck id must match output deck folder name")
+
+    chunk_count = (len(cards) + DECK_MAX_CARDS - 1) // DECK_MAX_CARDS
+    written_paths: list[Path] = []
+
+    for chunk_index in range(chunk_count):
+        chunk_number = chunk_index + 1
+        chunk_id = split_deck_id(deck_id, chunk_number, chunk_count)
+        chunk_output = output_dir.parent / chunk_id
+        chunk_cards = cards[
+            chunk_index * DECK_MAX_CARDS:
+            (chunk_index + 1) * DECK_MAX_CARDS
+        ]
+
+        write_deck(
+            chunk_output,
+            chunk_id,
+            split_deck_name(deck_name, chunk_number, chunk_count),
+            chunk_cards,
+            media_root,
+        )
+        written_paths.append(chunk_output)
+
+    return written_paths
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Convert a tab-separated Anki/plain-text export to an anki3ds deck."
@@ -561,6 +619,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="directory containing PPM P6 media files to convert into media/*.a3i",
     )
+    parser.add_argument(
+        "--split-large-decks",
+        action="store_true",
+        help="write oversized exports as numbered sibling deck folders",
+    )
     return parser.parse_args()
 
 
@@ -586,8 +649,18 @@ def main() -> int:
         args.back_media_field,
     )
     deck_id = args.deck_id if args.deck_id is not None else args.output.name
-    write_deck(args.output, deck_id, args.deck_name, cards, args.media_root)
-    print(f"wrote {len(cards)} cards to {args.output}")
+    if args.split_large_decks:
+        written_paths = write_split_decks(
+            args.output,
+            deck_id,
+            args.deck_name,
+            cards,
+            args.media_root,
+        )
+        print(f"wrote {len(cards)} cards to {len(written_paths)} deck folder(s)")
+    else:
+        write_deck(args.output, deck_id, args.deck_name, cards, args.media_root)
+        print(f"wrote {len(cards)} cards to {args.output}")
     return 0
 
 

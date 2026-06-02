@@ -20,6 +20,7 @@ from converter.anki3ds_convert import (
     resize_rgb_nearest,
     write_a3i_image,
     write_deck,
+    write_split_decks,
 )
 
 
@@ -402,6 +403,109 @@ class ConverterTests(unittest.TestCase):
 
             deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
             self.assertEqual(deck_json["deck_id"], "my-deck")
+
+    def test_write_split_decks_writes_numbered_sibling_decks(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+
+            written_paths = write_split_decks(output, "large", "Large", cards)
+
+            self.assertEqual(written_paths, [root / "large-01", root / "large-02"])
+            self.assertFalse(output.exists())
+
+            first_json = json.loads(
+                (root / "large-01" / "deck.json").read_text(encoding="utf-8")
+            )
+            second_json = json.loads(
+                (root / "large-02" / "deck.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(first_json["deck_id"], "large-01")
+            self.assertEqual(first_json["name"], "Large 1/2")
+            self.assertEqual(first_json["card_count"], DECK_MAX_CARDS)
+            self.assertEqual(second_json["deck_id"], "large-02")
+            self.assertEqual(second_json["name"], "Large 2/2")
+            self.assertEqual(second_json["card_count"], 1)
+
+    def test_write_split_decks_preserves_existing_chunk_state_and_settings(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first_chunk = root / "large-01"
+            first_chunk.mkdir()
+            state = first_chunk / "state.tsv"
+            settings = first_chunk / "settings.tsv"
+            state.write_text("existing-state\n", encoding="utf-8")
+            settings.write_text("new_limit\t3\nreview_limit\t4\n", encoding="utf-8")
+
+            write_split_decks(root / "large", "large", "Large", cards)
+
+            self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertEqual(
+                settings.read_text(encoding="utf-8"),
+                "new_limit\t3\nreview_limit\t4\n",
+            )
+
+    def test_write_split_decks_rejects_too_long_chunk_ids(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_id = "a" * 62
+
+            with self.assertRaisesRegex(ValueError, "too long"):
+                write_split_decks(
+                    Path(temp_dir) / deck_id,
+                    deck_id,
+                    "Large",
+                    cards,
+                )
+
+    def test_cli_split_large_decks(self):
+        cards_input = "\n".join(
+            f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)
+        ) + "\n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_path = root / "export.tsv"
+            output = root / "large"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            stdout = io.StringIO()
+            with stdout:
+                with redirect_stdout(stdout), mock.patch(
+                    "sys.argv",
+                    [
+                        "anki3ds_convert.py",
+                        str(input_path),
+                        str(output),
+                        "--split-large-decks",
+                    ],
+                ):
+                    self.assertEqual(main(), 0)
+                output_text = stdout.getvalue()
+
+            self.assertIn("2 deck folder", output_text)
+            self.assertTrue((root / "large-01" / "cards.tsv").exists())
+            self.assertTrue((root / "large-02" / "cards.tsv").exists())
 
 
 if __name__ == "__main__":
