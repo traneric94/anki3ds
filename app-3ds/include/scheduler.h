@@ -31,6 +31,17 @@ struct scheduler_card
 	unsigned int lapses;
 };
 
+struct scheduler_undo
+{
+	bool available;
+	size_t card_index;
+	size_t current_index;
+	size_t due_count;
+	unsigned int reviewed_count;
+	enum scheduler_rating rating;
+	struct scheduler_card card;
+};
+
 struct scheduler_session
 {
 	size_t card_count;
@@ -39,6 +50,7 @@ struct scheduler_session
 	size_t due_count;
 	unsigned int reviewed_count;
 	unsigned int rating_counts[SCHEDULER_RATING_COUNT];
+	struct scheduler_undo undo;
 	struct scheduler_card cards[DECK_MAX_CARDS];
 };
 
@@ -59,6 +71,7 @@ bool scheduler_restore_card(
 );
 void scheduler_reposition(struct scheduler_session *session);
 void scheduler_rate_current(struct scheduler_session *session, enum scheduler_rating rating);
+bool scheduler_undo_last(struct scheduler_session *session);
 const char *scheduler_rating_name(enum scheduler_rating rating);
 
 #endif

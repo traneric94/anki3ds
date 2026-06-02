@@ -102,7 +102,9 @@ Later versions may write an append-only review log:
 review_id<TAB>card_id<TAB>timestamp<TAB>rating<TAB>old_state<TAB>new_state
 ```
 
-This can support undo, debugging, and possible desktop import.
+This can support multi-step undo, debugging, and possible desktop import later.
+The current one-step undo is an in-memory scheduler snapshot saved back to
+`state.tsv`.
 
 ## Compatibility Policy
 

@@ -178,6 +178,29 @@ static void test_scheduler_scales_review_intervals(void)
 	check(session.due_count == 1, "again remains due");
 }
 
+static void test_scheduler_undo_last_rating(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+
+	check(session.cards[0].due_day == TEST_TODAY + 1, "rated card schedules before undo");
+	check(session.due_count == 1, "due count drops before undo");
+	check(session.reviewed_count == 1, "review count increments before undo");
+	check(scheduler_current_index(&session) == 1, "scheduler advances before undo");
+
+	check(scheduler_undo_last(&session), "undo succeeds");
+	check(session.cards[0].review_count == 0, "undo restores card review count");
+	check(session.cards[0].due_day == TEST_TODAY, "undo restores due day");
+	check(session.cards[0].interval_days == 0, "undo restores interval");
+	check(session.due_count == 2, "undo restores due count");
+	check(session.reviewed_count == 0, "undo restores reviewed count");
+	check(session.rating_counts[SCHEDULER_RATING_GOOD] == 0, "undo restores rating count");
+	check(scheduler_current_index(&session) == 0, "undo restores current index");
+	check(!scheduler_undo_last(&session), "undo is one-shot");
+}
+
 static void build_test_deck(struct deck *deck)
 {
 	deck_init(deck, "state-test");
@@ -409,6 +432,7 @@ int main(void)
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();
+	test_scheduler_undo_last_rating();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_loads_legacy_done_format();

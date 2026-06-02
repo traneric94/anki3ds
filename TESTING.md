@@ -64,6 +64,7 @@ Default Azahar keyboard controls used by the reviewer:
 ```text
 A key = open deck / reveal / Easy
 S key = Good
+Q key = undo last rating
 T key = selector up
 G key = selector down
 Z key = Hard
@@ -73,7 +74,8 @@ M key = exit
 ```
 
 In review and summary modes, `N` opens the actions screen. Press `A` there to
-confirm reset, or `S`/`N` to cancel.
+confirm reset, or `S`/`N` to cancel. In review and summary modes, `Q` undoes
+the last rating and saves the restored state.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.

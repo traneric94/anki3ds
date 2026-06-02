@@ -181,6 +181,7 @@ bool scheduler_restore_card(
 	card->interval_days = interval_days;
 	card->ease_permille = ease_permille;
 	card->lapses = lapses;
+	session->undo.available = false;
 	scheduler_recount_due(session);
 	return true;
 }
@@ -274,13 +275,23 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 {
 	struct scheduler_card *card;
 	bool use_initial_schedule;
+	size_t rated_index;
 
 	if (!scheduler_has_current(session))
 		return;
 	if (!scheduler_rating_is_valid(rating))
 		return;
 
-	card = &session->cards[session->current_index];
+	rated_index = session->current_index;
+	card = &session->cards[rated_index];
+	session->undo.available = true;
+	session->undo.card_index = rated_index;
+	session->undo.current_index = session->current_index;
+	session->undo.due_count = session->due_count;
+	session->undo.reviewed_count = session->reviewed_count;
+	session->undo.rating = rating;
+	session->undo.card = *card;
+
 	use_initial_schedule = scheduler_card_is_in_initial_learning(card);
 	card->last_rating = rating;
 	session->rating_counts[rating]++;
@@ -296,6 +307,27 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 	scheduler_recount_due(session);
 
 	scheduler_advance(session);
+}
+
+bool scheduler_undo_last(struct scheduler_session *session)
+{
+	if (!session->undo.available)
+		return false;
+	if (session->undo.card_index >= session->card_count)
+	{
+		session->undo.available = false;
+		return false;
+	}
+
+	session->cards[session->undo.card_index] = session->undo.card;
+	session->current_index = session->undo.current_index;
+	session->due_count = session->undo.due_count;
+	session->reviewed_count = session->undo.reviewed_count;
+	if (session->rating_counts[session->undo.rating] > 0)
+		session->rating_counts[session->undo.rating]--;
+
+	session->undo.available = false;
+	return true;
 }
 
 const char *scheduler_rating_name(enum scheduler_rating rating)

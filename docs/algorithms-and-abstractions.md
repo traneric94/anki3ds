@@ -148,6 +148,12 @@ Review algorithm:
 9. Advance to the next due card, wrapping through the fixed card array.
 10. Enter summary when no cards remain due today.
 
+`L` undoes the most recent rating in the active session. The scheduler stores a
+single snapshot of the rated card plus queue/session counters before applying a
+rating. Undo restores that snapshot, clears the undo slot, returns to review
+mode, and saves the restored `state.tsv`. Loading a deck or restoring saved
+card state clears the undo slot.
+
 `SELECT` opens an actions screen from review and summary modes. Confirming reset
 removes the active `state.tsv` and reloads the selected deck. If removal fails,
 the app leaves the current session in place and shows `reset failed`.
