@@ -69,25 +69,30 @@ card-0002	note-0002	What is 2 + 2?	4	math
 
 ## state.tsv
 
-Current sample-app columns:
+Current columns:
 
 ```text
-card_id<TAB>done<TAB>review_count<TAB>last_rating
+card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses
 ```
 
 Rules:
 
-- `done` is `0` or `1`
 - `review_count` is a non-negative integer
 - `last_rating` is numeric: `0` Again, `1` Hard, `2` Good, `3` Easy
+- `due_day` is days since the Unix epoch
+- `interval_days` is the current review interval
+- `ease_permille` is the ease factor scaled by 1000, such as `2500` for 2.5
+- `lapses` counts review-card Again ratings
 - unknown card IDs are ignored when loading state
+- old four-column state rows, `card_id done review_count last_rating`, still load
+  as a migration path
 
 `state.tsv` is owned by the 3DS app. The converter should preserve it when
 updating card content.
 
-This is an early persistence format for the sample reviewer. Full spaced
-repetition fields such as due date, interval, ease, lapses, and review log are
-planned later.
+This is an early day-level spaced repetition format. Minute-level learning
+steps, suspend flags, burying, filtered decks, and review logs are planned
+later.
 
 ## Review Log
 

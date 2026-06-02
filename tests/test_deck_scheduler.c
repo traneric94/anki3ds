@@ -11,8 +11,11 @@
 
 #define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
+#define TEST_TODAY 20000
 
 static int failures;
+
+static void write_file(const char *path, const char *content);
 
 static void check(bool condition, const char *message)
 {
@@ -61,42 +64,118 @@ static void test_reject_bad_card_line(void)
 	);
 }
 
-static void test_scheduler_repeats_again(void)
+static void test_scheduler_schedules_due_days(void)
 {
 	struct scheduler_session session;
 
-	scheduler_init(&session, 3);
+	scheduler_init(&session, 3, TEST_TODAY);
 	check(scheduler_current_index(&session) == 0, "scheduler starts at first card");
+	check(session.due_count == 3, "new cards start due");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
-	check(session.done_count == 0, "again keeps card due");
+	check(session.due_count == 3, "again keeps card due today");
+	check(session.cards[0].due_day == TEST_TODAY, "again stays due today");
+	check(session.cards[0].interval_days == 0, "again keeps zero-day interval");
+	check(session.cards[0].ease_permille == 2300, "again lowers ease");
 	check(scheduler_current_index(&session) == 1, "again advances to next card");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
-	check(session.done_count == 1, "good marks card done");
+	check(session.due_count == 2, "good schedules one card out");
+	check(session.cards[1].due_day == TEST_TODAY + 1, "good schedules tomorrow");
+	check(session.cards[1].interval_days == 1, "good starts one-day interval");
 	check(scheduler_current_index(&session) == 2, "good advances to next card");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_EASY);
-	check(session.done_count == 2, "easy marks card done");
+	check(session.due_count == 1, "easy schedules one card out");
+	check(session.cards[2].due_day == TEST_TODAY + 4, "easy starts four-day interval");
 	check(scheduler_current_index(&session) == 0, "again card is revisited");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_HARD);
-	check(session.done_count == 3, "hard marks final card done");
-	check(scheduler_is_complete(&session), "scheduler completes");
+	check(session.due_count == 0, "hard schedules final due card out");
+	check(session.cards[0].due_day == TEST_TODAY + 1, "hard schedules tomorrow");
+	check(scheduler_is_complete(&session), "scheduler completes when no due cards remain");
 	check(session.rating_counts[SCHEDULER_RATING_AGAIN] == 1, "again count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_HARD] == 1, "hard count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_GOOD] == 1, "good count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_EASY] == 1, "easy count tracked");
+	check(session.reviewed_count == 4, "reviewed count tracks ratings");
 }
 
 static void test_scheduler_rejects_invalid_rating(void)
 {
 	struct scheduler_session session;
 
-	scheduler_init(&session, 1);
+	scheduler_init(&session, 1, TEST_TODAY);
 	scheduler_rate_current(&session, (enum scheduler_rating)99);
-	check(session.done_count == 0, "invalid rating does not mark done");
+	check(session.due_count == 1, "invalid rating leaves due count unchanged");
 	check(session.rating_counts[SCHEDULER_RATING_AGAIN] == 0, "invalid rating does not count");
+}
+
+static void test_scheduler_new_again_stays_in_initial_learning(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 1, TEST_TODAY);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	check(session.cards[0].review_count == 2, "new again reviews count");
+	check(session.cards[0].lapses == 0, "new again does not count as lapse");
+	check(session.cards[0].interval_days == 0, "new again stays in zero-day loop");
+	check(scheduler_card_is_due(&session, 0), "new again remains due");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.cards[0].interval_days == 1, "new good after again starts one-day interval");
+	check(session.cards[0].due_day == TEST_TODAY + 1, "new good after again schedules tomorrow");
+	check(session.cards[0].lapses == 0, "new good after again still has no lapses");
+	check(session.due_count == 0, "new good after again clears due queue");
+}
+
+static void test_scheduler_scales_review_intervals(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 1, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0
+		),
+		"review card restores"
+	);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.cards[0].interval_days == 25, "good scales interval by ease");
+	check(session.cards[0].due_day == TEST_TODAY + 25, "good schedules scaled interval");
+	check(session.due_count == 0, "scaled review leaves session complete");
+
+	scheduler_init(&session, 1, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0
+		),
+		"review card restores again"
+	);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	check(session.cards[0].interval_days == 0, "again resets review interval");
+	check(session.cards[0].due_day == TEST_TODAY, "again keeps review due");
+	check(session.cards[0].lapses == 1, "again increments review lapses");
+	check(session.cards[0].ease_permille == 2300, "again lowers review ease");
+	check(session.due_count == 1, "again remains due");
 }
 
 static void build_test_deck(struct deck *deck)
@@ -118,13 +197,13 @@ static void test_review_state_missing_file(void)
 
 	remove(TEST_STATE_PATH);
 	build_test_deck(&deck);
-	scheduler_init(&session, deck.card_count);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
 
 	check(
 		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_NOT_FOUND,
 		"missing state is reported"
 	);
-	check(session.done_count == 0, "missing state leaves scheduler unchanged");
+	check(session.due_count == deck.card_count, "missing state leaves scheduler unchanged");
 }
 
 static void test_review_state_round_trip(void)
@@ -135,7 +214,7 @@ static void test_review_state_round_trip(void)
 
 	remove(TEST_STATE_PATH);
 	build_test_deck(&deck);
-	scheduler_init(&session, deck.card_count);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
@@ -145,19 +224,64 @@ static void test_review_state_round_trip(void)
 		"state saves"
 	);
 
-	scheduler_init(&loaded, deck.card_count);
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
 	check(
 		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
 		"state loads"
 	);
-	check(!loaded.cards[0].done, "again card stays due after load");
+	check(scheduler_card_is_due(&loaded, 0), "again card stays due after load");
+	check(loaded.cards[0].due_day == TEST_TODAY, "again due day loads");
+	check(loaded.cards[0].interval_days == 0, "again interval loads");
 	check(loaded.cards[0].review_count == 1, "again review count loads");
 	check(loaded.cards[0].last_rating == SCHEDULER_RATING_AGAIN, "again rating loads");
-	check(loaded.cards[1].done, "good card done loads");
+	check(!scheduler_card_is_due(&loaded, 1), "good card is scheduled after load");
+	check(loaded.cards[1].due_day == TEST_TODAY + 1, "good due day loads");
+	check(loaded.cards[1].interval_days == 1, "good interval loads");
 	check(loaded.cards[1].review_count == 1, "good review count loads");
 	check(loaded.cards[1].last_rating == SCHEDULER_RATING_GOOD, "good rating loads");
-	check(loaded.done_count == 1, "done count recalculates on load");
+	check(loaded.due_count == 1, "due count recalculates on load");
 	check(scheduler_current_index(&loaded) == 0, "first due card selected after load");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_loads_legacy_done_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t0\t2\t0\ncard-2\t1\t3\t2\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"legacy state loads"
+	);
+	check(scheduler_card_is_due(&session, 0), "legacy not-done card is due");
+	check(!scheduler_card_is_due(&session, 1), "legacy done card is scheduled out");
+	check(session.cards[1].due_day == TEST_TODAY + 1, "legacy done card migrates to tomorrow");
+	check(session.cards[1].interval_days == 1, "legacy done card migrates interval");
+	check(session.due_count == 1, "legacy due count recalculates");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_bad_load_does_not_mutate_session(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t1\t2\t20001\t1\t2500\t0\nbad\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_BAD_FORMAT,
+		"bad state load fails"
+	);
+	check(session.due_count == deck.card_count, "bad state load leaves due count unchanged");
+	check(session.cards[0].due_day == TEST_TODAY, "bad state load leaves card unchanged");
 
 	remove(TEST_STATE_PATH);
 }
@@ -281,10 +405,14 @@ int main(void)
 {
 	test_parse_card_line();
 	test_reject_bad_card_line();
-	test_scheduler_repeats_again();
+	test_scheduler_schedules_due_days();
 	test_scheduler_rejects_invalid_rating();
+	test_scheduler_new_again_stays_in_initial_learning();
+	test_scheduler_scales_review_intervals();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
+	test_review_state_loads_legacy_done_format();
+	test_review_state_bad_load_does_not_mutate_session();
 	test_deck_index_builds_paths();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_reports_overflow();

@@ -86,25 +86,24 @@ Current persistence is in `review_state.c`.
 `state.tsv` columns are:
 
 ```text
-card_id<TAB>done<TAB>review_count<TAB>last_rating
+card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses
 ```
 
 Load algorithm:
 
 1. Treat a missing file as normal new-deck state.
 2. Read bounded lines.
-3. Parse exactly four tab-separated fields.
-4. Validate `done`, `review_count`, and numeric rating.
+3. Parse either the current seven-field row or the old four-field row.
+4. Validate review count, numeric rating, due day, interval, ease, and lapses.
 5. Find the matching card by `card_id`.
 6. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
-7. Restore matching per-card scheduler state.
+7. Restore matching per-card scheduler state into a staged scheduler.
 8. Reposition the scheduler to the first due card.
 
-Current caveat: loading mutates the scheduler as it reads. If a later line is
-bad, earlier rows may already be restored before `BAD_FORMAT` is returned. If
-the UI promise becomes "bad state is fully ignored", the loader should stage
-into a temporary scheduler and commit only on success.
+Old rows migrate `done=0` to due today and `done=1` to tomorrow with a one-day
+interval. Bad rows are rejected before the staged scheduler is committed, so a
+bad state file leaves the live session unchanged.
 
 Save algorithm:
 
@@ -125,7 +124,7 @@ The app loop is a small mode machine:
 - `DECK_SELECT`: list discovered deck folders, move selection, rescan, open.
 - `LOAD_ERROR`: show the active path and load result, return to deck list.
 - `REVIEW`: show front, reveal back, accept a rating.
-- `SUMMARY`: show counts after all cards are done.
+- `SUMMARY`: show counts when no cards are due today.
 
 Review algorithm:
 
@@ -134,11 +133,11 @@ Review algorithm:
 3. Show the current card front.
 4. `A` reveals the answer.
 5. Ratings are accepted only after reveal.
-6. `Again` increments review count and keeps the card due.
-7. `Hard`, `Good`, and `Easy` increment review count and mark the card done.
+6. Ratings update interval, ease, due day, lapses, and review count.
+7. `Again` keeps a card due today; other ratings schedule it into the future.
 8. After every rating, save `state.tsv`.
-9. Advance to the next not-done card, wrapping through the fixed card array.
-10. Enter summary when `done_count >= card_count`.
+9. Advance to the next due card, wrapping through the fixed card array.
+10. Enter summary when no cards remain due today.
 
 `SELECT` resets progress for the active deck by removing the active `state.tsv`
 and reloading the selected deck. If removal fails, the app leaves the current
@@ -146,6 +145,27 @@ session in place and shows `reset failed`.
 
 `rating_counts` are live session counters. Restored state contributes to
 per-card `review_count`, but not to the current session's rating-count totals.
+
+## Scheduler
+
+The first spaced repetition algorithm is day-level and SM-2 inspired, not FSRS.
+It stores enough state to replace the algorithm later without changing card IDs.
+
+New cards start due today with ease `2500` and interval `0`. A card stays in
+the initial learning path while its interval is `0` and it has no lapses, so
+repeated new-card `Again` ratings do not count as review lapses.
+
+Rating behavior:
+
+- `Again`: due today, interval `0`, ease decreases by `200`.
+- `Hard`: due after roughly `interval * 1.2`, at least one day, ease decreases
+  by `150`.
+- `Good`: due after `interval * ease / 1000`.
+- `Easy`: due after `interval * (ease + 300) / 1000`, ease increases by `150`.
+
+First successful reviews are special-cased so new cards become usable quickly:
+`Hard` and `Good` start at one day, while `Easy` starts at four days. Ease is
+clamped between `1300` and `3500`, and intervals are clamped to 100 years.
 
 ## Converter Flow
 

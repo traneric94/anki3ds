@@ -3,13 +3,15 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "deck.h"
 #include "deck_index.h"
 #include "review_state.h"
 #include "scheduler.h"
 
-#define APP_VERSION "0.4.0-dev"
+#define APP_VERSION "0.5.0-dev"
+#define SECONDS_PER_DAY 86400
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 
@@ -40,6 +42,16 @@ struct app_state
 static void console_move(int row, int column)
 {
 	printf("\x1b[%d;%dH", row, column);
+}
+
+static unsigned int current_day(void)
+{
+	time_t now = time(NULL);
+
+	if (now == (time_t)-1 || now < 0)
+		return 0;
+
+	return (unsigned int)(now / SECONDS_PER_DAY);
 }
 
 static void draw_wrapped_text(const char *text, int row, int max_rows)
@@ -108,6 +120,19 @@ static unsigned int review_count_total(const struct scheduler_session *session)
 	return total;
 }
 
+static size_t scheduler_new_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (scheduler_card_is_due(session, index) && session->cards[index].review_count == 0)
+			count++;
+	}
+
+	return count;
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -163,7 +188,7 @@ static void app_load_selected_deck(struct app_state *app)
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
-		scheduler_init(&app->session, app->deck.card_count);
+		scheduler_init(&app->session, app->deck.card_count, current_day());
 		app->state_load_result = review_state_load(
 			&app->deck,
 			&app->session,
@@ -179,7 +204,7 @@ static void app_load_selected_deck(struct app_state *app)
 	else
 	{
 		app->mode = APP_MODE_LOAD_ERROR;
-		scheduler_init(&app->session, 0);
+		scheduler_init(&app->session, 0, current_day());
 	}
 }
 
@@ -194,12 +219,33 @@ static void draw_header(const struct app_state *app)
 {
 	printf("\x1b[1;1Hanki3ds Review");
 	printf(
-		"\x1b[2;1HDeck: %s  Done: %lu/%lu",
-		app->deck.name,
-		(unsigned long)app->session.done_count,
-		(unsigned long)app->session.card_count
+		"\x1b[2;1HDeck: %s",
+		app->deck.name
 	);
-	printf("\x1b[3;1HState: %s", app->state_message);
+	printf(
+		"\x1b[3;1HDue: %lu  New: %lu  Reviewed: %u",
+		(unsigned long)app->session.due_count,
+		(unsigned long)scheduler_new_due_count(&app->session),
+		app->session.reviewed_count
+	);
+	printf(
+		"\x1b[4;1HState: %s  Day: %u",
+		app->state_message,
+		app->session.today
+	);
+}
+
+static void draw_card_status(const struct app_state *app, const struct scheduler_card *state)
+{
+	printf(
+		"\x1b[5;1H%lu/%lu  Due:%lu  Int:%ud  Ease:%u.%02u",
+		(unsigned long)(scheduler_current_index(&app->session) + 1),
+		(unsigned long)app->session.card_count,
+		(unsigned long)app->session.due_count,
+		state->interval_days,
+		state->ease_permille / 1000,
+		(state->ease_permille % 1000) / 10
+	);
 }
 
 static void draw_deck_select_screen(const struct app_state *app)
@@ -262,25 +308,28 @@ static void draw_review_screen(const struct app_state *app)
 
 	if (card == NULL)
 	{
-		printf("\x1b[5;1HNo due cards.");
+		printf("\x1b[6;1HNo cards are due today.");
 		printf("\x1b[28;1HSTART/M: exit");
 		return;
 	}
 
-	printf("\x1b[5;1HFront:");
+	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
+	printf("\x1b[7;1HFront");
+	printf("\x1b[8;1H------------------------------------------------");
 
 	if (app->revealed)
 	{
-		draw_wrapped_text(card->front, 6, 7);
-		printf("\x1b[14;1HBack:");
-		draw_wrapped_text(card->back, 15, 9);
+		draw_wrapped_text(card->front, 9, 5);
+		printf("\x1b[15;1HBack");
+		printf("\x1b[16;1H------------------------------------------------");
+		draw_wrapped_text(card->back, 17, 7);
 		printf("\x1b[26;1HSELECT/N: reset progress");
 		printf("\x1b[27;1HRate: Y Again  X Hard  B Good  A Easy");
 		printf("\x1b[28;1HSTART/M: exit");
 	}
 	else
 	{
-		draw_wrapped_text(card->front, 6, 17);
+		draw_wrapped_text(card->front, 9, 15);
 		printf("\x1b[26;1HB/S: deck list  SELECT/N: reset");
 		printf("\x1b[27;1HA: show answer");
 		printf("\x1b[28;1HSTART/M: exit");
@@ -293,24 +342,25 @@ static void draw_summary_screen(const struct app_state *app)
 
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds Review");
-	printf("\x1b[3;1HSession complete");
-	printf("\x1b[5;1HCards:   %lu", (unsigned long)session->card_count);
-	printf("\x1b[6;1HReviews: %u", review_count_total(session));
-	printf("\x1b[7;1HState:   %s", app->state_message);
+	printf("\x1b[3;1HNo cards due now");
+	printf("\x1b[5;1HCards:    %lu", (unsigned long)session->card_count);
+	printf("\x1b[6;1HReviewed: %u", session->reviewed_count);
+	printf("\x1b[7;1HTotal rev:%u", review_count_total(session));
+	printf("\x1b[8;1HState:    %s", app->state_message);
 	printf(
-		"\x1b[9;1HY Again: %u",
+		"\x1b[10;1HY Again: %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[10;1HX Hard:  %u",
+		"\x1b[11;1HX Hard:  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[11;1HB Good:  %u",
+		"\x1b[12;1HB Good:  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[12;1HA Easy:  %u",
+		"\x1b[13;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 	printf("\x1b[26;1HB/S: deck list");

@@ -59,7 +59,7 @@ The app writes review progress beside the selected deck:
 sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
 
-Default Azahar keyboard controls used by the sample reviewer:
+Default Azahar keyboard controls used by the reviewer:
 
 ```text
 A key = open deck / reveal / Easy

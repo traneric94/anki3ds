@@ -107,9 +107,9 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
 
 Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
-reveals answers, records ratings, saves local `state.tsv` progress beside that
-deck, and can reset saved progress with `SELECT` (`N` in Azahar's default
-keyboard mapping).
+reveals answers, records ratings, schedules cards with a day-level spaced
+repetition algorithm, saves local `state.tsv` progress beside that deck, and can
+reset saved progress with `SELECT` (`N` in Azahar's default keyboard mapping).
 
 See:
 

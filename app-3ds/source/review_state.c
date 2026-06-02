@@ -6,9 +6,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STATE_FIELD_COUNT 4
+#define STATE_LEGACY_FIELD_COUNT 4
+#define STATE_FIELD_COUNT 7
 #define STATE_MAX_LINE_LENGTH 192
 #define STATE_MAX_PATH_LENGTH 256
+
+struct parsed_state
+{
+	char *card_id;
+	unsigned int review_count;
+	enum scheduler_rating last_rating;
+	unsigned int due_day;
+	unsigned int interval_days;
+	unsigned int ease_permille;
+	unsigned int lapses;
+};
 
 static const char *rating_to_field(enum scheduler_rating rating)
 {
@@ -78,7 +90,11 @@ static void consume_line_remainder(FILE *file)
 	while (value != EOF && value != '\n');
 }
 
-static bool split_state_line(char *line, char *fields[STATE_FIELD_COUNT])
+static bool split_state_line(
+	char *line,
+	char *fields[STATE_FIELD_COUNT],
+	size_t *field_count
+)
 {
 	size_t field_index = 0;
 	char *field_start = line;
@@ -103,40 +119,98 @@ static bool split_state_line(char *line, char *fields[STATE_FIELD_COUNT])
 		}
 	}
 
-	return field_index == STATE_FIELD_COUNT;
+	*field_count = field_index;
+	return true;
+}
+
+static bool parse_legacy_state_fields(
+	char *fields[STATE_FIELD_COUNT],
+	struct parsed_state *state,
+	unsigned int today
+)
+{
+	unsigned int done_value;
+	unsigned int rating_value;
+
+	if (fields[0][0] == '\0')
+		return false;
+	if (!parse_unsigned_field(fields[1], 1, &done_value))
+		return false;
+	if (!parse_unsigned_field(fields[2], 1000000, &state->review_count))
+		return false;
+	if (!parse_unsigned_field(fields[3], SCHEDULER_RATING_COUNT - 1, &rating_value))
+		return false;
+
+	state->card_id = fields[0];
+	state->last_rating = (enum scheduler_rating)rating_value;
+	state->due_day = done_value && today < SCHEDULER_MAX_DAY ? today + 1 : today;
+	state->interval_days = done_value ? 1 : 0;
+	state->ease_permille = SCHEDULER_DEFAULT_EASE_PERMILLE;
+	state->lapses = 0;
+	return true;
+}
+
+static bool parse_current_state_fields(
+	char *fields[STATE_FIELD_COUNT],
+	struct parsed_state *state
+)
+{
+	unsigned int rating_value;
+
+	if (fields[0][0] == '\0')
+		return false;
+	if (!parse_unsigned_field(fields[1], 1000000, &state->review_count))
+		return false;
+	if (!parse_unsigned_field(fields[2], SCHEDULER_RATING_COUNT - 1, &rating_value))
+		return false;
+	if (!parse_unsigned_field(fields[3], SCHEDULER_MAX_DAY, &state->due_day))
+		return false;
+	if (!parse_unsigned_field(fields[4], SCHEDULER_MAX_INTERVAL_DAYS, &state->interval_days))
+		return false;
+	if (
+		!parse_unsigned_field(
+			fields[5],
+			SCHEDULER_MAX_EASE_PERMILLE,
+			&state->ease_permille
+		)
+	)
+	{
+		return false;
+	}
+	if (state->ease_permille < SCHEDULER_MIN_EASE_PERMILLE)
+		return false;
+	if (!parse_unsigned_field(fields[6], 1000000, &state->lapses))
+		return false;
+
+	state->card_id = fields[0];
+	state->last_rating = (enum scheduler_rating)rating_value;
+	return true;
 }
 
 static bool parse_state_line(
 	char *line,
-	char **card_id,
-	bool *done,
-	unsigned int *review_count,
-	enum scheduler_rating *last_rating
+	struct parsed_state *state,
+	unsigned int today
 )
 {
 	char *fields[STATE_FIELD_COUNT];
-	unsigned int done_value;
-	unsigned int rating_value;
+	size_t field_count;
 
 	trim_line_end(line);
 
 	if (line[0] == '\0')
 		return false;
-	if (!split_state_line(line, fields))
-		return false;
-	if (fields[0][0] == '\0')
-		return false;
-	if (!parse_unsigned_field(fields[1], 1, &done_value))
-		return false;
-	if (!parse_unsigned_field(fields[2], 1000000, review_count))
-		return false;
-	if (!parse_unsigned_field(fields[3], SCHEDULER_RATING_COUNT - 1, &rating_value))
+	if (!split_state_line(line, fields, &field_count))
 		return false;
 
-	*card_id = fields[0];
-	*done = done_value != 0;
-	*last_rating = (enum scheduler_rating)rating_value;
-	return true;
+	memset(state, 0, sizeof(*state));
+
+	if (field_count == STATE_LEGACY_FIELD_COUNT)
+		return parse_legacy_state_fields(fields, state, today);
+	if (field_count == STATE_FIELD_COUNT)
+		return parse_current_state_fields(fields, state);
+
+	return false;
 }
 
 static size_t find_card_index(const struct deck *deck, const char *card_id)
@@ -158,16 +232,14 @@ enum review_state_load_result review_state_load(
 {
 	FILE *file = fopen(path, "r");
 	char line[STATE_MAX_LINE_LENGTH];
+	struct scheduler_session staged = *session;
 
 	if (file == NULL)
 		return REVIEW_STATE_LOAD_NOT_FOUND;
 
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
-		char *card_id;
-		bool done;
-		unsigned int review_count;
-		enum scheduler_rating last_rating;
+		struct parsed_state state;
 		size_t card_index;
 
 		if (line_needs_more_input(file, line))
@@ -177,17 +249,28 @@ enum review_state_load_result review_state_load(
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
 
-		if (!parse_state_line(line, &card_id, &done, &review_count, &last_rating))
+		if (!parse_state_line(line, &state, session->today))
 		{
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
 
-		card_index = find_card_index(deck, card_id);
+		card_index = find_card_index(deck, state.card_id);
 		if (card_index == deck->card_count)
 			continue;
 
-		if (!scheduler_restore_card(session, card_index, done, review_count, last_rating))
+		if (
+			!scheduler_restore_card(
+				&staged,
+				card_index,
+				state.review_count,
+				state.last_rating,
+				state.due_day,
+				state.interval_days,
+				state.ease_permille,
+				state.lapses
+			)
+		)
 		{
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
@@ -201,6 +284,7 @@ enum review_state_load_result review_state_load(
 	}
 
 	fclose(file);
+	*session = staged;
 	scheduler_reposition(session);
 	return REVIEW_STATE_LOAD_OK;
 }
@@ -227,11 +311,14 @@ enum review_state_save_result review_state_save(
 
 		if (fprintf(
 			file,
-			"%s\t%d\t%u\t%s\n",
+			"%s\t%u\t%s\t%u\t%u\t%u\t%u\n",
 			deck->cards[index].card_id,
-			state->done ? 1 : 0,
 			state->review_count,
-			rating_to_field(state->last_rating)
+			rating_to_field(state->last_rating),
+			state->due_day,
+			state->interval_days,
+			state->ease_permille,
+			state->lapses
 		) < 0)
 		{
 			fclose(file);
