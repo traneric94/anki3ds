@@ -23,7 +23,9 @@ from converter.anki3ds_convert import (
 class ConverterTests(unittest.TestCase):
     def test_deck_id_validation(self):
         self.assertTrue(deck_id_is_valid("my-deck_01"))
+        self.assertTrue(deck_id_is_valid("a" * 63))
         self.assertFalse(deck_id_is_valid(""))
+        self.assertFalse(deck_id_is_valid("a" * 64))
         self.assertFalse(deck_id_is_valid("My Deck"))
         self.assertFalse(deck_id_is_valid("bad/id"))
 

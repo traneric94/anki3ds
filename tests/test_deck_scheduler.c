@@ -917,6 +917,13 @@ static void save_entry_state(
 static void test_deck_index_builds_paths(void)
 {
 	struct deck_entry entry;
+	char longest_valid_id[DECK_MAX_NAME_LENGTH];
+	char too_long_id[DECK_MAX_NAME_LENGTH + 1];
+
+	memset(longest_valid_id, 'a', sizeof(longest_valid_id) - 1);
+	longest_valid_id[sizeof(longest_valid_id) - 1] = '\0';
+	memset(too_long_id, 'b', sizeof(too_long_id) - 1);
+	too_long_id[sizeof(too_long_id) - 1] = '\0';
 
 	check(
 		deck_index_build_entry(&entry, "/root", "sample"),
@@ -936,6 +943,15 @@ static void test_deck_index_builds_paths(void)
 	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad id"), "space id rejected");
+	check(
+		deck_index_build_entry(&entry, "/root", longest_valid_id),
+		"longest deck id accepted"
+	);
+	check(
+		strcmp(entry.id, longest_valid_id) == 0,
+		"longest deck id stores without truncation"
+	);
+	check(!deck_index_build_entry(&entry, "/root", too_long_id), "too-long deck id rejected");
 }
 
 static void test_media_image_loads_rgb565(void)

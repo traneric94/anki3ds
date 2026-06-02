@@ -52,6 +52,8 @@ Draft:
 
 `deck_id` must match the folder id. The converter defaults it from the output
 folder name, and rejects mismatches so desktop output stays loadable on-device.
+Folder ids are limited to 63 ASCII letters, numbers, `_`, or `-` characters,
+which leaves space for the C string terminator in the 3DS app's fixed buffers.
 The 3DS app reads the optional `name` string for deck-list and review-screen
 display, falling back to the folder id when metadata is missing or malformed.
 
