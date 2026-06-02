@@ -1,5 +1,7 @@
 #include "app_settings.h"
 
+#include "storage.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,9 +10,6 @@
 
 #define SETTINGS_FIELD_COUNT 2
 #define SETTINGS_MAX_LINE_LENGTH 96
-#define SETTINGS_MAX_PATH_LENGTH 256
-#define SETTINGS_TEMP_SUFFIX ".tmp"
-#define SETTINGS_BACKUP_SUFFIX ".bak"
 
 void app_settings_default(struct app_settings *settings)
 {
@@ -31,18 +30,6 @@ static bool parse_unsigned_field(const char *field, unsigned int max, unsigned i
 
 	*value = (unsigned int)parsed;
 	return true;
-}
-
-static bool build_suffixed_path(
-	char *destination,
-	size_t destination_size,
-	const char *path,
-	const char *suffix
-)
-{
-	int written = snprintf(destination, destination_size, "%s%s", path, suffix);
-
-	return written >= 0 && (size_t)written < destination_size;
 }
 
 static void trim_line_end(char *line)
@@ -146,7 +133,7 @@ static bool parse_settings_line(char *line, struct app_settings *settings)
 enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
 {
 	FILE *file;
-	char backup_path[SETTINGS_MAX_PATH_LENGTH];
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	char line[SETTINGS_MAX_LINE_LENGTH];
 	struct app_settings staged;
 
@@ -162,11 +149,11 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 	if (file == NULL)
 	{
 		if (
-			!build_suffixed_path(
+			!storage_build_suffixed_path(
 				backup_path,
 				sizeof(backup_path),
 				path,
-				SETTINGS_BACKUP_SUFFIX
+				STORAGE_BACKUP_SUFFIX
 			)
 		)
 		{
@@ -217,10 +204,8 @@ enum app_settings_save_result app_settings_save(
 	const char *path
 )
 {
-	char temp_path[SETTINGS_MAX_PATH_LENGTH];
-	char backup_path[SETTINGS_MAX_PATH_LENGTH];
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	FILE *file;
-	bool had_previous_settings = false;
 
 	if (settings == NULL || path == NULL)
 		return APP_SETTINGS_SAVE_FAILED;
@@ -228,10 +213,15 @@ enum app_settings_save_result app_settings_save(
 		return APP_SETTINGS_SAVE_FAILED;
 	if (settings->review_limit > APP_SETTINGS_MAX_DAILY_LIMIT)
 		return APP_SETTINGS_SAVE_FAILED;
-	if (!build_suffixed_path(temp_path, sizeof(temp_path), path, SETTINGS_TEMP_SUFFIX))
+	if (!storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	))
+	{
 		return APP_SETTINGS_SAVE_FAILED;
-	if (!build_suffixed_path(backup_path, sizeof(backup_path), path, SETTINGS_BACKUP_SUFFIX))
-		return APP_SETTINGS_SAVE_FAILED;
+	}
 
 	file = fopen(temp_path, "w");
 	if (file == NULL)
@@ -257,35 +247,8 @@ enum app_settings_save_result app_settings_save(
 		return APP_SETTINGS_SAVE_FAILED;
 	}
 
-	errno = 0;
-	if (remove(backup_path) != 0 && errno != ENOENT)
-	{
-		remove(temp_path);
+	if (!storage_replace_file(path))
 		return APP_SETTINGS_SAVE_FAILED;
-	}
-
-	errno = 0;
-	if (rename(path, backup_path) == 0)
-	{
-		had_previous_settings = true;
-	}
-	else if (errno != ENOENT)
-	{
-		remove(temp_path);
-		return APP_SETTINGS_SAVE_FAILED;
-	}
-
-	if (rename(temp_path, path) != 0)
-	{
-		if (had_previous_settings)
-			rename(backup_path, path);
-
-		remove(temp_path);
-		return APP_SETTINGS_SAVE_FAILED;
-	}
-
-	if (had_previous_settings)
-		remove(backup_path);
 
 	return APP_SETTINGS_SAVE_OK;
 }

@@ -1,5 +1,7 @@
 #include "review_state.h"
 
+#include "storage.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,9 +13,6 @@
 #define STATE_SUSPENDED_FIELD_COUNT 8
 #define STATE_CURRENT_FIELD_COUNT 10
 #define STATE_MAX_LINE_LENGTH 192
-#define STATE_MAX_PATH_LENGTH 256
-#define STATE_TEMP_SUFFIX ".tmp"
-#define STATE_BACKUP_SUFFIX ".bak"
 
 struct parsed_state
 {
@@ -61,18 +60,6 @@ static bool parse_unsigned_field(const char *field, unsigned int max, unsigned i
 
 	*value = (unsigned int)parsed;
 	return true;
-}
-
-static bool build_suffixed_path(
-	char *destination,
-	size_t destination_size,
-	const char *path,
-	const char *suffix
-)
-{
-	int written = snprintf(destination, destination_size, "%s%s", path, suffix);
-
-	return written >= 0 && (size_t)written < destination_size;
 }
 
 static void trim_line_end(char *line)
@@ -282,18 +269,18 @@ enum review_state_load_result review_state_load(
 	const char *path
 )
 {
-	char backup_path[STATE_MAX_PATH_LENGTH];
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	FILE *file = fopen(path, "r");
 	char line[STATE_MAX_LINE_LENGTH];
 	struct scheduler_session staged = *session;
 
 	if (file == NULL)
 	{
-		if (!build_suffixed_path(
+		if (!storage_build_suffixed_path(
 			backup_path,
 			sizeof(backup_path),
 			path,
-			STATE_BACKUP_SUFFIX
+			STORAGE_BACKUP_SUFFIX
 		))
 		{
 			return REVIEW_STATE_LOAD_NOT_FOUND;
@@ -368,15 +355,18 @@ enum review_state_save_result review_state_save(
 	const char *path
 )
 {
-	char temp_path[STATE_MAX_PATH_LENGTH];
-	char backup_path[STATE_MAX_PATH_LENGTH];
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	FILE *file;
-	bool had_previous_state = false;
 
-	if (!build_suffixed_path(temp_path, sizeof(temp_path), path, STATE_TEMP_SUFFIX))
+	if (!storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	))
+	{
 		return REVIEW_STATE_SAVE_FAILED;
-	if (!build_suffixed_path(backup_path, sizeof(backup_path), path, STATE_BACKUP_SUFFIX))
-		return REVIEW_STATE_SAVE_FAILED;
+	}
 
 	file = fopen(temp_path, "w");
 	if (file == NULL)
@@ -413,62 +403,15 @@ enum review_state_save_result review_state_save(
 		return REVIEW_STATE_SAVE_FAILED;
 	}
 
-	errno = 0;
-	if (remove(backup_path) != 0 && errno != ENOENT)
-	{
-		remove(temp_path);
+	if (!storage_replace_file(path))
 		return REVIEW_STATE_SAVE_FAILED;
-	}
-
-	errno = 0;
-	if (rename(path, backup_path) == 0)
-	{
-		had_previous_state = true;
-	}
-	else if (errno != ENOENT)
-	{
-		remove(temp_path);
-		return REVIEW_STATE_SAVE_FAILED;
-	}
-
-	if (rename(temp_path, path) != 0)
-	{
-		if (had_previous_state)
-			rename(backup_path, path);
-
-		remove(temp_path);
-		return REVIEW_STATE_SAVE_FAILED;
-	}
-
-	if (had_previous_state)
-		remove(backup_path);
 
 	return REVIEW_STATE_SAVE_OK;
 }
 
 bool review_state_delete(const char *path)
 {
-	char temp_path[STATE_MAX_PATH_LENGTH];
-	char backup_path[STATE_MAX_PATH_LENGTH];
-
-	if (!build_suffixed_path(temp_path, sizeof(temp_path), path, STATE_TEMP_SUFFIX))
-		return false;
-	if (!build_suffixed_path(backup_path, sizeof(backup_path), path, STATE_BACKUP_SUFFIX))
-		return false;
-
-	errno = 0;
-	if (remove(path) != 0 && errno != ENOENT)
-		return false;
-
-	errno = 0;
-	if (remove(temp_path) != 0 && errno != ENOENT)
-		return false;
-
-	errno = 0;
-	if (remove(backup_path) != 0 && errno != ENOENT)
-		return false;
-
-	return true;
+	return storage_delete_save_files(path);
 }
 
 const char *review_state_load_result_name(enum review_state_load_result result)

@@ -122,15 +122,14 @@ Save algorithm:
 1. Build `state.tsv.tmp`.
 2. Write one state row per loaded card.
 3. Close the temp file and check close errors.
-4. Remove stale `state.tsv.bak` when present.
-5. Rename the old `state.tsv` to `state.tsv.bak` when present.
-6. Rename the temp file to `state.tsv`.
-7. Remove `state.tsv.bak` after the new state is in place.
+4. Ask `storage` to replace the primary file through the shared
+   temp/backup transaction.
 
 If the main state file is missing on load, the app tries `state.tsv.bak`. Reset
 removes `state.tsv`, `state.tsv.tmp`, and `state.tsv.bak` for the active deck.
-This remains simple to inspect on the SD card while avoiding the known
-remove-before-rename data-loss window.
+The shared `storage` module owns the remove/rename order for both review state
+and settings. This remains simple to inspect on the SD card while avoiding the
+known remove-before-rename data-loss window.
 
 ## Review Loop
 
@@ -279,6 +278,7 @@ Keep the portable logic separate from the libctru shell:
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
 | `scheduler` | per-card session state, rating transitions, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
+| `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
@@ -286,8 +286,6 @@ Keep the portable logic separate from the libctru shell:
 
 Likely next boundaries:
 
-- `storage`: temp-file replace and remove/rename behavior that can be
-  hardware-tested in one place.
 - `ui`: screen drawing and button labels, once the app has more than a few
   screens.
 

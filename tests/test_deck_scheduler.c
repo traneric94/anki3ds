@@ -12,6 +12,7 @@
 #include "media_image.h"
 #include "review_state.h"
 #include "scheduler.h"
+#include "storage.h"
 
 #define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
 #define TEST_STATE_TEMP_PATH TEST_STATE_PATH ".tmp"
@@ -19,6 +20,9 @@
 #define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
 #define TEST_SETTINGS_TEMP_PATH TEST_SETTINGS_PATH ".tmp"
 #define TEST_SETTINGS_BACKUP_PATH TEST_SETTINGS_PATH ".bak"
+#define TEST_STORAGE_PATH "/private/tmp/anki3ds-storage-test.tsv"
+#define TEST_STORAGE_TEMP_PATH TEST_STORAGE_PATH ".tmp"
+#define TEST_STORAGE_BACKUP_PATH TEST_STORAGE_PATH ".bak"
 #define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
 #define TEST_MEDIA_PATH "/private/tmp/anki3ds-media-test.a3i"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
@@ -28,6 +32,7 @@ static int failures;
 
 static void write_file(const char *path, const char *content);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
+static bool file_equals(const char *path, const char *content);
 
 static void check(bool condition, const char *message)
 {
@@ -670,6 +675,32 @@ static void test_review_state_delete_removes_save_artifacts(void)
 	check(access(TEST_STATE_BACKUP_PATH, F_OK) != 0, "review state delete removes backup");
 }
 
+static void test_storage_replace_file_commits_temp_file(void)
+{
+	write_file(TEST_STORAGE_PATH, "old\n");
+	write_file(TEST_STORAGE_TEMP_PATH, "new\n");
+	write_file(TEST_STORAGE_BACKUP_PATH, "stale backup\n");
+
+	check(storage_replace_file(TEST_STORAGE_PATH), "storage replace succeeds");
+	check(file_equals(TEST_STORAGE_PATH, "new\n"), "storage replace commits temp");
+	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage replace removes temp");
+	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage replace removes backup");
+
+	remove(TEST_STORAGE_PATH);
+}
+
+static void test_storage_delete_save_files_removes_related_files(void)
+{
+	write_file(TEST_STORAGE_PATH, "primary\n");
+	write_file(TEST_STORAGE_TEMP_PATH, "temp\n");
+	write_file(TEST_STORAGE_BACKUP_PATH, "backup\n");
+
+	check(storage_delete_save_files(TEST_STORAGE_PATH), "storage delete succeeds");
+	check(access(TEST_STORAGE_PATH, F_OK) != 0, "storage delete removes primary");
+	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage delete removes temp");
+	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage delete removes backup");
+}
+
 static void test_review_state_bad_load_does_not_mutate_session(void)
 {
 	struct deck deck;
@@ -835,6 +866,29 @@ static void write_binary_file(const char *path, const unsigned char *content, si
 
 	fwrite(content, 1, size, file);
 	fclose(file);
+}
+
+static bool file_equals(const char *path, const char *content)
+{
+	char buffer[128];
+	FILE *file = fopen(path, "r");
+	size_t bytes_read;
+	bool matches;
+
+	if (file == NULL)
+		return false;
+
+	bytes_read = fread(buffer, 1, sizeof(buffer) - 1, file);
+	if (ferror(file))
+	{
+		fclose(file);
+		return false;
+	}
+
+	buffer[bytes_read] = '\0';
+	matches = strcmp(buffer, content) == 0 && fgetc(file) == EOF;
+	fclose(file);
+	return matches;
 }
 
 static void load_entry_deck(
@@ -1425,6 +1479,8 @@ int main(void)
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
 	test_review_state_delete_removes_save_artifacts();
+	test_storage_replace_file_commits_temp_file();
+	test_storage_delete_save_files_removes_related_files();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();
