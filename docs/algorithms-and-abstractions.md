@@ -150,7 +150,7 @@ The app loop is a small mode machine:
 - `ACTIONS`: choose deck-level actions such as restoring suspended cards or
   resetting progress.
 - `CONFIRM_RESET`: require explicit `X` before deleting saved review state.
-- `CONFIRM_EXIT`: require a second `START` before leaving the app.
+- `CONFIRM_EXIT`: require explicit `A` before leaving the app.
 
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls. This keeps button prompts out of the review card
@@ -203,8 +203,8 @@ opens a confirmation screen. Pressing `X` there removes the active `state.tsv`
 and reloads the selected deck. If removal fails, the app leaves the current
 session in place and shows `reset failed`.
 
-`START` opens an exit confirmation screen from every normal app mode. A second
-`START` exits the app; `B` or `SELECT` cancels back to the previous mode. This
+`START` opens an exit confirmation screen from every normal app mode. Pressing
+`A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This
 keeps the Homebrew-style exit path available while avoiding accidental exits
 during review or settings edits.
 

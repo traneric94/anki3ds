@@ -892,7 +892,7 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	printf("\x1b[3;1HExit app?");
 	printf("\x1b[6;1HProgress is saved after");
 	printf("\x1b[7;1Heach review action.");
-	printf("\x1b[10;1HUse START to exit.");
+	printf("\x1b[10;1HUse A to exit.");
 	printf("\x1b[12;1HUse B or SELECT to cancel.");
 }
 
@@ -1042,7 +1042,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		break;
 	case APP_MODE_CONFIRM_EXIT:
 		printf("\x1b[1;1HConfirm exit");
-		printf("\x1b[3;1HSTART: exit app");
+		printf("\x1b[3;1HA: exit app");
 		printf("\x1b[5;1HB or SELECT: cancel");
 		break;
 	}
@@ -1326,7 +1326,7 @@ static bool app_handle_reset_confirmation_input(struct app_state *app, u32 keys_
 
 static bool app_handle_exit_confirmation_input(struct app_state *app, u32 keys_down)
 {
-	if (keys_down & KEY_START)
+	if (keys_down & KEY_A)
 	{
 		app->exit_requested = true;
 		return true;

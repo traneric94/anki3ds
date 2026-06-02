@@ -52,7 +52,7 @@ Local emulator acceptance test:
 1. Build the `.3dsx`.
 2. Launch it in Azahar with `make run-emulator`.
 3. Confirm it displays a title and version string.
-4. Press `START`, confirm the exit screen appears, then press `START` again.
+4. Press `START`, confirm the exit screen appears, then press `A`.
 5. Confirm it exits cleanly.
 
 Hardware acceptance test:
@@ -60,7 +60,7 @@ Hardware acceptance test:
 1. Copy the `.3dsx` build to the SD card.
 2. Launch it from the Homebrew Launcher.
 3. Confirm it displays a title and version string.
-4. Press `START`, confirm the exit screen appears, then press `START` again.
+4. Press `START`, confirm the exit screen appears, then press `A`.
 5. Confirm it exits cleanly.
 
 Pass condition:
@@ -75,7 +75,7 @@ Acceptance test:
 2. Press `A`.
 3. Press D-pad directions.
 4. Press `START` to open exit confirmation.
-5. Press `START` again to exit, or `B`/`SELECT` to cancel.
+5. Press `A` to exit, or `B`/`SELECT` to cancel.
 
 Pass condition:
 

@@ -60,7 +60,7 @@ For the toolchain proof, the emulator test is intentionally small:
 1. Build `anki3ds.3dsx` with `make`.
 2. Launch it in Azahar with `make run-emulator`.
 3. Confirm the top screen shows the app name and version.
-4. Press `Start`, confirm the exit screen appears, then press `Start` again.
+4. Press `Start`, confirm the exit screen appears, then press `A`.
 
 Pass condition:
 

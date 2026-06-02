@@ -6,7 +6,7 @@ letters do not match the 3DS button label.
 
 | 3DS button | Azahar key | Main use |
 | --- | --- | --- |
-| `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits |
+| `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
 | `B` | `S` | Choose Good after reveal, go back, cancel |
 | `X` | `Z` | Choose Hard after reveal, confirm reset progress |
 | `Y` | `X` | Choose Again after reveal |
@@ -17,7 +17,7 @@ letters do not match the 3DS button label.
 | D-pad Left | `F` | Decrease daily-limit preset |
 | D-pad Right | `H` | Increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
-| `START` | `M` | Open exit confirmation, then exit on second press |
+| `START` | `M` | Open exit confirmation |
 
 ## Review Flow
 
