@@ -81,33 +81,9 @@ Deck settings live beside the selected deck:
 sdmc:/3ds/anki3ds/decks/<deck-id>/settings.tsv
 ```
 
-Default Azahar keyboard controls used by the reviewer:
-
-```text
-A key = open deck / reveal / Easy
-S key = Good
-Q key = undo last action
-W key = suspend current card
-T key = selector up
-G key = selector down
-F key = setting value left
-H key = setting value right
-Z key = Hard
-X key = Again
-N key = rescan decks / actions
-M key = open exit confirmation / confirm exit
-```
-
-In review and summary modes, `N` opens the actions screen. The default action is
-restore suspended cards. Use `T`/`G` to choose daily limits or reset progress,
-press `A` to open the selected action, or press `S`/`N` to cancel. On the daily
-limits screen, use `T`/`G` to choose `new_limit` or `review_limit`, `F`/`H` to
-cycle preset values, `A` to save, or `S`/`N` to cancel. Reset progress opens a
-confirmation screen; press `Z` for 3DS `X` to reset, or `S`/`N` to cancel. In
-review and summary modes, `Q` undoes the last rating or suspend action and
-saves the restored state. In review mode, `W` suspends the current card.
-Pressing `M` opens exit confirmation; press `M` again to exit or `S`/`N` to
-cancel.
+Default Azahar keyboard controls are documented in
+`docs/control-map.md`. The app displays Nintendo 3DS button names on screen;
+for example, the default Azahar key for 3DS `START` is `M`.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.

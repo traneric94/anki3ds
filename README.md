@@ -142,6 +142,7 @@ See:
 - [PROJECT_PLAN.md](PROJECT_PLAN.md)
 - [CHECKPOINTS.md](CHECKPOINTS.md)
 - [TESTING.md](TESTING.md)
+- [docs/control-map.md](docs/control-map.md)
 - [docs/algorithms-and-abstractions.md](docs/algorithms-and-abstractions.md)
 - [docs/deck-format.md](docs/deck-format.md)
 - [docs/c-style-and-architecture.md](docs/c-style-and-architecture.md)
