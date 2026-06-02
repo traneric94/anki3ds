@@ -499,6 +499,94 @@ static void test_scheduler_limits_review_cards(void)
 	check(session.due_count == 0, "review limit hides remaining review cards");
 }
 
+static void test_scheduler_restored_started_new_card_stays_due_after_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 1, 0);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			1,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			0,
+			false,
+			TEST_TODAY,
+			TEST_TODAY
+		),
+		"restored started new card"
+	);
+	scheduler_reposition(&session);
+
+	check(session.new_count_today == 1, "restored new card counts against new limit");
+	check(session.review_count_today == 0, "restored new card does not count as review");
+	check(session.due_count == 1, "restored started new card remains visible");
+	check(scheduler_current_index(&session) == 0, "restored started new card selected");
+	check(scheduler_card_is_due(&session, 0), "started new card is due");
+	check(!scheduler_card_is_due(&session, 1), "unstarted new card remains hidden");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.due_count == 0, "finished restored new card leaves limit full");
+	check(!scheduler_card_is_due(&session, 1), "new limit still hides next new card");
+}
+
+static void test_scheduler_restored_started_review_card_stays_due_after_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 0, 1);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			1,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY
+		),
+		"restored started review card"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"restored unstarted review card"
+	);
+	scheduler_reposition(&session);
+
+	check(session.new_count_today == 0, "restored review card does not count as new");
+	check(session.review_count_today == 1, "restored review card counts against review limit");
+	check(session.due_count == 1, "restored started review card remains visible");
+	check(scheduler_current_index(&session) == 0, "restored started review card selected");
+	check(scheduler_card_is_due(&session, 0), "started review card is due");
+	check(!scheduler_card_is_due(&session, 1), "unstarted review card remains hidden");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.due_count == 0, "finished restored review card leaves limit full");
+	check(!scheduler_card_is_due(&session, 1), "review limit still hides next review card");
+}
+
 static void build_test_deck(struct deck *deck)
 {
 	deck_init(deck, "state-test");
@@ -1548,6 +1636,8 @@ int main(void)
 	test_scheduler_limit_change_clears_undo();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
+	test_scheduler_restored_started_new_card_stays_due_after_limit();
+	test_scheduler_restored_started_review_card_stays_due_after_limit();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
