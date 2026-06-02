@@ -145,7 +145,8 @@ static void test_scheduler_scales_review_intervals(void)
 			TEST_TODAY,
 			10,
 			2500,
-			0
+			0,
+			false
 		),
 		"review card restores"
 	);
@@ -165,7 +166,8 @@ static void test_scheduler_scales_review_intervals(void)
 			TEST_TODAY,
 			10,
 			2500,
-			0
+			0,
+			false
 		),
 		"review card restores again"
 	);
@@ -199,6 +201,43 @@ static void test_scheduler_undo_last_rating(void)
 	check(session.rating_counts[SCHEDULER_RATING_GOOD] == 0, "undo restores rating count");
 	check(scheduler_current_index(&session) == 0, "undo restores current index");
 	check(!scheduler_undo_last(&session), "undo is one-shot");
+}
+
+static void test_scheduler_suspend_current(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+
+	check(scheduler_suspend_current(&session), "suspend succeeds");
+	check(session.cards[0].suspended, "suspend marks current card");
+	check(!scheduler_card_is_due(&session, 0), "suspended card is not due");
+	check(session.due_count == 1, "suspend drops due count");
+	check(scheduler_current_index(&session) == 1, "suspend advances to next due card");
+	check(session.reviewed_count == 0, "suspend does not count as review");
+
+	check(scheduler_undo_last(&session), "undo suspend succeeds");
+	check(!session.cards[0].suspended, "undo suspend restores card");
+	check(session.due_count == 2, "undo suspend restores due count");
+	check(scheduler_current_index(&session) == 0, "undo suspend restores current index");
+}
+
+static void test_scheduler_suspend_last_due_card(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 1, TEST_TODAY);
+
+	check(scheduler_suspend_current(&session), "last suspend succeeds");
+	check(session.due_count == 0, "last suspend clears due queue");
+	check(scheduler_is_complete(&session), "last suspend completes session");
+	check(!scheduler_has_current(&session), "last suspend leaves no current card");
+
+	check(scheduler_undo_last(&session), "undo last suspend succeeds");
+	check(!session.cards[0].suspended, "undo last suspend restores flag");
+	check(session.due_count == 1, "undo last suspend restores due queue");
+	check(scheduler_has_current(&session), "undo last suspend restores current card");
+	check(scheduler_current_index(&session) == 0, "undo last suspend restores current index");
 }
 
 static void build_test_deck(struct deck *deck)
@@ -262,8 +301,57 @@ static void test_review_state_round_trip(void)
 	check(loaded.cards[1].interval_days == 1, "good interval loads");
 	check(loaded.cards[1].review_count == 1, "good review count loads");
 	check(loaded.cards[1].last_rating == SCHEDULER_RATING_GOOD, "good rating loads");
+	check(!loaded.cards[1].suspended, "saved active card loads unsuspended");
 	check(loaded.due_count == 1, "due count recalculates on load");
 	check(scheduler_current_index(&loaded) == 0, "first due card selected after load");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_round_trip_suspended_card(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+
+	check(scheduler_suspend_current(&session), "suspended card saves from scheduler");
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"suspended state saves"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"suspended state loads"
+	);
+	check(loaded.cards[0].suspended, "suspended flag loads");
+	check(!scheduler_card_is_due(&loaded, 0), "loaded suspended card is not due");
+	check(loaded.due_count == 1, "loaded suspended state recounts due cards");
+	check(scheduler_current_index(&loaded) == 1, "loaded suspended state picks next card");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_loads_previous_current_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t1\t2\t20001\t1\t2500\t0\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"previous current state format loads"
+	);
+	check(!session.cards[0].suspended, "previous state format defaults unsuspended");
+	check(!scheduler_card_is_due(&session, 0), "previous state due day loads");
 
 	remove(TEST_STATE_PATH);
 }
@@ -433,8 +521,12 @@ int main(void)
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();
 	test_scheduler_undo_last_rating();
+	test_scheduler_suspend_current();
+	test_scheduler_suspend_last_due_card();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
+	test_review_state_round_trip_suspended_card();
+	test_review_state_loads_previous_current_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
 	test_deck_index_builds_paths();

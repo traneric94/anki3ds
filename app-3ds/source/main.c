@@ -423,23 +423,25 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		{
 			printf("\x1b[6;1HY: Again      X: Hard");
 			printf("\x1b[8;1HB: Good       A: Easy");
-			printf("\x1b[10;1HL: undo last rating");
-			printf("\x1b[12;1HSELECT: actions");
-			printf("\x1b[14;1HSTART: exit");
+			printf("\x1b[10;1HL: undo last action");
+			printf("\x1b[12;1HR: suspend card");
+			printf("\x1b[14;1HSELECT: actions");
+			printf("\x1b[16;1HSTART: exit");
 		}
 		else
 		{
 			printf("\x1b[6;1HA: show answer");
 			printf("\x1b[8;1HB: deck list");
-			printf("\x1b[10;1HL: undo last rating");
-			printf("\x1b[12;1HSELECT: actions");
-			printf("\x1b[14;1HSTART: exit");
+			printf("\x1b[10;1HL: undo last action");
+			printf("\x1b[12;1HR: suspend card");
+			printf("\x1b[14;1HSELECT: actions");
+			printf("\x1b[16;1HSTART: exit");
 		}
 		break;
 	case APP_MODE_SUMMARY:
 		printf("\x1b[1;1HNo cards due now");
 		printf("\x1b[3;1HB: deck list");
-		printf("\x1b[5;1HL: undo last rating");
+		printf("\x1b[5;1HL: undo last action");
 		printf("\x1b[7;1HSELECT: actions");
 		printf("\x1b[9;1HSTART: exit");
 		printf("\x1b[27;1HReviewed this session: %u", app->session.reviewed_count);
@@ -501,7 +503,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	return true;
 }
 
-static bool undo_last_rating(struct app_state *app)
+static bool undo_last_action(struct app_state *app)
 {
 	if (!scheduler_undo_last(&app->session))
 	{
@@ -520,6 +522,31 @@ static bool undo_last_rating(struct app_state *app)
 		review_state_save_result_name(app->state_save_result);
 	app->revealed = false;
 	app->mode = APP_MODE_REVIEW;
+	return true;
+}
+
+static bool suspend_current_card(struct app_state *app)
+{
+	if (!scheduler_suspend_current(&app->session))
+	{
+		app->state_message = "nothing to suspend";
+		return true;
+	}
+
+	app->state_save_result = review_state_save(
+		&app->deck,
+		&app->session,
+		app->active_state_path
+	);
+	app->state_message =
+		app->state_save_result == REVIEW_STATE_SAVE_OK ?
+		"suspended" :
+		review_state_save_result_name(app->state_save_result);
+	app->revealed = false;
+
+	if (scheduler_is_complete(&app->session))
+		app->mode = APP_MODE_SUMMARY;
+
 	return true;
 }
 
@@ -634,11 +661,14 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		(keys_down & KEY_L)
 	)
 	{
-		return undo_last_rating(app);
+		return undo_last_action(app);
 	}
 
 	if (app->mode != APP_MODE_REVIEW)
 		return false;
+
+	if (keys_down & KEY_R)
+		return suspend_current_card(app);
 
 	if (!app->revealed)
 	{

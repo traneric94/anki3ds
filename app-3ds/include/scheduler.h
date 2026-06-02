@@ -21,8 +21,16 @@ enum scheduler_rating
 	SCHEDULER_RATING_COUNT,
 };
 
+enum scheduler_undo_kind
+{
+	SCHEDULER_UNDO_NONE,
+	SCHEDULER_UNDO_RATING,
+	SCHEDULER_UNDO_SUSPEND,
+};
+
 struct scheduler_card
 {
+	bool suspended;
 	enum scheduler_rating last_rating;
 	unsigned int review_count;
 	unsigned int due_day;
@@ -34,6 +42,7 @@ struct scheduler_card
 struct scheduler_undo
 {
 	bool available;
+	enum scheduler_undo_kind kind;
 	size_t card_index;
 	size_t current_index;
 	size_t due_count;
@@ -67,10 +76,12 @@ bool scheduler_restore_card(
 	unsigned int due_day,
 	unsigned int interval_days,
 	unsigned int ease_permille,
-	unsigned int lapses
+	unsigned int lapses,
+	bool suspended
 );
 void scheduler_reposition(struct scheduler_session *session);
 void scheduler_rate_current(struct scheduler_session *session, enum scheduler_rating rating);
+bool scheduler_suspend_current(struct scheduler_session *session);
 bool scheduler_undo_last(struct scheduler_session *session);
 const char *scheduler_rating_name(enum scheduler_rating rating);
 

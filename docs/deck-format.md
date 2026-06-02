@@ -72,7 +72,7 @@ card-0002	note-0002	What is 2 + 2?	4	math
 Current columns:
 
 ```text
-card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses
+card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses<TAB>suspended
 ```
 
 Rules:
@@ -83,7 +83,9 @@ Rules:
 - `interval_days` is the current review interval
 - `ease_permille` is the ease factor scaled by 1000, such as `2500` for 2.5
 - `lapses` counts review-card Again ratings
+- `suspended` is `0` for active cards and `1` for cards skipped by review
 - unknown card IDs are ignored when loading state
+- previous seven-column state rows still load with `suspended=0`
 - old four-column state rows, `card_id done review_count last_rating`, still load
   as a migration path
 
@@ -91,8 +93,9 @@ Rules:
 updating card content.
 
 This is an early day-level spaced repetition format. Minute-level learning
-steps, suspend flags, burying, filtered decks, and review logs are planned
-later.
+steps, unsuspend UI, burying, filtered decks, and review logs are planned later.
+Older app builds that only accept seven-column rows will reject state saved by
+this version.
 
 ## Review Log
 

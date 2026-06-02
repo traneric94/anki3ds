@@ -86,15 +86,17 @@ Current persistence is in `review_state.c`.
 `state.tsv` columns are:
 
 ```text
-card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses
+card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses<TAB>suspended
 ```
 
 Load algorithm:
 
 1. Treat a missing file as normal new-deck state.
 2. Read bounded lines.
-3. Parse either the current seven-field row or the old four-field row.
-4. Validate review count, numeric rating, due day, interval, ease, and lapses.
+3. Parse the current eight-field row, previous seven-field row, or old
+   four-field row.
+4. Validate review count, numeric rating, due day, interval, ease, lapses, and
+   suspended flag.
 5. Find the matching card by `card_id`.
 6. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
@@ -148,11 +150,15 @@ Review algorithm:
 9. Advance to the next due card, wrapping through the fixed card array.
 10. Enter summary when no cards remain due today.
 
-`L` undoes the most recent rating in the active session. The scheduler stores a
-single snapshot of the rated card plus queue/session counters before applying a
-rating. Undo restores that snapshot, clears the undo slot, returns to review
-mode, and saves the restored `state.tsv`. Loading a deck or restoring saved
-card state clears the undo slot.
+`R` suspends the current card without counting a review. Suspended cards are
+saved in `state.tsv`, treated as not due, skipped by queue advancement, and
+included in total card counts.
+
+`L` undoes the most recent rating or suspend action in the active session. The
+scheduler stores a single snapshot of the affected card plus queue/session
+counters before applying the action. Undo restores that snapshot, clears the
+undo slot, returns to review mode, and saves the restored `state.tsv`. Loading a
+deck or restoring saved card state clears the undo slot.
 
 `SELECT` opens an actions screen from review and summary modes. Confirming reset
 removes the active `state.tsv` and reloads the selected deck. If removal fails,
