@@ -111,8 +111,9 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
-Current 3DS builds support 256 cards per deck folder. To split a larger export
-into numbered sibling decks such as `my-deck-01` and `my-deck-02`:
+Current 3DS builds support 256 cards per deck folder and store up to 64 deck
+folders in the selector. To split a larger export into numbered sibling decks
+such as `my-deck-01` and `my-deck-02`:
 
 ```sh
 python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \

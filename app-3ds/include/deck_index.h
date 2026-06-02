@@ -6,7 +6,7 @@
 
 #include "deck.h"
 
-#define DECK_INDEX_MAX_DECKS 16
+#define DECK_INDEX_MAX_DECKS 64
 #define DECK_INDEX_MAX_PATH_LENGTH 240
 #define DECK_INDEX_ROOT_PATH "sdmc:/3ds/anki3ds/decks"
 

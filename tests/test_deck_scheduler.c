@@ -1137,7 +1137,11 @@ static void cleanup_deck_index_test_root(void)
 	remove_test_deck_dir("summary");
 	remove_test_deck_dir("zeta");
 
-	for (unsigned int deck_number = 0; deck_number < 18; deck_number++)
+	for (
+		unsigned int deck_number = 0;
+		deck_number < DECK_INDEX_MAX_DECKS + 2;
+		deck_number++
+	)
 	{
 		char deck_id[16];
 
@@ -1236,7 +1240,11 @@ static void test_deck_index_reports_overflow(void)
 	cleanup_deck_index_test_root();
 	mkdir(TEST_DECK_ROOT, 0700);
 
-	for (unsigned int deck_number = 0; deck_number < 18; deck_number++)
+	for (
+		unsigned int deck_number = 0;
+		deck_number < DECK_INDEX_MAX_DECKS + 2;
+		deck_number++
+	)
 	{
 		char deck_id[16];
 
@@ -1249,7 +1257,10 @@ static void test_deck_index_reports_overflow(void)
 	check(index.count == DECK_INDEX_MAX_DECKS, "deck index stops at display limit");
 	check(index.overflowed, "deck index reports overflow");
 	check(strcmp(index.entries[0].id, "deck00") == 0, "deck index keeps sorted first deck");
-	check(strcmp(index.entries[DECK_INDEX_MAX_DECKS - 1].id, "deck15") == 0, "deck index keeps first visible deck set");
+	check(
+		strcmp(index.entries[DECK_INDEX_MAX_DECKS - 1].id, "deck63") == 0,
+		"deck index keeps first visible deck set"
+	);
 
 	cleanup_deck_index_test_root();
 }

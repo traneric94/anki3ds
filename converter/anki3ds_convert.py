@@ -12,6 +12,7 @@ from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
 DECK_MAX_CARDS = 256
+DECK_INDEX_MAX_DECKS = 64
 DECK_MAX_ID_LENGTH = 32
 DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128
@@ -544,6 +545,11 @@ def write_split_decks(
         raise ValueError("deck id must match output deck folder name")
 
     chunk_count = (len(cards) + DECK_MAX_CARDS - 1) // DECK_MAX_CARDS
+    if chunk_count > DECK_INDEX_MAX_DECKS:
+        raise ValueError(
+            f"split output would create more than {DECK_INDEX_MAX_DECKS} deck folders"
+        )
+
     written_paths: list[Path] = []
 
     for chunk_index in range(chunk_count):

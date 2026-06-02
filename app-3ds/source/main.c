@@ -26,6 +26,8 @@
 #define MEDIA_BACK_Y 160
 #define DECK_NAME_HEADER_WIDTH 42
 #define DECK_NAME_SELECTOR_WIDTH 32
+#define DECK_SELECTOR_FIRST_ROW 5
+#define DECK_SELECTOR_VISIBLE_ROWS 16
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -591,6 +593,9 @@ static void draw_card_status(const struct app_state *app, const struct scheduler
 
 static void draw_deck_select_screen(const struct app_state *app)
 {
+	size_t first_visible_deck = 0;
+	size_t visible_deck_count;
+
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds");
 	printf("\x1b[3;1HSelect deck");
@@ -603,12 +608,23 @@ static void draw_deck_select_screen(const struct app_state *app)
 	}
 	else
 	{
-		for (size_t index = 0; index < app->deck_index.count; index++)
+		if (app->selected_deck_index >= DECK_SELECTOR_VISIBLE_ROWS)
+			first_visible_deck = app->selected_deck_index - DECK_SELECTOR_VISIBLE_ROWS + 1;
+		visible_deck_count = app->deck_index.count - first_visible_deck;
+		if (visible_deck_count > DECK_SELECTOR_VISIBLE_ROWS)
+			visible_deck_count = DECK_SELECTOR_VISIBLE_ROWS;
+
+		for (size_t visible_index = 0; visible_index < visible_deck_count; visible_index++)
 		{
+			size_t index = first_visible_deck + visible_index;
 			const char *marker = index == app->selected_deck_index ? ">" : " ";
 			const struct deck_summary *summary = &app->deck_summaries[index];
 
-			printf("\x1b[%lu;1H%s ", (unsigned long)(5 + index), marker);
+			printf(
+				"\x1b[%lu;1H%s ",
+				(unsigned long)(DECK_SELECTOR_FIRST_ROW + visible_index),
+				marker
+			);
 			print_truncated(
 				app->deck_index.entries[index].display_name,
 				DECK_NAME_SELECTOR_WIDTH
@@ -628,6 +644,15 @@ static void draw_deck_select_screen(const struct app_state *app)
 			}
 		}
 
+		if (first_visible_deck > 0)
+			printf("\x1b[4;1H... %lu above", (unsigned long)first_visible_deck);
+		if (first_visible_deck + visible_deck_count < app->deck_index.count)
+			printf(
+				"\x1b[21;1H... %lu below",
+				(unsigned long)(
+					app->deck_index.count - first_visible_deck - visible_deck_count
+				)
+			);
 		if (app->deck_index.overflowed)
 			printf("\x1b[23;1HShowing first %u decks.", (unsigned int)DECK_INDEX_MAX_DECKS);
 	}

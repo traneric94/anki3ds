@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from converter.anki3ds_convert import (
+    DECK_INDEX_MAX_DECKS,
     DECK_MAX_CARDS,
     DECK_MAX_MEDIA_NAME_LENGTH,
     DECK_MAX_TEXT_LENGTH,
@@ -475,6 +476,26 @@ class ConverterTests(unittest.TestCase):
                     Path(temp_dir) / deck_id,
                     deck_id,
                     "Large",
+                    cards,
+                )
+
+    def test_write_split_decks_rejects_more_chunks_than_device_deck_list(self):
+        cards = convert_lines(
+            [
+                f"front {index}\tback {index}"
+                for index in range(DECK_MAX_CARDS * DECK_INDEX_MAX_DECKS + 1)
+            ],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "more than 64 deck folders"):
+                write_split_decks(
+                    Path(temp_dir) / "huge",
+                    "huge",
+                    "Huge",
                     cards,
                 )
 
