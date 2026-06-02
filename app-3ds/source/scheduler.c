@@ -200,21 +200,122 @@ static void scheduler_recount(struct scheduler_session *session)
 	scheduler_recount_due(session);
 }
 
-static void scheduler_advance(struct scheduler_session *session)
+static unsigned int scheduler_due_priority(const struct scheduler_card *card)
 {
-	if (scheduler_is_complete(session))
-		return;
+	if (card->review_count > 0 && card->interval_days == 0)
+		return 0;
+	if (card->review_count > 0)
+		return 1;
 
-	for (size_t offset = 1; offset <= session->card_count; offset++)
+	return 2;
+}
+
+static bool scheduler_due_candidate_is_better(
+	const struct scheduler_session *session,
+	size_t candidate_index,
+	size_t candidate_order,
+	size_t best_index,
+	size_t best_order
+)
+{
+	const struct scheduler_card *candidate = &session->cards[candidate_index];
+	const struct scheduler_card *best = &session->cards[best_index];
+	unsigned int candidate_priority = scheduler_due_priority(candidate);
+	unsigned int best_priority = scheduler_due_priority(best);
+
+	if (candidate_priority != best_priority)
+		return candidate_priority < best_priority;
+	if (candidate->due_day != best->due_day)
+		return candidate->due_day < best->due_day;
+
+	return candidate_order < best_order;
+}
+
+static bool scheduler_find_best_due(
+	struct scheduler_session *session,
+	size_t *best_index
+)
+{
+	bool found = false;
+	size_t best_order = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (!scheduler_card_is_due(session, index))
+			continue;
+
+		if (
+			!found ||
+			scheduler_due_candidate_is_better(
+				session,
+				index,
+				index,
+				*best_index,
+				best_order
+			)
+		)
+		{
+			*best_index = index;
+			best_order = index;
+			found = true;
+		}
+	}
+
+	return found;
+}
+
+static bool scheduler_find_next_due(
+	struct scheduler_session *session,
+	size_t *best_index
+)
+{
+	bool found = false;
+	size_t best_order = 0;
+
+	for (size_t offset = 1; offset < session->card_count; offset++)
 	{
 		size_t index = (session->current_index + offset) % session->card_count;
 
-		if (scheduler_card_is_due(session, index))
+		if (!scheduler_card_is_due(session, index))
+			continue;
+
+		if (
+			!found ||
+			scheduler_due_candidate_is_better(
+				session,
+				index,
+				offset,
+				*best_index,
+				best_order
+			)
+		)
 		{
-			session->current_index = index;
-			return;
+			*best_index = index;
+			best_order = offset;
+			found = true;
 		}
 	}
+
+	if (found)
+		return true;
+	if (scheduler_card_is_due(session, session->current_index))
+	{
+		*best_index = session->current_index;
+		return true;
+	}
+
+	return false;
+}
+
+static void scheduler_advance(struct scheduler_session *session)
+{
+	size_t next_index;
+
+	if (scheduler_is_complete(session))
+		return;
+
+	if (scheduler_find_next_due(session, &next_index))
+		session->current_index = next_index;
 }
 
 void scheduler_init(struct scheduler_session *session, size_t card_count, unsigned int today)
@@ -358,17 +459,13 @@ void scheduler_set_daily_limits(
 
 void scheduler_reposition(struct scheduler_session *session)
 {
+	size_t next_index;
+
 	if (scheduler_is_complete(session))
 		return;
 
-	for (size_t index = 0; index < session->card_count; index++)
-	{
-		if (scheduler_card_is_due(session, index))
-		{
-			session->current_index = index;
-			return;
-		}
-	}
+	if (scheduler_find_best_due(session, &next_index))
+		session->current_index = next_index;
 }
 
 static void schedule_new_card(

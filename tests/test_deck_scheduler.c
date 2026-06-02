@@ -220,16 +220,16 @@ static void test_scheduler_schedules_due_days(void)
 	check(session.due_count == 2, "good schedules one card out");
 	check(session.cards[1].due_day == TEST_TODAY + 1, "good schedules tomorrow");
 	check(session.cards[1].interval_days == 1, "good starts one-day interval");
-	check(scheduler_current_index(&session) == 2, "good advances to next card");
-
-	scheduler_rate_current(&session, SCHEDULER_RATING_EASY);
-	check(session.due_count == 1, "easy schedules one card out");
-	check(session.cards[2].due_day == TEST_TODAY + 4, "easy starts four-day interval");
-	check(scheduler_current_index(&session) == 0, "again card is revisited");
+	check(scheduler_current_index(&session) == 0, "learning card is revisited before new card");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_HARD);
-	check(session.due_count == 0, "hard schedules final due card out");
+	check(session.due_count == 1, "hard schedules learning card out");
 	check(session.cards[0].due_day == TEST_TODAY + 1, "hard schedules tomorrow");
+	check(scheduler_current_index(&session) == 2, "new card follows learning card");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_EASY);
+	check(session.due_count == 0, "easy schedules final due card out");
+	check(session.cards[2].due_day == TEST_TODAY + 4, "easy starts four-day interval");
 	check(scheduler_is_complete(&session), "scheduler completes when no due cards remain");
 	check(session.rating_counts[SCHEDULER_RATING_AGAIN] == 1, "again count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_HARD] == 1, "hard count tracked");
@@ -503,6 +503,94 @@ static void test_scheduler_limits_review_cards(void)
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
 	check(session.due_count == 0, "review limit hides remaining review cards");
+}
+
+static void test_scheduler_prioritizes_learning_cards(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 3, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"priority review card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			2,
+			5,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			1,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY
+		),
+		"priority learning card restores"
+	);
+
+	scheduler_reposition(&session);
+	check(scheduler_current_index(&session) == 2, "learning card is selected first");
+}
+
+static void test_scheduler_prioritizes_overdue_reviews_before_new_cards(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 4, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 30,
+			TEST_TODAY - 10
+		),
+		"priority due review restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			2,
+			8,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY - 20,
+			20,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 60,
+			TEST_TODAY - 20
+		),
+		"priority overdue review restores"
+	);
+	scheduler_reposition(&session);
+
+	check(scheduler_current_index(&session) == 2, "oldest overdue review is selected first");
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(scheduler_current_index(&session) == 1, "due review follows overdue review");
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(scheduler_current_index(&session) == 3, "new cards follow due reviews by rotation");
 }
 
 static void test_scheduler_restored_started_new_card_stays_due_after_limit(void)
@@ -1741,6 +1829,8 @@ int main(void)
 	test_scheduler_limit_change_clears_undo();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
+	test_scheduler_prioritizes_learning_cards();
+	test_scheduler_prioritizes_overdue_reviews_before_new_cards();
 	test_scheduler_restored_started_new_card_stays_due_after_limit();
 	test_scheduler_restored_started_review_card_stays_due_after_limit();
 	test_review_state_missing_file();

@@ -254,6 +254,13 @@ First successful reviews are special-cased so new cards become usable quickly:
 `Hard` and `Good` start at one day, while `Easy` starts at four days. Ease is
 clamped between `1300` and `3500`, and intervals are clamped to 100 years.
 
+Due selection prefers cards that are already in progress before introducing new
+cards. The priority order is learning/relearning cards, then review cards by
+oldest due day, then new cards. During an active session, advancement starts
+after the current card so a failed card is not immediately reselected while
+other due cards remain; among those candidates, rotation is the tie-breaker when
+priority and due day are equal.
+
 ## Converter Flow
 
 The converter is desktop Python and owns import-time normalization.
