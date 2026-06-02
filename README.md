@@ -110,6 +110,8 @@ Multi-deck text review works at build level: the app scans
 reveals answers, records ratings, schedules cards with a day-level spaced
 repetition algorithm, saves local `state.tsv` progress beside that deck, and can
 reset saved progress with `SELECT` (`N` in Azahar's default keyboard mapping).
+The top screen shows deck/card content, while the bottom screen shows controls
+and review status.
 
 See:
 

@@ -126,6 +126,10 @@ The app loop is a small mode machine:
 - `REVIEW`: show front, reveal back, accept a rating.
 - `SUMMARY`: show counts when no cards are due today.
 
+The console UI uses the top screen for deck/card content and the bottom screen
+for mode-specific controls. This keeps button prompts out of the review card
+area without introducing a graphics framework yet.
+
 Review algorithm:
 
 1. Start with a loaded deck and initialized scheduler session.

@@ -72,6 +72,9 @@ N key = rescan decks / reset progress
 M key = exit
 ```
 
+The app uses the top screen for deck/card content and the bottom screen for
+current controls.
+
 Record emulator runs in `docs/emulator-test-log.md`.
 
 ## Initial Target Device

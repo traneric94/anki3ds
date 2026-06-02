@@ -39,6 +39,19 @@ struct app_state
 	struct scheduler_session session;
 };
 
+static PrintConsole top_screen;
+static PrintConsole bottom_screen;
+
+static void select_top_screen(void)
+{
+	consoleSelect(&top_screen);
+}
+
+static void select_bottom_screen(void)
+{
+	consoleSelect(&bottom_screen);
+}
+
 static void console_move(int row, int column)
 {
 	printf("\x1b[%d;%dH", row, column);
@@ -276,12 +289,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 
 		if (app->deck_index.overflowed)
 			printf("\x1b[23;1HShowing first %u decks.", (unsigned int)DECK_INDEX_MAX_DECKS);
-
-		printf("\x1b[26;1HUp/Down: choose  A: open");
 	}
-
-	printf("\x1b[27;1HSELECT/N: rescan decks");
-	printf("\x1b[28;1HSTART/M: exit");
 }
 
 static void draw_load_error_screen(const struct app_state *app)
@@ -295,8 +303,6 @@ static void draw_load_error_screen(const struct app_state *app)
 	);
 	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
 	printf("\x1b[10;1HCopy cards.tsv to the path above.");
-	printf("\x1b[27;1HB/S or SELECT/N: deck list");
-	printf("\x1b[28;1HSTART/M: exit");
 }
 
 static void draw_review_screen(const struct app_state *app)
@@ -309,7 +315,6 @@ static void draw_review_screen(const struct app_state *app)
 	if (card == NULL)
 	{
 		printf("\x1b[6;1HNo cards are due today.");
-		printf("\x1b[28;1HSTART/M: exit");
 		return;
 	}
 
@@ -323,16 +328,10 @@ static void draw_review_screen(const struct app_state *app)
 		printf("\x1b[15;1HBack");
 		printf("\x1b[16;1H------------------------------------------------");
 		draw_wrapped_text(card->back, 17, 7);
-		printf("\x1b[26;1HSELECT/N: reset progress");
-		printf("\x1b[27;1HRate: Y Again  X Hard  B Good  A Easy");
-		printf("\x1b[28;1HSTART/M: exit");
 	}
 	else
 	{
 		draw_wrapped_text(card->front, 9, 15);
-		printf("\x1b[26;1HB/S: deck list  SELECT/N: reset");
-		printf("\x1b[27;1HA: show answer");
-		printf("\x1b[28;1HSTART/M: exit");
 	}
 }
 
@@ -363,13 +362,72 @@ static void draw_summary_screen(const struct app_state *app)
 		"\x1b[13;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
-	printf("\x1b[26;1HB/S: deck list");
-	printf("\x1b[27;1HSELECT/N: reset progress");
-	printf("\x1b[28;1HSTART/M: exit");
+}
+
+static void draw_bottom_controls_screen(const struct app_state *app)
+{
+	consoleClear();
+
+	switch (app->mode)
+	{
+	case APP_MODE_DECK_SELECT:
+		printf("\x1b[1;1HDecks");
+		if (app->deck_index.count > 0)
+		{
+			printf("\x1b[3;1HA: open selected deck");
+			printf("\x1b[5;1HD-pad Up/Down: choose");
+			printf("\x1b[7;1HSELECT: rescan decks");
+			printf("\x1b[9;1HSTART: exit");
+		}
+		else
+		{
+			printf("\x1b[3;1HSELECT: rescan decks");
+			printf("\x1b[5;1HSTART: exit");
+		}
+		printf("\x1b[27;1HFound: %lu", (unsigned long)app->deck_index.count);
+		break;
+	case APP_MODE_LOAD_ERROR:
+		printf("\x1b[1;1HLoad error");
+		printf("\x1b[3;1HB or SELECT: deck list");
+		printf("\x1b[5;1HSTART: exit");
+		break;
+	case APP_MODE_REVIEW:
+		printf("\x1b[1;1HReview");
+		printf(
+			"\x1b[3;1HDue %lu   New %lu",
+			(unsigned long)app->session.due_count,
+			(unsigned long)scheduler_new_due_count(&app->session)
+		);
+
+		if (app->revealed)
+		{
+			printf("\x1b[6;1HY: Again      X: Hard");
+			printf("\x1b[8;1HB: Good       A: Easy");
+			printf("\x1b[12;1HSELECT: reset progress");
+			printf("\x1b[14;1HSTART: exit");
+		}
+		else
+		{
+			printf("\x1b[6;1HA: show answer");
+			printf("\x1b[8;1HB: deck list");
+			printf("\x1b[10;1HSELECT: reset progress");
+			printf("\x1b[12;1HSTART: exit");
+		}
+		break;
+	case APP_MODE_SUMMARY:
+		printf("\x1b[1;1HNo cards due now");
+		printf("\x1b[3;1HB: deck list");
+		printf("\x1b[5;1HSELECT: reset progress");
+		printf("\x1b[7;1HSTART: exit");
+		printf("\x1b[27;1HReviewed this session: %u", app->session.reviewed_count);
+		break;
+	}
 }
 
 static void draw_app(const struct app_state *app)
 {
+	select_top_screen();
+
 	switch (app->mode)
 	{
 	case APP_MODE_DECK_SELECT:
@@ -385,6 +443,10 @@ static void draw_app(const struct app_state *app)
 		draw_summary_screen(app);
 		break;
 	}
+
+	select_bottom_screen();
+	draw_bottom_controls_screen(app);
+	select_top_screen();
 }
 
 static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
@@ -523,13 +585,15 @@ int main(int argc, char *argv[])
 	static struct app_state app;
 
 	gfxInitDefault();
-	consoleInit(GFX_TOP, NULL);
+	consoleInit(GFX_TOP, &top_screen);
+	consoleInit(GFX_BOTTOM, &bottom_screen);
 
 	app_init(&app);
 	draw_app(&app);
 
 	while (aptMainLoop())
 	{
+		gfxFlushBuffers();
 		gspWaitForVBlank();
 		gfxSwapBuffers();
 		hidScanInput();
