@@ -48,6 +48,7 @@ enum app_mode
 	APP_MODE_ACTIONS,
 	APP_MODE_SETTINGS,
 	APP_MODE_CONFIRM_RESET,
+	APP_MODE_CONFIRM_EXIT,
 };
 
 enum action_item
@@ -69,8 +70,10 @@ struct app_state
 {
 	enum app_mode mode;
 	enum app_mode action_return_mode;
+	enum app_mode exit_return_mode;
 	enum action_item selected_action;
 	bool revealed;
+	bool exit_requested;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
 	enum app_settings_save_result settings_save_result;
@@ -541,6 +544,12 @@ static void app_open_reset_confirmation(struct app_state *app)
 	app->mode = APP_MODE_CONFIRM_RESET;
 }
 
+static void app_open_exit_confirmation(struct app_state *app)
+{
+	app->exit_return_mode = app->mode;
+	app->mode = APP_MODE_CONFIRM_EXIT;
+}
+
 static void app_init(struct app_state *app)
 {
 	memset(app, 0, sizeof(*app));
@@ -813,6 +822,17 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
+static void draw_exit_confirmation_screen(const struct app_state *app)
+{
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds Review");
+	printf("\x1b[3;1HExit app?");
+	printf("\x1b[6;1HProgress is saved after");
+	printf("\x1b[7;1Heach review action.");
+	printf("\x1b[10;1HUse START to exit.");
+	printf("\x1b[12;1HUse B or SELECT to cancel.");
+}
+
 static void draw_bottom_controls_screen(const struct app_state *app)
 {
 	consoleClear();
@@ -950,7 +970,12 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[1;1HConfirm reset");
 		printf("\x1b[3;1HX: reset progress");
 		printf("\x1b[5;1HB or SELECT: cancel");
-		printf("\x1b[7;1HSTART: exit");
+		printf("\x1b[7;1HSTART: confirm exit");
+		break;
+	case APP_MODE_CONFIRM_EXIT:
+		printf("\x1b[1;1HConfirm exit");
+		printf("\x1b[3;1HSTART: exit app");
+		printf("\x1b[5;1HB or SELECT: cancel");
 		break;
 	}
 }
@@ -981,6 +1006,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		draw_reset_confirmation_screen(app);
+		break;
+	case APP_MODE_CONFIRM_EXIT:
+		draw_exit_confirmation_screen(app);
 		break;
 	}
 
@@ -1228,6 +1256,23 @@ static bool app_handle_reset_confirmation_input(struct app_state *app, u32 keys_
 	return false;
 }
 
+static bool app_handle_exit_confirmation_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & KEY_START)
+	{
+		app->exit_requested = true;
+		return true;
+	}
+
+	if (keys_down & (KEY_B | KEY_SELECT))
+	{
+		app->mode = app->exit_return_mode;
+		return true;
+	}
+
+	return false;
+}
+
 static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
 {
 	if (keys_down & (KEY_DUP | KEY_DDOWN))
@@ -1261,6 +1306,15 @@ static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
 
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
+	if (app->mode == APP_MODE_CONFIRM_EXIT)
+		return app_handle_exit_confirmation_input(app, keys_down);
+
+	if (keys_down & KEY_START)
+	{
+		app_open_exit_confirmation(app);
+		return true;
+	}
+
 	if (app->mode == APP_MODE_DECK_SELECT)
 		return app_handle_deck_select_input(app, keys_down);
 	if (app->mode == APP_MODE_ACTIONS)
@@ -1365,11 +1419,12 @@ int main(int argc, char *argv[])
 		hidScanInput();
 
 		u32 keys_down = hidKeysDown();
-		if (keys_down & KEY_START)
-			break;
 
 		if (app_handle_input(&app, keys_down))
 		{
+			if (app.exit_requested)
+				break;
+
 			draw_app(&app);
 			frame_dirty = true;
 		}

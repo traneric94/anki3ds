@@ -95,7 +95,7 @@ H key = setting value right
 Z key = Hard
 X key = Again
 N key = rescan decks / actions
-M key = exit
+M key = open exit confirmation / confirm exit
 ```
 
 In review and summary modes, `N` opens the actions screen. The default action is
@@ -106,6 +106,8 @@ cycle preset values, `A` to save, or `S`/`N` to cancel. Reset progress opens a
 confirmation screen; press `Z` for 3DS `X` to reset, or `S`/`N` to cancel. In
 review and summary modes, `Q` undoes the last rating or suspend action and
 saves the restored state. In review mode, `W` suspends the current card.
+Pressing `M` opens exit confirmation; press `M` again to exit or `S`/`N` to
+cancel.
 
 The app uses the top screen for deck/card content and the bottom screen for
 current controls.
