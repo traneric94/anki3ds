@@ -48,6 +48,8 @@ static void test_parse_card_line(void)
 	check(strcmp(card.front, "front\nline") == 0, "front escaped newline parses");
 	check(strcmp(card.back, "back\\slash") == 0, "back escaped slash parses");
 	check(strcmp(card.tags, "tag1 tag2") == 0, "tags parse");
+	check(strcmp(card.front_media, "") == 0, "missing front media defaults empty");
+	check(strcmp(card.back_media, "") == 0, "missing back media defaults empty");
 }
 
 static void test_reject_bad_card_line(void)
@@ -70,6 +72,24 @@ static void test_reject_bad_card_line(void)
 			DECK_PARSE_BAD_ESCAPE,
 		"bad escape rejected"
 	);
+	check(
+		deck_parse_card_line(&card, "card\tnote\tfront\tback\ttag\tbad/name\t") ==
+			DECK_PARSE_BAD_MEDIA_NAME,
+		"media path separators rejected"
+	);
+}
+
+static void test_parse_card_line_with_media(void)
+{
+	struct card card;
+	enum deck_parse_result result = deck_parse_card_line(
+		&card,
+		"card-1\tnote-1\tfront\tback\ttag1\tfront.a3i\tback.a3i\n"
+	);
+
+	check(result == DECK_PARSE_OK, "media card line parses");
+	check(strcmp(card.front_media, "front.a3i") == 0, "front media parses");
+	check(strcmp(card.back_media, "back.a3i") == 0, "back media parses");
 }
 
 static void test_deck_load_rejects_duplicate_card_ids(void)
@@ -1229,6 +1249,7 @@ int main(void)
 {
 	test_parse_card_line();
 	test_reject_bad_card_line();
+	test_parse_card_line_with_media();
 	test_deck_load_rejects_duplicate_card_ids();
 	test_tracked_sample_decks_load();
 	test_scheduler_schedules_due_days();

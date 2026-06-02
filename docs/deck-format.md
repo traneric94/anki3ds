@@ -59,6 +59,7 @@ Draft columns:
 
 ```text
 card_id<TAB>note_id<TAB>front<TAB>back<TAB>tags
+card_id<TAB>note_id<TAB>front<TAB>back<TAB>tags<TAB>front_media<TAB>back_media
 ```
 
 Rules:
@@ -72,13 +73,16 @@ Rules:
 - embedded newlines are encoded as `\n`
 - literal backslashes are escaped as `\\`
 - converter output simplifies simple HTML to text before writing these fields
-- media references are plain filenames, introduced later
+- `front_media` and `back_media` are optional plain filenames under `media/`
+- media filenames may use only letters, numbers, `_`, `-`, and `.`, and may not
+  start with `.`
 
 Example:
 
 ```text
 card-0001	note-0001	front text	back text	tag1 tag2
 card-0002	note-0002	What is 2 + 2?	4	math
+card-0003	note-0003	What is shown?	diagram explanation	media	front-diagram.a3i	back-diagram.a3i
 ```
 
 ## settings.tsv

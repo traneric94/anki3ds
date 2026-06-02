@@ -8,6 +8,7 @@
 #define DECK_MAX_TEXT_LENGTH 384
 #define DECK_MAX_TAGS_LENGTH 128
 #define DECK_MAX_NAME_LENGTH 64
+#define DECK_MAX_MEDIA_NAME_LENGTH 96
 #define DECK_MAX_LINE_LENGTH 1024
 
 struct card
@@ -17,6 +18,8 @@ struct card
 	char front[DECK_MAX_TEXT_LENGTH];
 	char back[DECK_MAX_TEXT_LENGTH];
 	char tags[DECK_MAX_TAGS_LENGTH];
+	char front_media[DECK_MAX_MEDIA_NAME_LENGTH];
+	char back_media[DECK_MAX_MEDIA_NAME_LENGTH];
 };
 
 struct deck
@@ -34,6 +37,7 @@ enum deck_parse_result
 	DECK_PARSE_FIELD_TOO_LONG,
 	DECK_PARSE_MISSING_REQUIRED_FIELD,
 	DECK_PARSE_BAD_ESCAPE,
+	DECK_PARSE_BAD_MEDIA_NAME,
 };
 
 enum deck_load_result
