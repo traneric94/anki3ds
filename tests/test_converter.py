@@ -11,6 +11,7 @@ from converter.anki3ds_convert import (
     deck_id_is_valid,
     escape_tsv_field,
     main,
+    normalize_text,
     write_deck,
 )
 
@@ -24,6 +25,16 @@ class ConverterTests(unittest.TestCase):
 
     def test_escape_tsv_field(self):
         self.assertEqual(escape_tsv_field("a\\b\tc\nd"), "a\\\\b\\tc\\nd")
+
+    def test_normalize_text_simplifies_html(self):
+        self.assertEqual(
+            normalize_text("<b>front</b><br>line&nbsp;two"),
+            "front\nline two",
+        )
+        self.assertEqual(
+            normalize_text("<div>back <i>text</i></div><script>ignored()</script>"),
+            "back text",
+        )
 
     def test_convert_lines(self):
         cards = convert_lines(
@@ -42,6 +53,17 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(cards[0].front, "front one")
         self.assertEqual(cards[0].back, "back one")
         self.assertEqual(cards[0].tags, "tag1 tag2")
+
+    def test_convert_lines_simplifies_html_fields(self):
+        cards = convert_lines(
+            ["<p>front<br>line</p>\t<div>back&nbsp;<b>text</b></div>\ttag1 tag2"],
+            front_field=0,
+            back_field=1,
+            tags_field=2,
+        )
+
+        self.assertEqual(cards[0].front, "front\nline")
+        self.assertEqual(cards[0].back, "back text")
 
     def test_rejects_missing_or_empty_fields(self):
         with self.assertRaisesRegex(ValueError, "expected at least"):

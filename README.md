@@ -103,6 +103,11 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --deck-name "My Deck"
 ```
 
+The converter simplifies simple HTML in exported fields before writing
+`cards.tsv`: formatting tags are removed, block tags and `<br>` become line
+breaks, entities such as `&nbsp;` are decoded, and script/style content is
+dropped.
+
 ## Current Status
 
 Multi-deck text review works at build level: the app scans

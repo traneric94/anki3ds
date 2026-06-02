@@ -5,12 +5,52 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from html.parser import HTMLParser
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
+
+BLOCK_TAGS = {
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "dd",
+    "div",
+    "dl",
+    "dt",
+    "figcaption",
+    "figure",
+    "footer",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "li",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "table",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+}
+LINE_BREAK_TAGS = {"br"}
+SKIP_CONTENT_TAGS = {"script", "style"}
 
 
 @dataclass(frozen=True)
@@ -22,8 +62,62 @@ class ConvertedCard:
     tags: str
 
 
+class HtmlTextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        tag = tag.lower()
+
+        if tag in SKIP_CONTENT_TAGS:
+            self.skip_depth += 1
+            return
+        if self.skip_depth > 0:
+            return
+
+        if tag in LINE_BREAK_TAGS or tag in BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+
+        if tag in SKIP_CONTENT_TAGS:
+            if self.skip_depth > 0:
+                self.skip_depth -= 1
+            return
+        if self.skip_depth > 0:
+            return
+
+        if tag in BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self.skip_depth == 0:
+            self.parts.append(data)
+
+    def text(self) -> str:
+        return "".join(self.parts)
+
+
 def escape_tsv_field(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n")
+
+
+def normalize_text(value: str) -> str:
+    parser = HtmlTextExtractor()
+    parser.feed(value)
+    parser.close()
+
+    lines = []
+    for line in parser.text().replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        collapsed = " ".join(line.split())
+        if collapsed:
+            lines.append(collapsed)
+
+    return "\n".join(lines)
 
 
 def stable_id(prefix: str, *parts: str) -> str:
@@ -60,9 +154,9 @@ def convert_lines(
         if len(fields) <= max_field:
             raise ValueError(f"line {line_number}: expected at least {max_field + 1} fields")
 
-        front = fields[front_field].strip()
-        back = fields[back_field].strip()
-        tags = fields[tags_field].strip() if tags_field is not None else ""
+        front = normalize_text(fields[front_field])
+        back = normalize_text(fields[back_field])
+        tags = normalize_text(fields[tags_field]) if tags_field is not None else ""
 
         if not front:
             raise ValueError(f"line {line_number}: front field is empty")

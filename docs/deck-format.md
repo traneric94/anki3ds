@@ -65,6 +65,7 @@ Rules:
 - tabs separate fields
 - embedded newlines are encoded as `\n`
 - literal backslashes are escaped as `\\`
+- converter output simplifies simple HTML to text before writing these fields
 - media references are plain filenames, introduced later
 
 Example:
