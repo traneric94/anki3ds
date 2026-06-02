@@ -385,6 +385,21 @@ static void test_scheduler_limits_new_cards(void)
 	check(scheduler_is_complete(&session), "new limit completes visible queue");
 }
 
+static void test_scheduler_limit_change_clears_undo(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 3, TEST_TODAY);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.due_count == 2, "limit undo setup rates card");
+
+	scheduler_set_daily_limits(&session, 1, 0);
+	check(session.due_count == 0, "limit change recalculates visible queue");
+	check(!scheduler_undo_last(&session), "limit change clears stale undo");
+	check(session.cards[0].review_count == 1, "cleared undo leaves rating intact");
+	check(session.due_count == 0, "cleared undo leaves limited due count");
+}
+
 static void test_scheduler_allows_started_new_card_after_limit(void)
 {
 	struct scheduler_session session;
@@ -1398,6 +1413,7 @@ int main(void)
 	test_scheduler_suspend_last_due_card();
 	test_scheduler_unsuspend_all();
 	test_scheduler_limits_new_cards();
+	test_scheduler_limit_change_clears_undo();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
 	test_review_state_missing_file();

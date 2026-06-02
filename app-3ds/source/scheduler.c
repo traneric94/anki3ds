@@ -350,6 +350,8 @@ void scheduler_set_daily_limits(
 {
 	session->new_limit = new_limit;
 	session->review_limit = review_limit;
+	session->undo.available = false;
+	session->undo.kind = SCHEDULER_UNDO_NONE;
 	scheduler_recount(session);
 	scheduler_reposition(session);
 }

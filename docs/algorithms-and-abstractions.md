@@ -216,6 +216,10 @@ Review limits apply to unstarted review cards. A card already started today is
 allowed to remain due, which lets same-day Again loops finish instead of hiding
 half-reviewed cards behind a limit.
 
+Changing daily limits clears the one-step undo slot. The undo snapshot contains
+queue counters from the previous limit configuration, so keeping it after a
+limit change could restore a stale visible queue.
+
 ## Scheduler
 
 The first spaced repetition algorithm is day-level and SM-2 inspired, not FSRS.
