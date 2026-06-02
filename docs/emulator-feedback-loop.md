@@ -35,6 +35,24 @@ local/sdmc/
 `local/` is ignored by git so personal decks, emulator files, and temporary
 build artifacts do not get committed.
 
+Install the tracked sample deck into the local mirror with:
+
+```sh
+make install-local-sample-deck
+```
+
+Azahar's macOS SD card data directory is:
+
+```text
+~/Library/Application Support/Azahar/sdmc/
+```
+
+Install the sample deck there with:
+
+```sh
+make install-azahar-sample-deck
+```
+
 ## M1 Local Test
 
 For the toolchain proof, the emulator test is intentionally small:

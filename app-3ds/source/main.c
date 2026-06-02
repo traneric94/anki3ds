@@ -2,74 +2,267 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "deck.h"
+#include "scheduler.h"
+
 #define APP_VERSION "0.2.0-dev"
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
+#define SAMPLE_DECK_PATH "sdmc:/3ds/anki3ds/decks/sample/cards.tsv"
+#define TEXT_LEFT 1
+#define TEXT_WIDTH 48
+
+enum app_mode
+{
+	APP_MODE_LOAD_ERROR,
+	APP_MODE_REVIEW,
+	APP_MODE_SUMMARY,
+};
 
 struct app_state
 {
-	const char *last_button;
-	const char *last_keyboard_key;
-	u32 press_count;
+	enum app_mode mode;
+	bool revealed;
+	enum deck_load_result load_result;
+	struct deck deck;
+	struct scheduler_session session;
 };
 
-struct button_mapping
+static void console_move(int row, int column)
 {
-	u32 mask;
-	const char *button;
-	const char *keyboard_key;
-};
+	printf("\x1b[%d;%dH", row, column);
+}
 
-static const struct button_mapping BUTTON_MAPPINGS[] = {
-	{ KEY_A, "A", "A" },
-	{ KEY_B, "B", "S" },
-	{ KEY_X, "X", "Z" },
-	{ KEY_Y, "Y", "X" },
-	{ KEY_DUP, "D-pad Up", "T" },
-	{ KEY_DLEFT, "D-pad Left", "F" },
-	{ KEY_DDOWN, "D-pad Down", "G" },
-	{ KEY_DRIGHT, "D-pad Right", "H" },
-	{ KEY_L, "L", "Q" },
-	{ KEY_R, "R", "W" },
-	{ KEY_SELECT, "SELECT", "N" },
-};
+static void draw_wrapped_text(const char *text, int row, int max_rows)
+{
+	int current_row = row;
+	int column = TEXT_LEFT;
+	bool truncated = false;
+
+	console_move(current_row, TEXT_LEFT);
+
+	for (size_t index = 0; text[index] != '\0'; index++)
+	{
+		char value = text[index];
+
+		if (current_row >= row + max_rows)
+		{
+			truncated = true;
+			break;
+		}
+
+		if (value == '\r')
+			continue;
+
+		if (value == '\n')
+		{
+			current_row++;
+			column = TEXT_LEFT;
+			if (current_row < row + max_rows)
+				console_move(current_row, TEXT_LEFT);
+			continue;
+		}
+
+		if (value == '\t')
+			value = ' ';
+
+		if (column >= TEXT_LEFT + TEXT_WIDTH)
+		{
+			current_row++;
+			column = TEXT_LEFT;
+			if (current_row >= row + max_rows)
+			{
+				truncated = true;
+				break;
+			}
+			console_move(current_row, TEXT_LEFT);
+		}
+
+		putchar(value);
+		column++;
+	}
+
+	if (truncated && max_rows > 0)
+	{
+		console_move(row + max_rows - 1, TEXT_LEFT + TEXT_WIDTH - 3);
+		printf("...");
+	}
+}
+
+static unsigned int review_count_total(const struct scheduler_session *session)
+{
+	unsigned int total = 0;
+
+	total += session->rating_counts[SCHEDULER_RATING_AGAIN];
+	total += session->rating_counts[SCHEDULER_RATING_HARD];
+	total += session->rating_counts[SCHEDULER_RATING_GOOD];
+	total += session->rating_counts[SCHEDULER_RATING_EASY];
+
+	return total;
+}
+
+static const struct card *current_card(const struct app_state *app)
+{
+	if (!scheduler_has_current(&app->session))
+		return NULL;
+
+	return &app->deck.cards[scheduler_current_index(&app->session)];
+}
 
 static void app_init(struct app_state *app)
 {
-	app->last_button = "none";
-	app->last_keyboard_key = "-";
-	app->press_count = 0;
-}
+	deck_init(&app->deck, "sample");
+	app->revealed = false;
+	app->load_result = deck_load_cards(&app->deck, SAMPLE_DECK_PATH);
 
-static bool app_record_button(struct app_state *app, u32 keys_down)
-{
-	for (size_t i = 0; i < ARRAY_SIZE(BUTTON_MAPPINGS); i++)
+	if (app->load_result == DECK_LOAD_OK)
 	{
-		if (keys_down & BUTTON_MAPPINGS[i].mask)
-		{
-			app->last_button = BUTTON_MAPPINGS[i].button;
-			app->last_keyboard_key = BUTTON_MAPPINGS[i].keyboard_key;
-			app->press_count++;
-			return true;
-		}
+		scheduler_init(&app->session, app->deck.card_count);
+		app->mode = APP_MODE_REVIEW;
 	}
-
-	return false;
+	else
+	{
+		app->mode = APP_MODE_LOAD_ERROR;
+		scheduler_init(&app->session, 0);
+	}
 }
 
-static void draw_input_screen(const struct app_state *app)
+static void draw_header(const struct app_state *app)
+{
+	printf("\x1b[1;1Hanki3ds Review");
+	printf(
+		"\x1b[2;1HDeck: %s  Done: %lu/%lu",
+		app->deck.name,
+		(unsigned long)app->session.done_count,
+		(unsigned long)app->session.card_count
+	);
+}
+
+static void draw_load_error_screen(const struct app_state *app)
 {
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds");
-	printf("\x1b[3;1HM2 Input Proof");
-	printf("\x1b[5;1HVersion: %s", APP_VERSION);
-	printf("\x1b[7;1HBuild: %s %s", __DATE__, __TIME__);
-	printf("\x1b[10;1HLast button: %s", app->last_button);
-	printf("\x1b[11;1HAzahar key:  %s", app->last_keyboard_key);
-	printf("\x1b[12;1HPress count: %lu", (unsigned long)app->press_count);
-	printf("\x1b[15;1HDefaults: A/S/Z/X -> A/B/X/Y");
-	printf("\x1b[16;1H          T/F/G/H -> D-pad");
-	printf("\x1b[17;1H          Q/W -> L/R, N -> SELECT");
-	printf("\x1b[20;1HPress START / M to exit.");
+	printf("\x1b[3;1HCould not load deck.");
+	printf("\x1b[5;1H%s", SAMPLE_DECK_PATH);
+	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
+	printf("\x1b[10;1HCopy cards.tsv to the path above.");
+	printf("\x1b[28;1HSTART/M: exit");
+}
+
+static void draw_review_screen(const struct app_state *app)
+{
+	const struct card *card = current_card(app);
+
+	consoleClear();
+	draw_header(app);
+
+	if (card == NULL)
+	{
+		printf("\x1b[5;1HNo due cards.");
+		printf("\x1b[28;1HSTART/M: exit");
+		return;
+	}
+
+	printf("\x1b[4;1HFront:");
+
+	if (app->revealed)
+	{
+		draw_wrapped_text(card->front, 5, 8);
+		printf("\x1b[14;1HBack:");
+		draw_wrapped_text(card->back, 15, 9);
+		printf("\x1b[27;1HRate: Y Again  X Hard  B Good  A Easy");
+		printf("\x1b[28;1HSTART/M: exit");
+	}
+	else
+	{
+		draw_wrapped_text(card->front, 5, 18);
+		printf("\x1b[27;1HA: show answer");
+		printf("\x1b[28;1HSTART/M: exit");
+	}
+}
+
+static void draw_summary_screen(const struct app_state *app)
+{
+	const struct scheduler_session *session = &app->session;
+
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds Review");
+	printf("\x1b[3;1HSession complete");
+	printf("\x1b[5;1HCards:   %lu", (unsigned long)session->card_count);
+	printf("\x1b[6;1HReviews: %u", review_count_total(session));
+	printf(
+		"\x1b[8;1HY Again: %u",
+		session->rating_counts[SCHEDULER_RATING_AGAIN]
+	);
+	printf(
+		"\x1b[9;1HX Hard:  %u",
+		session->rating_counts[SCHEDULER_RATING_HARD]
+	);
+	printf(
+		"\x1b[10;1HB Good:  %u",
+		session->rating_counts[SCHEDULER_RATING_GOOD]
+	);
+	printf(
+		"\x1b[11;1HA Easy:  %u",
+		session->rating_counts[SCHEDULER_RATING_EASY]
+	);
+	printf("\x1b[28;1HSTART/M: exit");
+}
+
+static void draw_app(const struct app_state *app)
+{
+	switch (app->mode)
+	{
+	case APP_MODE_LOAD_ERROR:
+		draw_load_error_screen(app);
+		break;
+	case APP_MODE_REVIEW:
+		draw_review_screen(app);
+		break;
+	case APP_MODE_SUMMARY:
+		draw_summary_screen(app);
+		break;
+	}
+}
+
+static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
+{
+	if (!app->revealed)
+		return false;
+
+	scheduler_rate_current(&app->session, rating);
+	app->revealed = false;
+
+	if (scheduler_is_complete(&app->session))
+		app->mode = APP_MODE_SUMMARY;
+
+	return true;
+}
+
+static bool app_handle_input(struct app_state *app, u32 keys_down)
+{
+	if (app->mode != APP_MODE_REVIEW)
+		return false;
+
+	if (!app->revealed)
+	{
+		if (keys_down & KEY_A)
+		{
+			app->revealed = true;
+			return true;
+		}
+
+		return false;
+	}
+
+	if (keys_down & KEY_Y)
+		return rate_current_card(app, SCHEDULER_RATING_AGAIN);
+	if (keys_down & KEY_X)
+		return rate_current_card(app, SCHEDULER_RATING_HARD);
+	if (keys_down & KEY_B)
+		return rate_current_card(app, SCHEDULER_RATING_GOOD);
+	if (keys_down & KEY_A)
+		return rate_current_card(app, SCHEDULER_RATING_EASY);
+
+	return false;
 }
 
 int main(int argc, char *argv[])
@@ -77,13 +270,13 @@ int main(int argc, char *argv[])
 	(void)argc;
 	(void)argv;
 
-	struct app_state app;
-	app_init(&app);
+	static struct app_state app;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, NULL);
 
-	draw_input_screen(&app);
+	app_init(&app);
+	draw_app(&app);
 
 	while (aptMainLoop())
 	{
@@ -95,8 +288,8 @@ int main(int argc, char *argv[])
 		if (keys_down & KEY_START)
 			break;
 
-		if (app_record_button(&app, keys_down))
-			draw_input_screen(&app);
+		if (app_handle_input(&app, keys_down))
+			draw_app(&app);
 	}
 
 	gfxExit();

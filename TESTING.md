@@ -32,6 +32,8 @@ Current build commands:
 ```sh
 make
 make install-local-sd
+make install-local-sample-deck
+make install-azahar-sample-deck
 make run-emulator
 ```
 
@@ -39,6 +41,13 @@ The local SD mirror lives at:
 
 ```text
 local/sdmc/3ds/anki3ds/
+```
+
+The tracked sample deck installs to:
+
+```text
+local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
+~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
 Record emulator runs in `docs/emulator-test-log.md`.

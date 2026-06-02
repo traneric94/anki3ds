@@ -1,0 +1,10 @@
+card-0001	note-0001	What SD path should this sample deck install to?	sdmc:/3ds/anki3ds/decks/sample/cards.tsv	sample paths
+card-0002	note-0002	Which file holds the text cards for this deck?	cards.tsv	sample format
+card-0003	note-0003	What character separates fields in cards.tsv?	A tab character.	sample format
+card-0004	note-0004	How many fields does each sample card line use?	Five fields: card id, note id, front, back, and tags.	sample format
+card-0005	note-0005	What is the answer side called in this simple deck format?	The back field.	sample format
+card-0006	note-0006	What does the front field contain?	The prompt shown before revealing the answer.	sample review
+card-0007	note-0007	What should sample decks avoid?	Personal data and copyrighted media.	sample policy
+card-0008	note-0008	What local folder mirrors the 3DS SD card during development?	local/sdmc/	sample paths
+card-0009	note-0009	What escape sequence represents an embedded newline?	\\n	sample escaping
+card-0010	note-0010	What is the deck id for this tracked sample?	sample	sample metadata

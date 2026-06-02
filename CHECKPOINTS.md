@@ -82,14 +82,16 @@ Pass condition:
 
 Acceptance test:
 
-1. Copy a sample deck to `/3ds/anki3ds/decks/sample/`.
+1. Install the sample deck with `make install-local-sample-deck` for the local
+   SD mirror, or `make install-azahar-sample-deck` for Azahar.
 2. Launch the app.
 3. Open the sample deck.
 4. Reveal at least one answer.
 
 Pass condition:
 
-- card text comes from the SD card, not from hardcoded app data
+- card text comes from `sdmc:/3ds/anki3ds/decks/sample/cards.tsv`, not from
+  hardcoded app data
 
 ## M4: Review Loop
 

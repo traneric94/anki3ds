@@ -12,6 +12,13 @@ The 3DS app should read a simple format that avoids full Anki complexity.
   media/
 ```
 
+The tracked text-only sample deck lives in `sample-decks/sample/` and installs
+to:
+
+```text
+sdmc:/3ds/anki3ds/decks/sample/cards.tsv
+```
+
 ## deck.json
 
 Draft:

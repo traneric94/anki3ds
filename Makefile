@@ -1,6 +1,13 @@
 AZAHAR_APP ?= $(HOME)/Applications/azahar-macos-arm64-2125.1.2/Azahar.app
+AZAHAR_SDMC ?= $(HOME)/Library/Application Support/Azahar/sdmc
+LOCAL_SDMC ?= local/sdmc
 
-.PHONY: all app-3ds clean install-local-sd check-emulator run-emulator
+APP_SD_DIR := 3ds/anki3ds
+SAMPLE_DECK := sample
+SAMPLE_DECK_SRC := sample-decks/$(SAMPLE_DECK)
+SAMPLE_DECK_SD_DIR := $(APP_SD_DIR)/decks/$(SAMPLE_DECK)
+
+.PHONY: all app-3ds clean install-local-sd install-local-sample-deck install-azahar-sample-deck check-emulator run-emulator
 
 all: app-3ds
 
@@ -10,10 +17,18 @@ app-3ds:
 clean:
 	$(MAKE) -C app-3ds clean
 
-install-local-sd: app-3ds
-	mkdir -p local/sdmc/3ds/anki3ds
-	cp app-3ds/anki3ds.3dsx local/sdmc/3ds/anki3ds/anki3ds.3dsx
-	cp app-3ds/anki3ds.smdh local/sdmc/3ds/anki3ds/anki3ds.smdh
+install-local-sd: app-3ds install-local-sample-deck
+	mkdir -p "$(LOCAL_SDMC)/$(APP_SD_DIR)"
+	cp app-3ds/anki3ds.3dsx "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.3dsx"
+	cp app-3ds/anki3ds.smdh "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.smdh"
+
+install-local-sample-deck:
+	mkdir -p "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_DIR)"
+	cp -R "$(SAMPLE_DECK_SRC)/." "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_DIR)/"
+
+install-azahar-sample-deck:
+	mkdir -p "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_DIR)"
+	cp -R "$(SAMPLE_DECK_SRC)/." "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_DIR)/"
 
 check-emulator:
 	@test -d "$(AZAHAR_APP)" || \
