@@ -53,20 +53,22 @@ local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
-The app writes review progress to:
+The app writes review progress beside the selected deck:
 
 ```text
-sdmc:/3ds/anki3ds/decks/sample/state.tsv
+sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
 
 Default Azahar keyboard controls used by the sample reviewer:
 
 ```text
-A key = reveal / Easy
+A key = open deck / reveal / Easy
 S key = Good
+T key = selector up
+G key = selector down
 Z key = Hard
 X key = Again
-N key = reset progress
+N key = rescan decks / reset progress
 M key = exit
 ```
 

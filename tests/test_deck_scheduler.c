@@ -1,12 +1,16 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "deck.h"
+#include "deck_index.h"
 #include "review_state.h"
 #include "scheduler.h"
 
 #define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
+#define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 
 static int failures;
 
@@ -158,6 +162,121 @@ static void test_review_state_round_trip(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void write_file(const char *path, const char *content)
+{
+	FILE *file = fopen(path, "w");
+
+	check(file != NULL, "test file opens");
+	if (file == NULL)
+		return;
+
+	fputs(content, file);
+	fclose(file);
+}
+
+static void test_deck_index_builds_paths(void)
+{
+	struct deck_entry entry;
+
+	check(
+		deck_index_build_entry(&entry, "/root", "sample"),
+		"deck index builds entry"
+	);
+	check(strcmp(entry.id, "sample") == 0, "deck index stores id");
+	check(strcmp(entry.cards_path, "/root/sample/cards.tsv") == 0, "cards path builds");
+	check(strcmp(entry.state_path, "/root/sample/state.tsv") == 0, "state path builds");
+	check(!deck_index_build_entry(&entry, "/root", ".hidden"), "hidden id rejected");
+	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
+	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
+	check(!deck_index_build_entry(&entry, "/root", "bad id"), "space id rejected");
+}
+
+static void remove_test_deck_dir(const char *deck_id)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), "%s/%s/cards.tsv", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s", TEST_DECK_ROOT, deck_id);
+	rmdir(path);
+}
+
+static void cleanup_deck_index_test_root(void)
+{
+	remove_test_deck_dir("alpha");
+	remove_test_deck_dir("empty");
+	remove_test_deck_dir("zeta");
+
+	for (unsigned int deck_number = 0; deck_number < 18; deck_number++)
+	{
+		char deck_id[16];
+
+		snprintf(deck_id, sizeof(deck_id), "deck%02u", deck_number);
+		remove_test_deck_dir(deck_id);
+	}
+
+	rmdir(TEST_DECK_ROOT);
+}
+
+static void create_test_deck_dir(const char *deck_id, bool has_cards)
+{
+	char path[256];
+
+	snprintf(path, sizeof(path), "%s/%s", TEST_DECK_ROOT, deck_id);
+	mkdir(path, 0700);
+
+	if (has_cards)
+	{
+		snprintf(path, sizeof(path), "%s/%s/cards.tsv", TEST_DECK_ROOT, deck_id);
+		write_file(path, "card\tnote\tfront\tback\ttags\n");
+	}
+}
+
+static void test_deck_index_scans_sorted_decks_with_cards(void)
+{
+	struct deck_index index;
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	create_test_deck_dir("zeta", true);
+	create_test_deck_dir("empty", false);
+	create_test_deck_dir("alpha", true);
+
+	deck_index_scan(&index, TEST_DECK_ROOT);
+
+	check(index.count == 2, "deck index scans only folders with cards");
+	check(strcmp(index.entries[0].id, "alpha") == 0, "deck index sorts first deck");
+	check(strcmp(index.entries[1].id, "zeta") == 0, "deck index sorts second deck");
+	check(!index.overflowed, "deck index does not report overflow under limit");
+
+	cleanup_deck_index_test_root();
+}
+
+static void test_deck_index_reports_overflow(void)
+{
+	struct deck_index index;
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+
+	for (unsigned int deck_number = 0; deck_number < 18; deck_number++)
+	{
+		char deck_id[16];
+
+		snprintf(deck_id, sizeof(deck_id), "deck%02u", deck_number);
+		create_test_deck_dir(deck_id, true);
+	}
+
+	deck_index_scan(&index, TEST_DECK_ROOT);
+
+	check(index.count == DECK_INDEX_MAX_DECKS, "deck index stops at display limit");
+	check(index.overflowed, "deck index reports overflow");
+	check(strcmp(index.entries[0].id, "deck00") == 0, "deck index keeps sorted first deck");
+	check(strcmp(index.entries[DECK_INDEX_MAX_DECKS - 1].id, "deck15") == 0, "deck index keeps first visible deck set");
+
+	cleanup_deck_index_test_root();
+}
+
 int main(void)
 {
 	test_parse_card_line();
@@ -166,6 +285,9 @@ int main(void)
 	test_scheduler_rejects_invalid_rating();
 	test_review_state_missing_file();
 	test_review_state_round_trip();
+	test_deck_index_builds_paths();
+	test_deck_index_scans_sorted_decks_with_cards();
+	test_deck_index_reports_overflow();
 
 	if (failures != 0)
 	{

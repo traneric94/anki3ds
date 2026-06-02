@@ -37,7 +37,7 @@ anki3ds/
 
 ## Build
 
-The 3DS app currently builds a text-only sample deck reviewer.
+The 3DS app currently builds a text-only multi-deck reviewer.
 
 ```sh
 make
@@ -105,15 +105,18 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
 
 ## Current Status
 
-Sample deck review works at build level: the app loads `cards.tsv`, reveals
-answers, records ratings, saves local `state.tsv` progress, and can reset saved
-progress with `SELECT` (`N` in Azahar's default keyboard mapping).
+Multi-deck text review works at build level: the app scans
+`sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
+reveals answers, records ratings, saves local `state.tsv` progress beside that
+deck, and can reset saved progress with `SELECT` (`N` in Azahar's default
+keyboard mapping).
 
 See:
 
 - [PROJECT_PLAN.md](PROJECT_PLAN.md)
 - [CHECKPOINTS.md](CHECKPOINTS.md)
 - [TESTING.md](TESTING.md)
+- [docs/algorithms-and-abstractions.md](docs/algorithms-and-abstractions.md)
 - [docs/deck-format.md](docs/deck-format.md)
 - [docs/c-style-and-architecture.md](docs/c-style-and-architecture.md)
 - [docs/emulator-feedback-loop.md](docs/emulator-feedback-loop.md)

@@ -9,6 +9,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+DECK_ID_MAX_LENGTH = 64
+
 
 @dataclass(frozen=True)
 class ConvertedCard:
@@ -26,6 +28,16 @@ def escape_tsv_field(value: str) -> str:
 def stable_id(prefix: str, *parts: str) -> str:
     digest = hashlib.sha1("\x1f".join(parts).encode("utf-8")).hexdigest()
     return f"{prefix}-{digest[:12]}"
+
+
+def deck_id_is_valid(value: str) -> bool:
+    if not value or len(value) >= DECK_ID_MAX_LENGTH:
+        return False
+
+    return all(
+        character.isascii() and (character.isalnum() or character in "_-")
+        for character in value
+    )
 
 
 def convert_lines(
@@ -66,7 +78,21 @@ def convert_lines(
     return cards
 
 
-def write_deck(output_dir: Path, deck_id: str, deck_name: str, cards: list[ConvertedCard]) -> None:
+def write_deck(
+    output_dir: Path,
+    deck_id: str,
+    deck_name: str,
+    cards: list[ConvertedCard],
+) -> None:
+    if not deck_id_is_valid(output_dir.name):
+        raise ValueError(
+            "output deck folder name must use letters, numbers, '_' or '-'"
+        )
+    if not deck_id_is_valid(deck_id):
+        raise ValueError("deck id must use letters, numbers, '_' or '-'")
+    if deck_id != output_dir.name:
+        raise ValueError("deck id must match output deck folder name")
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     deck_json = {
@@ -104,11 +130,34 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("input", type=Path, help="UTF-8 tab-separated input file")
     parser.add_argument("output", type=Path, help="output deck directory")
-    parser.add_argument("--deck-id", default="converted", help="deck id written to deck.json")
-    parser.add_argument("--deck-name", default="Converted Deck", help="deck name written to deck.json")
-    parser.add_argument("--front-field", type=int, default=0, help="zero-based front field index")
-    parser.add_argument("--back-field", type=int, default=1, help="zero-based back field index")
-    parser.add_argument("--tags-field", type=int, default=None, help="zero-based tags field index")
+    parser.add_argument(
+        "--deck-id",
+        default=None,
+        help="deck id written to deck.json; defaults to output folder name",
+    )
+    parser.add_argument(
+        "--deck-name",
+        default="Converted Deck",
+        help="deck name written to deck.json",
+    )
+    parser.add_argument(
+        "--front-field",
+        type=int,
+        default=0,
+        help="zero-based front field index",
+    )
+    parser.add_argument(
+        "--back-field",
+        type=int,
+        default=1,
+        help="zero-based back field index",
+    )
+    parser.add_argument(
+        "--tags-field",
+        type=int,
+        default=None,
+        help="zero-based tags field index",
+    )
     return parser.parse_args()
 
 
@@ -122,7 +171,8 @@ def main() -> int:
 
     lines = args.input.read_text(encoding="utf-8").splitlines()
     cards = convert_lines(lines, args.front_field, args.back_field, args.tags_field)
-    write_deck(args.output, args.deck_id, args.deck_name, cards)
+    deck_id = args.deck_id if args.deck_id is not None else args.output.name
+    write_deck(args.output, deck_id, args.deck_name, cards)
     print(f"wrote {len(cards)} cards to {args.output}")
     return 0
 

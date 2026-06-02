@@ -1,12 +1,27 @@
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
-from converter.anki3ds_convert import convert_lines, escape_tsv_field, write_deck
+from converter.anki3ds_convert import (
+    convert_lines,
+    deck_id_is_valid,
+    escape_tsv_field,
+    main,
+    write_deck,
+)
 
 
 class ConverterTests(unittest.TestCase):
+    def test_deck_id_validation(self):
+        self.assertTrue(deck_id_is_valid("my-deck_01"))
+        self.assertFalse(deck_id_is_valid(""))
+        self.assertFalse(deck_id_is_valid("My Deck"))
+        self.assertFalse(deck_id_is_valid("bad/id"))
+
     def test_escape_tsv_field(self):
         self.assertEqual(escape_tsv_field("a\\b\tc\nd"), "a\\\\b\\tc\\nd")
 
@@ -52,8 +67,41 @@ class ConverterTests(unittest.TestCase):
             deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
             self.assertEqual(deck_json["deck_id"], "sample")
             self.assertEqual(deck_json["card_count"], 1)
-            self.assertTrue((output / "cards.tsv").read_text(encoding="utf-8").startswith("card-"))
+            self.assertTrue(
+                (output / "cards.tsv").read_text(encoding="utf-8").startswith("card-")
+            )
             self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+
+    def test_write_deck_rejects_invalid_folder_id(self):
+        cards = convert_lines(["front\tback"], 0, 1, None)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "folder name"):
+                write_deck(Path(temp_dir) / "My Deck", "my-deck", "My Deck", cards)
+
+            with self.assertRaisesRegex(ValueError, "deck id"):
+                write_deck(Path(temp_dir) / "my-deck", "My Deck", "My Deck", cards)
+
+            with self.assertRaisesRegex(ValueError, "match"):
+                write_deck(Path(temp_dir) / "my-deck", "other-deck", "My Deck", cards)
+
+    def test_cli_defaults_deck_id_to_output_folder(self):
+        cards_input = "front\tback\n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            with io.StringIO() as stdout:
+                with redirect_stdout(stdout), mock.patch(
+                    "sys.argv",
+                    ["anki3ds_convert.py", str(input_path), str(output)],
+                ):
+                    self.assertEqual(main(), 0)
+
+            deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
+            self.assertEqual(deck_json["deck_id"], "my-deck")
 
 
 if __name__ == "__main__":

@@ -5,11 +5,18 @@ The 3DS app should read a simple format that avoids full Anki complexity.
 ## Folder Layout
 
 ```text
-/3ds/anki3ds/decks/Deck Name/
+/3ds/anki3ds/decks/<deck-id>/
   deck.json
   cards.tsv
   state.tsv
   media/
+```
+
+Folder ids should use only letters, numbers, `_`, and `-`. The current app uses
+the folder id as the selector display name and reads:
+
+```text
+sdmc:/3ds/anki3ds/decks/<deck-id>/cards.tsv
 ```
 
 The tracked text-only sample deck lives in `sample-decks/sample/` and installs
@@ -32,6 +39,9 @@ Draft:
   "card_count": 2
 }
 ```
+
+`deck_id` must match the folder id. The converter defaults it from the output
+folder name, and rejects mismatches so desktop output stays loadable on-device.
 
 ## cards.tsv
 

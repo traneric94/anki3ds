@@ -1,19 +1,21 @@
 #include <3ds.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "deck.h"
+#include "deck_index.h"
 #include "review_state.h"
 #include "scheduler.h"
 
-#define APP_VERSION "0.3.0-dev"
-#define SAMPLE_DECK_PATH "sdmc:/3ds/anki3ds/decks/sample/cards.tsv"
-#define SAMPLE_STATE_PATH "sdmc:/3ds/anki3ds/decks/sample/state.tsv"
+#define APP_VERSION "0.4.0-dev"
 #define TEXT_LEFT 1
 #define TEXT_WIDTH 48
 
 enum app_mode
 {
+	APP_MODE_DECK_SELECT,
 	APP_MODE_LOAD_ERROR,
 	APP_MODE_REVIEW,
 	APP_MODE_SUMMARY,
@@ -27,6 +29,10 @@ struct app_state
 	enum review_state_load_result state_load_result;
 	enum review_state_save_result state_save_result;
 	const char *state_message;
+	size_t selected_deck_index;
+	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
+	struct deck_index deck_index;
 	struct deck deck;
 	struct scheduler_session session;
 };
@@ -110,19 +116,59 @@ static const struct card *current_card(const struct app_state *app)
 	return &app->deck.cards[scheduler_current_index(&app->session)];
 }
 
-static void app_init(struct app_state *app)
+static void copy_string(char *destination, size_t destination_size, const char *source)
 {
-	deck_init(&app->deck, "sample");
+	if (destination_size == 0)
+		return;
+
+	snprintf(destination, destination_size, "%s", source);
+}
+
+static void app_scan_decks(struct app_state *app)
+{
+	deck_index_scan(&app->deck_index, DECK_INDEX_ROOT_PATH);
+	app->selected_deck_index = 0;
+}
+
+static void app_load_selected_deck(struct app_state *app)
+{
+	const struct deck_entry *entry;
+
+	if (app->deck_index.count == 0)
+	{
+		app->mode = APP_MODE_DECK_SELECT;
+		return;
+	}
+
+	if (app->selected_deck_index >= app->deck_index.count)
+		app->selected_deck_index = 0;
+
+	entry = deck_index_get(&app->deck_index, app->selected_deck_index);
+	if (entry == NULL)
+	{
+		app->load_result = DECK_LOAD_NOT_FOUND;
+		app->state_message = "Missing deck";
+		app->mode = APP_MODE_LOAD_ERROR;
+		return;
+	}
+
+	copy_string(app->active_cards_path, sizeof(app->active_cards_path), entry->cards_path);
+	copy_string(app->active_state_path, sizeof(app->active_state_path), entry->state_path);
+	deck_init(&app->deck, entry->id);
 	app->revealed = false;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
 	app->state_message = "State: not loaded";
-	app->load_result = deck_load_cards(&app->deck, SAMPLE_DECK_PATH);
+	app->load_result = deck_load_cards(&app->deck, app->active_cards_path);
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
 		scheduler_init(&app->session, app->deck.card_count);
-		app->state_load_result = review_state_load(&app->deck, &app->session, SAMPLE_STATE_PATH);
+		app->state_load_result = review_state_load(
+			&app->deck,
+			&app->session,
+			app->active_state_path
+		);
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
 		if (scheduler_is_complete(&app->session))
@@ -137,6 +183,13 @@ static void app_init(struct app_state *app)
 	}
 }
 
+static void app_init(struct app_state *app)
+{
+	memset(app, 0, sizeof(*app));
+	app_scan_decks(app);
+	app->mode = APP_MODE_DECK_SELECT;
+}
+
 static void draw_header(const struct app_state *app)
 {
 	printf("\x1b[1;1Hanki3ds Review");
@@ -149,14 +202,54 @@ static void draw_header(const struct app_state *app)
 	printf("\x1b[3;1HState: %s", app->state_message);
 }
 
+static void draw_deck_select_screen(const struct app_state *app)
+{
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds");
+	printf("\x1b[3;1HSelect deck");
+
+	if (app->deck_index.count == 0)
+	{
+		printf("\x1b[5;1HNo decks found.");
+		printf("\x1b[7;1HCreate a folder like:");
+		printf("\x1b[8;1H%s/my-deck/cards.tsv", DECK_INDEX_ROOT_PATH);
+	}
+	else
+	{
+		for (size_t index = 0; index < app->deck_index.count; index++)
+		{
+			const char *marker = index == app->selected_deck_index ? ">" : " ";
+
+			printf(
+				"\x1b[%lu;1H%s %s",
+				(unsigned long)(5 + index),
+				marker,
+				app->deck_index.entries[index].id
+			);
+		}
+
+		if (app->deck_index.overflowed)
+			printf("\x1b[23;1HShowing first %u decks.", (unsigned int)DECK_INDEX_MAX_DECKS);
+
+		printf("\x1b[26;1HUp/Down: choose  A: open");
+	}
+
+	printf("\x1b[27;1HSELECT/N: rescan decks");
+	printf("\x1b[28;1HSTART/M: exit");
+}
+
 static void draw_load_error_screen(const struct app_state *app)
 {
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds");
 	printf("\x1b[3;1HCould not load deck.");
-	printf("\x1b[5;1H%s", SAMPLE_DECK_PATH);
+	printf(
+		"\x1b[5;1H%s",
+		app->active_cards_path[0] ? app->active_cards_path : DECK_INDEX_ROOT_PATH
+	);
 	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
 	printf("\x1b[10;1HCopy cards.tsv to the path above.");
+	printf("\x1b[27;1HB/S or SELECT/N: deck list");
 	printf("\x1b[28;1HSTART/M: exit");
 }
 
@@ -188,7 +281,7 @@ static void draw_review_screen(const struct app_state *app)
 	else
 	{
 		draw_wrapped_text(card->front, 6, 17);
-		printf("\x1b[26;1HSELECT/N: reset progress");
+		printf("\x1b[26;1HB/S: deck list  SELECT/N: reset");
 		printf("\x1b[27;1HA: show answer");
 		printf("\x1b[28;1HSTART/M: exit");
 	}
@@ -220,6 +313,7 @@ static void draw_summary_screen(const struct app_state *app)
 		"\x1b[12;1HA Easy:  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
+	printf("\x1b[26;1HB/S: deck list");
 	printf("\x1b[27;1HSELECT/N: reset progress");
 	printf("\x1b[28;1HSTART/M: exit");
 }
@@ -228,6 +322,9 @@ static void draw_app(const struct app_state *app)
 {
 	switch (app->mode)
 	{
+	case APP_MODE_DECK_SELECT:
+		draw_deck_select_screen(app);
+		break;
 	case APP_MODE_LOAD_ERROR:
 		draw_load_error_screen(app);
 		break;
@@ -246,7 +343,11 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		return false;
 
 	scheduler_rate_current(&app->session, rating);
-	app->state_save_result = review_state_save(&app->deck, &app->session, SAMPLE_STATE_PATH);
+	app->state_save_result = review_state_save(
+		&app->deck,
+		&app->session,
+		app->active_state_path
+	);
 	app->state_message = review_state_save_result_name(app->state_save_result);
 	app->revealed = false;
 
@@ -258,12 +359,80 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 
 static void reset_progress(struct app_state *app)
 {
-	remove(SAMPLE_STATE_PATH);
-	app_init(app);
+	if (app->active_state_path[0] == '\0')
+	{
+		app->state_message = "reset failed";
+		return;
+	}
+
+	errno = 0;
+	if (remove(app->active_state_path) != 0 && errno != ENOENT)
+	{
+		app->state_message = "reset failed";
+		return;
+	}
+
+	app_load_selected_deck(app);
+}
+
+static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & KEY_SELECT)
+	{
+		app_scan_decks(app);
+		return true;
+	}
+
+	if (app->deck_index.count == 0)
+		return false;
+
+	if (keys_down & KEY_DUP)
+	{
+		if (app->selected_deck_index == 0)
+			app->selected_deck_index = app->deck_index.count - 1;
+		else
+			app->selected_deck_index--;
+		return true;
+	}
+
+	if (keys_down & KEY_DDOWN)
+	{
+		app->selected_deck_index =
+			(app->selected_deck_index + 1) % app->deck_index.count;
+		return true;
+	}
+
+	if (keys_down & KEY_A)
+	{
+		app_load_selected_deck(app);
+		return true;
+	}
+
+	return false;
 }
 
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
+	if (app->mode == APP_MODE_DECK_SELECT)
+		return app_handle_deck_select_input(app, keys_down);
+
+	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
+	{
+		app_scan_decks(app);
+		app->mode = APP_MODE_DECK_SELECT;
+		return true;
+	}
+
+	if (
+		(app->mode == APP_MODE_SUMMARY && (keys_down & KEY_B)) ||
+		(app->mode == APP_MODE_REVIEW && !app->revealed && (keys_down & KEY_B))
+	)
+	{
+		app_scan_decks(app);
+		app->mode = APP_MODE_DECK_SELECT;
+		return true;
+	}
+
 	if (app->mode != APP_MODE_LOAD_ERROR && (keys_down & KEY_SELECT))
 	{
 		reset_progress(app);
