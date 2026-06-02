@@ -61,7 +61,9 @@ After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, due count, new-due count, and suspended-card
 count for the selector. This keeps the deck list useful for daily study while
-preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits.
+preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits. The
+summary loader allocates its temporary deck and scheduler on the heap so larger
+supported decks do not consume a large 3DS stack frame during deck scanning.
 
 ## Deck Loading
 

@@ -171,7 +171,7 @@ class ConverterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "sample"
 
-            with self.assertRaisesRegex(ValueError, "more than 64 cards"):
+            with self.assertRaisesRegex(ValueError, f"more than {DECK_MAX_CARDS} cards"):
                 write_deck(output, "sample", "Sample", cards)
 
     def test_write_deck_accepts_device_card_limit(self):

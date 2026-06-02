@@ -31,6 +31,7 @@
 static int failures;
 
 static void write_file(const char *path, const char *content);
+static void write_numbered_cards_file(const char *path, size_t card_count);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
 static bool file_equals(const char *path, const char *content);
 
@@ -115,6 +116,28 @@ static void test_deck_load_rejects_duplicate_card_ids(void)
 	check(
 		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_BAD_FORMAT,
 		"duplicate card ids are rejected"
+	);
+
+	remove(TEST_CARDS_PATH);
+}
+
+static void test_deck_load_card_limit(void)
+{
+	struct deck deck;
+
+	write_numbered_cards_file(TEST_CARDS_PATH, DECK_MAX_CARDS);
+	deck_init(&deck, "limit-test");
+	check(
+		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_OK,
+		"deck load accepts card limit"
+	);
+	check(deck.card_count == DECK_MAX_CARDS, "deck load stores card limit");
+
+	write_numbered_cards_file(TEST_CARDS_PATH, DECK_MAX_CARDS + 1);
+	deck_init(&deck, "too-large-test");
+	check(
+		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_TOO_LARGE,
+		"deck load rejects beyond card limit"
 	);
 
 	remove(TEST_CARDS_PATH);
@@ -856,6 +879,29 @@ static void write_file(const char *path, const char *content)
 	fclose(file);
 }
 
+static void write_numbered_cards_file(const char *path, size_t card_count)
+{
+	FILE *file = fopen(path, "w");
+
+	check(file != NULL, "test numbered cards file opens");
+	if (file == NULL)
+		return;
+
+	for (size_t index = 0; index < card_count; index++)
+	{
+		fprintf(
+			file,
+			"card-%03lu\tnote-%03lu\tfront %lu\tback %lu\ttag\n",
+			(unsigned long)index,
+			(unsigned long)index,
+			(unsigned long)index,
+			(unsigned long)index
+		);
+	}
+
+	fclose(file);
+}
+
 static void write_binary_file(const char *path, const unsigned char *content, size_t size)
 {
 	FILE *file = fopen(path, "wb");
@@ -1473,6 +1519,7 @@ int main(void)
 	test_reject_bad_card_line();
 	test_parse_card_line_with_media();
 	test_deck_load_rejects_duplicate_card_ids();
+	test_deck_load_card_limit();
 	test_tracked_sample_decks_load();
 	test_scheduler_schedules_due_days();
 	test_scheduler_rejects_invalid_rating();

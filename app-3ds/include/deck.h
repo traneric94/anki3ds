@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#define DECK_MAX_CARDS 64
+#define DECK_MAX_CARDS 256
 #define DECK_MAX_ID_LENGTH 32
 #define DECK_MAX_TEXT_LENGTH 384
 #define DECK_MAX_TAGS_LENGTH 128

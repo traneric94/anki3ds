@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
-DECK_MAX_CARDS = 64
+DECK_MAX_CARDS = 256
 MEDIA_IMAGE_MAX_WIDTH = 160
 MEDIA_IMAGE_MAX_HEIGHT = 72
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"

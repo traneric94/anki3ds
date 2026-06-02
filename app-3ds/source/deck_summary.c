@@ -2,6 +2,8 @@
 
 #include "scheduler.h"
 
+#include <stdlib.h>
+
 static size_t count_new_due_cards(const struct scheduler_session *session)
 {
 	size_t count = 0;
@@ -38,25 +40,42 @@ void deck_summary_load(
 )
 {
 	struct app_settings settings;
-	struct deck deck;
-	struct scheduler_session session;
+	struct deck *deck;
+	struct scheduler_session *session;
 
 	deck_summary_init(summary);
 
 	if (entry == NULL)
 		return;
 
-	deck_init(&deck, entry->display_name);
-	summary->deck_load_result = deck_load_cards(&deck, entry->cards_path);
-	if (summary->deck_load_result != DECK_LOAD_OK)
+	deck = malloc(sizeof(*deck));
+	session = malloc(sizeof(*session));
+	if (deck == NULL || session == NULL)
+	{
+		free(session);
+		free(deck);
+		summary->deck_load_result = DECK_LOAD_TOO_LARGE;
 		return;
+	}
 
-	summary->card_count = deck.card_count;
+	deck_init(deck, entry->display_name);
+	summary->deck_load_result = deck_load_cards(deck, entry->cards_path);
+	if (summary->deck_load_result != DECK_LOAD_OK)
+	{
+		free(session);
+		free(deck);
+		return;
+	}
+
+	summary->card_count = deck->card_count;
 	summary->settings_load_result = app_settings_load(&settings, entry->settings_path);
-	scheduler_init(&session, deck.card_count, today);
-	scheduler_set_daily_limits(&session, settings.new_limit, settings.review_limit);
-	summary->state_load_result = review_state_load(&deck, &session, entry->state_path);
-	summary->due_count = session.due_count;
-	summary->new_due_count = count_new_due_cards(&session);
-	summary->suspended_count = scheduler_suspended_count(&session);
+	scheduler_init(session, deck->card_count, today);
+	scheduler_set_daily_limits(session, settings.new_limit, settings.review_limit);
+	summary->state_load_result = review_state_load(deck, session, entry->state_path);
+	summary->due_count = session->due_count;
+	summary->new_due_count = count_new_due_cards(session);
+	summary->suspended_count = scheduler_suspended_count(session);
+
+	free(session);
+	free(deck);
 }
