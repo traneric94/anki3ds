@@ -626,6 +626,24 @@ static void test_app_controls_requires_single_command(void)
 		APP_CONTROL_COMMAND_BUTTON_MASK;
 
 	check(
+		app_controls_command_pressed(APP_CONTROL_BUTTON_A, APP_CONTROL_BUTTON_A),
+		"command helper accepts exact command"
+	);
+	check(
+		!app_controls_command_pressed(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
+			APP_CONTROL_BUTTON_A
+		),
+		"command helper rejects command chord"
+	);
+	check(
+		!app_controls_command_pressed(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_A
+		),
+		"command helper rejects navigation chord"
+	);
+	check(
 		app_controls_single_command(
 			APP_CONTROL_BUTTON_A,
 			APP_CONTROL_BUTTON_A,

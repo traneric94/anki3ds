@@ -169,15 +169,20 @@ bool app_controls_single_command(
 	return (buttons & command_mask) == command_button;
 }
 
+bool app_controls_command_pressed(unsigned int buttons, unsigned int command_button)
+{
+	return app_controls_single_command(
+		buttons,
+		command_button,
+		APP_CONTROL_BUTTON_INPUT_MASK
+	);
+}
+
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
 {
 	return (
 		!review_answer_revealed &&
-		app_controls_single_command(
-			buttons,
-			APP_CONTROL_BUTTON_A,
-			APP_CONTROL_BUTTON_INPUT_MASK
-		)
+		app_controls_command_pressed(buttons, APP_CONTROL_BUTTON_A)
 	);
 }
 

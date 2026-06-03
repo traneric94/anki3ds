@@ -406,11 +406,7 @@ static unsigned int *selected_daily_limit(struct app_state *app)
 
 static bool app_command_pressed(unsigned int buttons, unsigned int command_button)
 {
-	return app_controls_single_command(
-		buttons,
-		command_button,
-		APP_CONTROL_COMMAND_BUTTON_MASK
-	);
+	return app_controls_command_pressed(buttons, command_button);
 }
 
 static const struct card *current_card(const struct app_state *app)

@@ -69,6 +69,7 @@ bool app_controls_single_command(
 	unsigned int command_button,
 	unsigned int command_mask
 );
+bool app_controls_command_pressed(unsigned int buttons, unsigned int command_button);
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed);
 bool app_controls_rating_for_buttons(
 	unsigned int buttons,
