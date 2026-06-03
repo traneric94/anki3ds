@@ -430,6 +430,31 @@ static bool state_load_result_needs_warning(enum review_state_load_result result
 	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
+static void draw_load_error_detail(const struct app_state *app, int row)
+{
+	if (app->load_report.line_number > 0 && app->load_result == DECK_LOAD_TOO_LARGE)
+	{
+		printf(
+			"\x1b[%d;1HLine %u: too many cards",
+			row,
+			app->load_report.line_number
+		);
+	}
+	else if (app->load_report.line_number > 0)
+	{
+		printf(
+			"\x1b[%d;1HLine %u: %s",
+			row,
+			app->load_report.line_number,
+			deck_parse_result_name(app->load_report.parse_result)
+		);
+	}
+	else if (app->load_report.parse_result == DECK_PARSE_EMPTY)
+	{
+		printf("\x1b[%d;1Hcards.tsv has no cards.", row);
+	}
+}
+
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
 {
 	return app_review_should_show_queue(app->state_load_result, &app->session) ?
@@ -1095,25 +1120,7 @@ static void draw_load_error_screen(const struct app_state *app)
 		APP_LAYOUT_TEXT_WIDTH
 	);
 	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
-	if (app->load_report.line_number > 0 && app->load_result == DECK_LOAD_TOO_LARGE)
-	{
-		printf(
-			"\x1b[9;1HLine %u: too many cards",
-			app->load_report.line_number
-		);
-	}
-	else if (app->load_report.line_number > 0)
-	{
-		printf(
-			"\x1b[9;1HLine %u: %s",
-			app->load_report.line_number,
-			deck_parse_result_name(app->load_report.parse_result)
-		);
-	}
-	else if (app->load_report.parse_result == DECK_PARSE_EMPTY)
-	{
-		printf("\x1b[9;1Hcards.tsv has no cards.");
-	}
+	draw_load_error_detail(app, 9);
 	printf("\x1b[12;1HFix cards.tsv at the path above.");
 }
 
@@ -1843,6 +1850,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1HB or SELECT: deck list");
 		printf("\x1b[5;1HSTART: confirm exit");
 		printf("\x1b[7;1HY: controls");
+		draw_load_error_detail(app, 10);
 		break;
 	case APP_MODE_REVIEW:
 	{
