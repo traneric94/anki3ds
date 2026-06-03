@@ -116,6 +116,64 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(cards[1].card_id, f"{cards[0].card_id}-2")
         self.assertEqual(cards[2].card_id, f"{cards[0].card_id}-3")
 
+    def test_convert_lines_uses_source_card_id_for_reimport_identity(self):
+        original = convert_lines(
+            ["anki-card-1\tfront\tback"],
+            front_field=1,
+            back_field=2,
+            tags_field=None,
+            card_id_field=0,
+        )
+        edited = convert_lines(
+            ["anki-card-1\tfront edited\tback"],
+            front_field=1,
+            back_field=2,
+            tags_field=None,
+            card_id_field=0,
+        )
+
+        self.assertEqual(original[0].card_id, edited[0].card_id)
+        self.assertEqual(original[0].note_id, edited[0].note_id)
+        self.assertNotEqual(original[0].front, edited[0].front)
+
+    def test_convert_lines_uses_source_note_id_when_card_id_is_missing(self):
+        original = convert_lines(
+            ["anki-note-1\tfront\tback"],
+            front_field=1,
+            back_field=2,
+            tags_field=None,
+            note_id_field=0,
+        )
+        edited = convert_lines(
+            ["anki-note-1\tfront edited\tback"],
+            front_field=1,
+            back_field=2,
+            tags_field=None,
+            note_id_field=0,
+        )
+
+        self.assertEqual(original[0].card_id, edited[0].card_id)
+        self.assertEqual(original[0].note_id, edited[0].note_id)
+
+    def test_convert_lines_rejects_empty_source_ids(self):
+        with self.assertRaisesRegex(ValueError, "card id field is empty"):
+            convert_lines(
+                ["\tfront\tback"],
+                front_field=1,
+                back_field=2,
+                tags_field=None,
+                card_id_field=0,
+            )
+
+        with self.assertRaisesRegex(ValueError, "note id field is empty"):
+            convert_lines(
+                ["\tfront\tback"],
+                front_field=1,
+                back_field=2,
+                tags_field=None,
+                note_id_field=0,
+            )
+
     def test_rejects_missing_or_empty_fields(self):
         with self.assertRaisesRegex(ValueError, "expected at least"):
             convert_lines(["front only"], front_field=0, back_field=1, tags_field=None)
@@ -404,6 +462,42 @@ class ConverterTests(unittest.TestCase):
 
             deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
             self.assertEqual(deck_json["deck_id"], "my-deck")
+
+    def test_cli_accepts_source_id_fields(self):
+        cards_input = "note-1\tcard-1\tfront\tback\n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            with io.StringIO() as stdout:
+                with redirect_stdout(stdout), mock.patch(
+                    "sys.argv",
+                    [
+                        "anki3ds_convert.py",
+                        str(input_path),
+                        str(output),
+                        "--note-id-field",
+                        "0",
+                        "--card-id-field",
+                        "1",
+                        "--front-field",
+                        "2",
+                        "--back-field",
+                        "3",
+                    ],
+                ):
+                    self.assertEqual(main(), 0)
+
+            card_id, note_id, front, back, tags = (
+                output / "cards.tsv"
+            ).read_text(encoding="utf-8").splitlines()[0].split("\t")
+            self.assertTrue(card_id.startswith("card-"))
+            self.assertTrue(note_id.startswith("note-"))
+            self.assertEqual(front, "front")
+            self.assertEqual(back, "back")
+            self.assertEqual(tags, "")
 
     def test_write_split_decks_writes_numbered_sibling_decks(self):
         cards = convert_lines(

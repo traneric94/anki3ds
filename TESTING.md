@@ -150,6 +150,7 @@ Minimum converter tests:
 - converts optional media fields into bounded `.a3i` files
 - writes expected deck folder layout
 - preserves existing review state on re-import
+- preserves card IDs across text edits when stable source ID fields are supplied
 
 ## Save-State Tests
 

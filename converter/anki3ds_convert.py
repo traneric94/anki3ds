@@ -137,6 +137,14 @@ def stable_id(prefix: str, *parts: str) -> str:
     return f"{prefix}-{digest[:12]}"
 
 
+def normalize_source_id(line_number: int, label: str, value: str) -> str:
+    normalized = " ".join(value.split())
+    if not normalized:
+        raise ValueError(f"line {line_number}: {label} field is empty")
+
+    return normalized
+
+
 def unique_id(base_id: str, seen_counts: dict[str, int]) -> str:
     count = seen_counts.get(base_id, 0) + 1
     seen_counts[base_id] = count
@@ -258,6 +266,8 @@ def convert_lines(
     tags_field: int | None,
     front_media_field: int | None = None,
     back_media_field: int | None = None,
+    card_id_field: int | None = None,
+    note_id_field: int | None = None,
 ) -> list[ConvertedCard]:
     cards: list[ConvertedCard] = []
     seen_card_ids: dict[str, int] = {}
@@ -276,6 +286,8 @@ def convert_lines(
             tags_field or 0,
             front_media_field or 0,
             back_media_field or 0,
+            card_id_field or 0,
+            note_id_field or 0,
         )
         if len(fields) <= max_field:
             raise ValueError(f"line {line_number}: expected at least {max_field + 1} fields")
@@ -299,8 +311,34 @@ def convert_lines(
         if not back:
             raise ValueError(f"line {line_number}: back field is empty")
 
-        base_note_id = stable_id("note", front, back, tags)
-        base_card_id = stable_id("card", base_note_id, front, back)
+        if card_id_field is not None:
+            source_card_id = normalize_source_id(
+                line_number,
+                "card id",
+                fields[card_id_field],
+            )
+            base_card_id = stable_id("card", source_card_id)
+        else:
+            source_card_id = ""
+
+        if note_id_field is not None:
+            source_note_id = normalize_source_id(
+                line_number,
+                "note id",
+                fields[note_id_field],
+            )
+            base_note_id = stable_id("note", source_note_id)
+        elif source_card_id:
+            base_note_id = stable_id("note", source_card_id)
+        else:
+            base_note_id = stable_id("note", front, back, tags)
+
+        if card_id_field is None:
+            if note_id_field is not None:
+                base_card_id = stable_id("card", source_note_id)
+            else:
+                base_card_id = stable_id("card", base_note_id, front, back)
+
         note_id = unique_id(base_note_id, seen_note_ids)
         card_id = unique_id(base_card_id, seen_card_ids)
         cards.append(
@@ -620,6 +658,18 @@ def parse_args() -> argparse.Namespace:
         help="zero-based optional back media filename field index",
     )
     parser.add_argument(
+        "--card-id-field",
+        type=int,
+        default=None,
+        help="zero-based stable source card id field for preserving progress",
+    )
+    parser.add_argument(
+        "--note-id-field",
+        type=int,
+        default=None,
+        help="zero-based stable source note id field for preserving progress",
+    )
+    parser.add_argument(
         "--media-root",
         type=Path,
         default=None,
@@ -644,6 +694,10 @@ def main() -> int:
         raise SystemExit("field indexes must be non-negative")
     if args.back_media_field is not None and args.back_media_field < 0:
         raise SystemExit("field indexes must be non-negative")
+    if args.card_id_field is not None and args.card_id_field < 0:
+        raise SystemExit("field indexes must be non-negative")
+    if args.note_id_field is not None and args.note_id_field < 0:
+        raise SystemExit("field indexes must be non-negative")
 
     lines = args.input.read_text(encoding="utf-8").splitlines()
     cards = convert_lines(
@@ -653,6 +707,8 @@ def main() -> int:
         args.tags_field,
         args.front_media_field,
         args.back_media_field,
+        args.card_id_field,
+        args.note_id_field,
     )
     deck_id = args.deck_id if args.deck_id is not None else args.output.name
     if args.split_large_decks:

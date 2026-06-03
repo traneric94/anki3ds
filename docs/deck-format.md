@@ -79,8 +79,10 @@ Rules:
   sibling deck folders within this limit
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
 - `tags` may use at most 127 UTF-8 bytes after unescaping
-- converter-generated `card_id` and `note_id` values are stable hashes of the
-  normalized export fields, with numeric suffixes for exact duplicates
+- converter-generated `card_id` and `note_id` values are short stable hashes
+  with numeric suffixes for duplicates; by default they come from normalized
+  front/back/tags text, but `--card-id-field` and `--note-id-field` can seed
+  them from durable source IDs so edited card text preserves review progress
 - embedded newlines are encoded as `\n`
 - literal backslashes are escaped as `\\`
 - converter output simplifies simple HTML to text before writing these fields

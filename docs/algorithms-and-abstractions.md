@@ -338,7 +338,9 @@ Algorithm:
 4. Strip outer whitespace from selected fields.
 5. Reject missing fields and empty front/back text.
 6. Generate stable IDs from SHA-1 digests:
-   `note_id` from front/back/tags, then `card_id` from note/front/back.
+   `note_id` and `card_id` from `--note-id-field`/`--card-id-field` when
+   durable source IDs are provided, otherwise `note_id` from front/back/tags
+   and `card_id` from note/front/back.
 7. Write `deck.json` with format version, deck id, deck name, creator, and
    card count.
 8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
@@ -348,11 +350,14 @@ Algorithm:
 
 The converter deliberately does not open or rewrite existing `state.tsv` or
 `settings.tsv`, so review progress and deck-specific daily limits survive
-re-imports into the same deck folder. The folder id is the runtime deck id on
-the 3DS, so the converter defaults `deck_id` from the output folder name and
-rejects mismatches. Current converter media support is deliberately narrow:
-PPM `P6` in, `.a3i` out. Rich HTML/template rendering and Anki collection
-parsing still belong on the desktop side rather than on the 3DS.
+re-imports into the same deck folder. To keep progress attached to edited card
+text, pass stable source ID fields during conversion; otherwise content-derived
+fallback IDs change when the normalized front/back/tags content changes. The
+folder id is the runtime deck id on the 3DS, so the converter defaults
+`deck_id` from the output folder name and rejects mismatches. Current converter
+media support is deliberately narrow: PPM `P6` in, `.a3i` out. Rich
+HTML/template rendering and Anki collection parsing still belong on the desktop
+side rather than on the 3DS.
 
 ## C Boundaries We Want
 

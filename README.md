@@ -118,6 +118,19 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
+If your export includes durable source identifiers, pass them through so
+re-imported card text keeps the same on-device review state:
+
+```sh
+python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
+  --deck-id my-deck \
+  --deck-name "My Deck" \
+  --note-id-field 0 \
+  --card-id-field 1 \
+  --front-field 2 \
+  --back-field 3
+```
+
 Current 3DS builds support 256 cards per deck folder and store up to 64 deck
 folders in the selector. To split a larger export into numbered sibling decks
 such as `my-deck-01` and `my-deck-02`:
@@ -154,9 +167,9 @@ restore suspended cards from the actions screen, or reset saved progress after
 opening the reset action and confirming with `X`. Cards may optionally reference
 bounded `.a3i` images under the deck's `media/` folder. The top screen shows
 deck/card content, while the bottom screen shows controls, review status, save
-feedback, and a low-battery warning when the system reports `1/5` battery or
-lower while not charging. An in-app controls screen is available with `Y` from
-non-rating screens and unrevealed review cards.
+feedback, and the last valid sampled battery level, including charging and low
+battery states. An in-app controls screen is available with `Y` from non-rating
+screens and unrevealed review cards.
 
 See:
 
