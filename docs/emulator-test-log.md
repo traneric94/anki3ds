@@ -39,3 +39,28 @@ Result: pass
 Notes:
 - Azahar maps 3DS `START` to keyboard `M` in the default control profile on
   this machine.
+
+## 2026-06-03 - First-Save Rollback Diagnosis
+
+Build: `41edf65` before fix, local working tree after fix
+Command: `make run-emulator`
+Steps:
+- Launched the review app in Azahar.
+- User reported that rating cards did not advance.
+- Checked Azahar's SD-card directory and log.
+Observed:
+- No `state.tsv` existed after attempted ratings.
+- Azahar logged repeated missing-file rename failures for
+  `limits-demo/state.tsv` to `limits-demo/state.tsv.bak`.
+Expected:
+- The first rating should create `state.tsv` without needing an existing
+  primary state file.
+Result: fail before fix
+Notes:
+- The storage transaction had relied on desktop-style `errno == ENOENT` after
+  `rename` failed for a missing primary file.
+- The fix checks file existence before remove/rename and adds a first-save
+  regression test.
+- The fixed build launches in Azahar, but button-level acceptance still needs a
+  manual emulator or hardware pass because this session cannot automate Azahar
+  keypresses.

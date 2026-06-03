@@ -898,6 +898,20 @@ static void test_storage_replace_file_commits_temp_file(void)
 	remove(TEST_STORAGE_PATH);
 }
 
+static void test_storage_replace_file_commits_first_save(void)
+{
+	remove(TEST_STORAGE_PATH);
+	remove(TEST_STORAGE_BACKUP_PATH);
+	write_file(TEST_STORAGE_TEMP_PATH, "new\n");
+
+	check(storage_replace_file(TEST_STORAGE_PATH), "storage first save succeeds");
+	check(file_equals(TEST_STORAGE_PATH, "new\n"), "storage first save commits temp");
+	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage first save removes temp");
+	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage first save has no backup");
+
+	remove(TEST_STORAGE_PATH);
+}
+
 static void test_storage_delete_save_files_removes_related_files(void)
 {
 	write_file(TEST_STORAGE_PATH, "primary\n");
@@ -1843,6 +1857,7 @@ int main(void)
 	test_review_state_bad_load_does_not_mutate_session();
 	test_review_state_delete_removes_save_artifacts();
 	test_storage_replace_file_commits_temp_file();
+	test_storage_replace_file_commits_first_save();
 	test_storage_delete_save_files_removes_related_files();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();

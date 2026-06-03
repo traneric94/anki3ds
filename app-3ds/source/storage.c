@@ -1,6 +1,5 @@
 #include "storage.h"
 
-#include <errno.h>
 #include <stdio.h>
 
 bool storage_build_suffixed_path(
@@ -22,10 +21,26 @@ bool storage_build_suffixed_path(
 
 static bool remove_if_present(const char *path)
 {
-	errno = 0;
-	if (remove(path) != 0 && errno != ENOENT)
+	FILE *file = fopen(path, "rb");
+
+	if (file == NULL)
+		return true;
+
+	fclose(file);
+	if (remove(path) != 0)
 		return false;
 
+	return true;
+}
+
+static bool file_exists(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+
+	if (file == NULL)
+		return false;
+
+	fclose(file);
 	return true;
 }
 
@@ -61,15 +76,15 @@ bool storage_replace_file(const char *path)
 		return false;
 	}
 
-	errno = 0;
-	if (rename(path, backup_path) == 0)
+	if (file_exists(path))
 	{
+		if (rename(path, backup_path) != 0)
+		{
+			remove(temp_path);
+			return false;
+		}
+
 		had_previous_file = true;
-	}
-	else if (errno != ENOENT)
-	{
-		remove(temp_path);
-		return false;
 	}
 
 	if (rename(temp_path, path) != 0)

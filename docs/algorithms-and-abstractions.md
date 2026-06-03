@@ -141,6 +141,11 @@ The shared `storage` module owns the remove/rename order for both review state
 and settings. This remains simple to inspect on the SD card while avoiding the
 known remove-before-rename data-loss window.
 
+The storage transaction checks whether the primary or backup file exists before
+removing or renaming it. Azahar/libctru SD-card operations do not behave exactly
+like desktop POSIX in missing-file cases, so first-save behavior must not rely
+on `errno == ENOENT` after a failed `rename`.
+
 ## Review Loop
 
 The app loop is a small mode machine:
@@ -151,12 +156,15 @@ The app loop is a small mode machine:
 - `SUMMARY`: show counts when no cards are due today.
 - `ACTIONS`: choose deck-level actions such as restoring suspended cards or
   resetting progress.
+- `SETTINGS`: edit per-deck daily limits.
+- `CONTROLS`: show the in-app key map, then return to the previous mode.
 - `CONFIRM_RESET`: require explicit `X` before deleting saved review state.
 - `CONFIRM_EXIT`: require explicit `A` before leaving the app.
 
 The console UI uses the top screen for deck/card content and the bottom screen
-for mode-specific controls. This keeps button prompts out of the review card
-area without introducing a graphics framework yet.
+for mode-specific controls and a short status line. This keeps button prompts
+and save feedback out of the review card area without introducing a graphics
+framework yet.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
@@ -210,6 +218,11 @@ state and then save `state.tsv`. If the save fails after a rating, suspend,
 undo, or restore-suspended action, the app restores that snapshot and leaves the
 user on the current workflow screen with the save error visible. This keeps the
 in-memory review queue from advancing past the durable SD-card state.
+
+The bottom status line reports successful ratings with the next card index, and
+reports save failures as non-advancing actions. This is intentionally redundant
+with the top-screen state string because SD-card save failures are otherwise
+easy to mistake for scheduler bugs during emulator or hardware testing.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
 opens a confirmation screen. Pressing `X` there removes the active `state.tsv`

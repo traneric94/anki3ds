@@ -33,6 +33,8 @@
 #define DECK_NAME_SELECTOR_WIDTH 22
 #define DECK_SELECTOR_FIRST_ROW 5
 #define DECK_SELECTOR_VISIBLE_ROWS 16
+#define STATUS_MESSAGE_SIZE 64
+#define STATUS_MESSAGE_WIDTH 31
 #define BATTERY_LOW_LEVEL 1
 #define BATTERY_POLL_INTERVAL_LOOPS 120
 
@@ -56,6 +58,7 @@ enum app_mode
 	APP_MODE_SUMMARY,
 	APP_MODE_ACTIONS,
 	APP_MODE_SETTINGS,
+	APP_MODE_CONTROLS,
 	APP_MODE_CONFIRM_RESET,
 	APP_MODE_CONFIRM_EXIT,
 };
@@ -80,6 +83,7 @@ struct app_state
 	enum app_mode mode;
 	enum app_mode action_return_mode;
 	enum app_mode exit_return_mode;
+	enum app_mode controls_return_mode;
 	enum action_item selected_action;
 	bool revealed;
 	bool exit_requested;
@@ -107,6 +111,7 @@ struct app_state
 	struct deck deck;
 	struct scheduler_session session;
 	struct scheduler_session save_rollback_session;
+	char status_message[STATUS_MESSAGE_SIZE];
 };
 
 static PrintConsole top_screen;
@@ -358,6 +363,11 @@ static void copy_string(char *destination, size_t destination_size, const char *
 	snprintf(destination, destination_size, "%s", source);
 }
 
+static void app_set_status(struct app_state *app, const char *message)
+{
+	copy_string(app->status_message, sizeof(app->status_message), message);
+}
+
 static long long idle_input_wait_ns(unsigned int idle_wait_count)
 {
 	if (idle_wait_count < IDLE_INPUT_FAST_WAIT_COUNT)
@@ -563,6 +573,7 @@ static void app_refresh_selected_deck_summary(struct app_state *app)
 static void app_return_to_deck_select(struct app_state *app)
 {
 	app_refresh_selected_deck_summary(app);
+	app_set_status(app, "Deck list");
 	app->mode = APP_MODE_DECK_SELECT;
 }
 
@@ -572,6 +583,7 @@ static void app_load_selected_deck(struct app_state *app)
 
 	if (app->deck_index.count == 0)
 	{
+		app_set_status(app, "No deck selected");
 		app->mode = APP_MODE_DECK_SELECT;
 		return;
 	}
@@ -584,6 +596,7 @@ static void app_load_selected_deck(struct app_state *app)
 	{
 		app->load_result = DECK_LOAD_NOT_FOUND;
 		app->state_message = "Missing deck";
+		app_set_status(app, "Missing deck");
 		app->mode = APP_MODE_LOAD_ERROR;
 		return;
 	}
@@ -628,12 +641,19 @@ static void app_load_selected_deck(struct app_state *app)
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
 		if (scheduler_is_complete(&app->session))
+		{
+			app_set_status(app, "Loaded; no cards due");
 			app->mode = APP_MODE_SUMMARY;
+		}
 		else
+		{
+			app_set_status(app, "Loaded deck");
 			app->mode = APP_MODE_REVIEW;
+		}
 	}
 	else
 	{
+		app_set_status(app, "Deck load failed");
 		app->mode = APP_MODE_LOAD_ERROR;
 		scheduler_init(&app->session, 0, current_day());
 	}
@@ -645,6 +665,7 @@ static void app_open_actions(struct app_state *app)
 {
 	app->action_return_mode = app->mode;
 	app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
+	app_set_status(app, "Actions");
 	app->mode = APP_MODE_ACTIONS;
 }
 
@@ -653,18 +674,28 @@ static void app_open_settings(struct app_state *app)
 	app->edited_settings = app->settings;
 	app->selected_setting = SETTING_ITEM_NEW_LIMIT;
 	app->settings_message = "settings not saved";
+	app_set_status(app, "Editing limits");
 	app->mode = APP_MODE_SETTINGS;
 }
 
 static void app_open_reset_confirmation(struct app_state *app)
 {
+	app_set_status(app, "Reset requires X");
 	app->mode = APP_MODE_CONFIRM_RESET;
 }
 
 static void app_open_exit_confirmation(struct app_state *app)
 {
 	app->exit_return_mode = app->mode;
+	app_set_status(app, "Exit requires A");
 	app->mode = APP_MODE_CONFIRM_EXIT;
+}
+
+static void app_open_controls(struct app_state *app)
+{
+	app->controls_return_mode = app->mode;
+	app_set_status(app, "Controls");
+	app->mode = APP_MODE_CONTROLS;
 }
 
 static void app_init(struct app_state *app)
@@ -673,6 +704,7 @@ static void app_init(struct app_state *app)
 	app->battery_service_available = R_SUCCEEDED(ptmuInit());
 	app_sample_battery(app);
 	media_cache_init(&media_cache);
+	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;
 }
 
@@ -974,6 +1006,25 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	printf("\x1b[12;1HUse B or SELECT to cancel.");
 }
 
+static void draw_controls_screen(const struct app_state *app)
+{
+	(void)app;
+
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds");
+	printf("\x1b[3;1HControls");
+	printf("\x1b[5;1HA: open / show / easy / confirm");
+	printf("\x1b[7;1HB: good / back / cancel");
+	printf("\x1b[9;1HX: hard / confirm reset");
+	printf("\x1b[11;1HY: again / controls");
+	printf("\x1b[13;1HL: undo last action");
+	printf("\x1b[15;1HR: suspend current card");
+	printf("\x1b[17;1HD-pad: move / daily limits");
+	printf("\x1b[19;1HSELECT: actions / rescan / cancel");
+	printf("\x1b[21;1HSTART: confirm exit");
+	printf("\x1b[24;1HB, Y, or SELECT returns.");
+}
+
 static void draw_battery_warning(const struct app_state *app)
 {
 	if (!app->battery_status_available || !app->battery_low)
@@ -990,6 +1041,15 @@ static void draw_due_legend(int row, bool include_suspended)
 	printf("\x1b[%d;1HN new  L learn  R review", row);
 	if (include_suspended)
 		printf("\x1b[%d;1HS suspended", row + 1);
+}
+
+static void draw_status_message(const struct app_state *app)
+{
+	if (app->status_message[0] == '\0')
+		return;
+
+	printf("\x1b[24;1HStatus: ");
+	print_truncated(app->status_message, STATUS_MESSAGE_WIDTH);
 }
 
 static void draw_scanning_screen(const struct app_state *app)
@@ -1017,9 +1077,16 @@ static void present_current_frame(void)
 
 static void show_scan_then_scan_decks(struct app_state *app)
 {
+	app_set_status(app, "Scanning decks");
 	draw_scanning_screen(app);
 	present_current_frame();
 	app_scan_decks(app);
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Scan done; %lu decks",
+		(unsigned long)app->deck_index.count
+	);
 }
 
 static void draw_bottom_controls_screen(const struct app_state *app)
@@ -1039,6 +1106,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[5;1HD-pad Up/Down: choose");
 			printf("\x1b[7;1HSELECT: rescan decks");
 			printf("\x1b[9;1HSTART: confirm exit");
+			printf("\x1b[11;1HY: controls");
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
@@ -1067,6 +1135,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		{
 			printf("\x1b[3;1HSELECT: rescan decks");
 			printf("\x1b[5;1HSTART: confirm exit");
+			printf("\x1b[7;1HY: controls");
 		}
 		printf("\x1b[27;1HFound: %lu", (unsigned long)app->deck_index.count);
 		break;
@@ -1074,6 +1143,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[1;1HLoad error");
 		printf("\x1b[3;1HB or SELECT: deck list");
 		printf("\x1b[5;1HSTART: confirm exit");
+		printf("\x1b[7;1HY: controls");
 		break;
 	case APP_MODE_REVIEW:
 	{
@@ -1115,6 +1185,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[12;1HR: suspend card");
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
+			printf("\x1b[20;1HY: controls");
 		}
 		printf(
 			"\x1b[27;1HSettings: %s",
@@ -1134,6 +1205,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HL: undo last action");
 		printf("\x1b[7;1HSELECT: actions");
 		printf("\x1b[9;1HSTART: confirm exit");
+		printf("\x1b[17;1HY: controls");
 		printf(
 			"\x1b[11;1HStarted: N %u/%s  R %u/%s",
 			app->session.new_count_today,
@@ -1155,6 +1227,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HD-pad Up/Down: choose");
 		printf("\x1b[7;1HB or SELECT: cancel");
 		printf("\x1b[9;1HSTART: confirm exit");
+		printf("\x1b[11;1HY: controls");
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[1;1HDaily limits");
@@ -1163,6 +1236,12 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[7;1HA: save limits");
 		printf("\x1b[9;1HB or SELECT: cancel");
 		printf("\x1b[11;1HSTART: confirm exit");
+		printf("\x1b[13;1HY: controls");
+		break;
+	case APP_MODE_CONTROLS:
+		printf("\x1b[1;1HControls");
+		printf("\x1b[3;1HB, Y, or SELECT: back");
+		printf("\x1b[5;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		printf("\x1b[1;1HConfirm reset");
@@ -1177,6 +1256,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		break;
 	}
 
+	draw_status_message(app);
 	draw_battery_warning(app);
 }
 
@@ -1203,6 +1283,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_SETTINGS:
 		draw_settings_screen(app);
+		break;
+	case APP_MODE_CONTROLS:
+		draw_controls_screen(app);
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		draw_reset_confirmation_screen(app);
@@ -1241,6 +1324,8 @@ static bool save_review_state(struct app_state *app)
 
 static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
 {
+	const char *rating_name = scheduler_rating_name(rating);
+
 	if (!app->revealed)
 		return false;
 
@@ -1249,6 +1334,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
+		app_set_status(app, "Save failed; card not advanced");
 		app->mode = APP_MODE_REVIEW;
 		return true;
 	}
@@ -1256,7 +1342,26 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"%s saved; no cards due",
+			rating_name
+		);
 		app->mode = APP_MODE_SUMMARY;
+	}
+	else
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"%s saved; card %lu/%lu",
+			rating_name,
+			(unsigned long)(scheduler_current_index(&app->session) + 1),
+			(unsigned long)app->session.card_count
+		);
+	}
 
 	return true;
 }
@@ -1267,16 +1372,19 @@ static bool undo_last_action(struct app_state *app)
 	if (!scheduler_undo_last(&app->session))
 	{
 		app->state_message = "nothing to undo";
+		app_set_status(app, "Nothing to undo");
 		return true;
 	}
 
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
+		app_set_status(app, "Save failed; undo not kept");
 		return true;
 	}
 
 	app->state_message = "undone";
+	app_set_status(app, "Undo saved");
 	app->revealed = false;
 	app->mode = APP_MODE_REVIEW;
 	return true;
@@ -1288,20 +1396,26 @@ static bool suspend_current_card(struct app_state *app)
 	if (!scheduler_suspend_current(&app->session))
 	{
 		app->state_message = "nothing to suspend";
+		app_set_status(app, "Nothing to suspend");
 		return true;
 	}
 
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
+		app_set_status(app, "Save failed; card not suspended");
 		return true;
 	}
 
 	app->state_message = "suspended";
+	app_set_status(app, "Suspend saved");
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
+	{
+		app_set_status(app, "Suspend saved; no cards due");
 		app->mode = APP_MODE_SUMMARY;
+	}
 
 	return true;
 }
@@ -1311,15 +1425,18 @@ static bool reset_progress(struct app_state *app)
 	if (app->active_state_path[0] == '\0')
 	{
 		app->state_message = "reset failed";
+		app_set_status(app, "Reset failed");
 		return false;
 	}
 
 	if (!review_state_delete(app->active_state_path))
 	{
 		app->state_message = "reset failed";
+		app_set_status(app, "Reset failed");
 		return false;
 	}
 
+	app_set_status(app, "Progress reset");
 	app_load_selected_deck(app);
 	return true;
 }
@@ -1333,6 +1450,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 	if (unsuspended_count == 0)
 	{
 		app->state_message = "nothing suspended";
+		app_set_status(app, "Nothing suspended");
 		app->mode = app->action_return_mode;
 		return true;
 	}
@@ -1340,10 +1458,17 @@ static bool unsuspend_all_cards(struct app_state *app)
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
+		app_set_status(app, "Save failed; restore undone");
 		return true;
 	}
 
 	app->state_message = "unsuspended";
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Restored %u suspended",
+		unsuspended_count
+	);
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
@@ -1364,7 +1489,10 @@ static bool save_daily_limits(struct app_state *app)
 	app->state_message = app->settings_message;
 
 	if (app->settings_save_result != APP_SETTINGS_SAVE_OK)
+	{
+		app_set_status(app, "Settings save failed");
 		return true;
+	}
 
 	app->settings = app->edited_settings;
 	app->settings_load_result = APP_SETTINGS_LOAD_OK;
@@ -1376,9 +1504,15 @@ static bool save_daily_limits(struct app_state *app)
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
+	{
+		app_set_status(app, "Limits saved; no cards due");
 		app->mode = APP_MODE_SUMMARY;
+	}
 	else
+	{
+		app_set_status(app, "Limits saved");
 		app->mode = APP_MODE_REVIEW;
+	}
 
 	return true;
 }
@@ -1526,6 +1660,30 @@ static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
 	return false;
 }
 
+static bool app_can_open_controls(const struct app_state *app)
+{
+	if (app->mode == APP_MODE_CONFIRM_EXIT || app->mode == APP_MODE_CONFIRM_RESET)
+		return false;
+	if (app->mode == APP_MODE_CONTROLS)
+		return false;
+	if (app->mode == APP_MODE_REVIEW && app->revealed)
+		return false;
+
+	return true;
+}
+
+static bool app_handle_controls_input(struct app_state *app, u32 keys_down)
+{
+	if (keys_down & (KEY_B | KEY_SELECT | KEY_Y))
+	{
+		app->mode = app->controls_return_mode;
+		app_set_status(app, "Returned");
+		return true;
+	}
+
+	return false;
+}
+
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
 	if (app->mode == APP_MODE_CONFIRM_EXIT)
@@ -1534,6 +1692,15 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (keys_down & KEY_START)
 	{
 		app_open_exit_confirmation(app);
+		return true;
+	}
+
+	if (app->mode == APP_MODE_CONTROLS)
+		return app_handle_controls_input(app, keys_down);
+
+	if ((keys_down & KEY_Y) && app_can_open_controls(app))
+	{
+		app_open_controls(app);
 		return true;
 	}
 

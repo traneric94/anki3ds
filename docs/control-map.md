@@ -9,7 +9,7 @@ letters do not match the 3DS button label.
 | `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
 | `B` | `S` | Choose Good after reveal, go back, cancel |
 | `X` | `Z` | Choose Hard after reveal, confirm reset progress |
-| `Y` | `X` | Choose Again after reveal |
+| `Y` | `X` | Choose Again after reveal, open controls where available |
 | `L` | `Q` | Undo last rating or suspend action |
 | `R` | `W` | Suspend current card |
 | D-pad Up | `T` | Move selection up |
@@ -26,6 +26,16 @@ letters do not match the 3DS button label.
 3. Press `L` to undo the last rating or suspend action.
 4. Press `R` to suspend the current card.
 5. Press `SELECT` to open deck actions.
+
+After a rating, the bottom status line shows whether the rating saved and which
+card is next. If saving fails, the app keeps the old scheduler state and shows
+that the card did not advance.
+
+## Controls Screen
+
+Press `Y` from deck select, load error, unrevealed review cards, summary,
+actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
+`SELECT` to return. On a revealed review card, `Y` is reserved for Again.
 
 ## Actions Flow
 
