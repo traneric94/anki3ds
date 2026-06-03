@@ -16,6 +16,7 @@ DECK_ID_MAX_LENGTH = 64
 DECK_MAX_CARDS = 256
 DECK_INDEX_MAX_DECKS = 64
 DECK_MAX_ID_LENGTH = 32
+DECK_MAX_NAME_LENGTH = 64
 DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128
 DECK_MAX_LINE_LENGTH = 1024
@@ -190,6 +191,15 @@ def validate_device_field(
     if len(value.encode("utf-8")) >= max_length:
         raise ValueError(
             f"card {card_number}: {label} exceeds {max_length - 1} UTF-8 bytes"
+        )
+
+
+def validate_deck_name(deck_name: str) -> None:
+    if not deck_name:
+        raise ValueError("deck name is required")
+    if len(deck_name.encode("utf-8")) >= DECK_MAX_NAME_LENGTH:
+        raise ValueError(
+            f"deck name exceeds {DECK_MAX_NAME_LENGTH - 1} UTF-8 bytes"
         )
 
 
@@ -415,6 +425,7 @@ def write_deck(
         raise ValueError("deck id must use letters, numbers, '_' or '-'")
     if deck_id != output_dir.name:
         raise ValueError("deck id must match output deck folder name")
+    validate_deck_name(deck_name)
     if not cards:
         raise ValueError("deck must contain at least one card")
     if len(cards) > DECK_MAX_CARDS:

@@ -132,13 +132,20 @@ def verify_deck_json(
     deck_json_path = deck_dir / "deck.json"
     deck_id = deck_dir.name
     card_count = deck_json.get("card_count")
+    deck_name = deck_json.get("name")
 
     if deck_json.get("format_version") != 1:
         append_file_error(errors, deck_json_path, "format_version must be 1")
     if deck_json.get("deck_id") != deck_id:
         append_file_error(errors, deck_json_path, "deck_id must match folder name")
-    if not isinstance(deck_json.get("name"), str) or deck_json.get("name") == "":
+    if not isinstance(deck_name, str) or deck_name == "":
         append_file_error(errors, deck_json_path, "name is required")
+    elif utf8_length(deck_name) >= DECK_MAX_NAME_LENGTH:
+        append_file_error(
+            errors,
+            deck_json_path,
+            f"name exceeds {DECK_MAX_NAME_LENGTH - 1} UTF-8 bytes",
+        )
     if not isinstance(card_count, int) or isinstance(card_count, bool):
         append_file_error(errors, deck_json_path, "card_count must be an integer")
     elif card_count != len(card_rows):

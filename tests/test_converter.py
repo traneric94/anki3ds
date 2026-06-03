@@ -9,6 +9,7 @@ from unittest import mock
 from converter.anki3ds_convert import (
     DECK_INDEX_MAX_DECKS,
     DECK_MAX_CARDS,
+    DECK_MAX_NAME_LENGTH,
     DECK_MAX_TEXT_LENGTH,
     convert_lines,
     deck_id_is_valid,
@@ -302,6 +303,17 @@ class ConverterTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "at least one card"):
                 write_deck(output, "sample", "Sample", [])
+
+    def test_write_deck_rejects_unloadable_display_name(self):
+        cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "deck name is required"):
+                write_deck(output, "sample", "", cards)
+            with self.assertRaisesRegex(ValueError, "deck name exceeds"):
+                write_deck(output, "sample", "a" * DECK_MAX_NAME_LENGTH, cards)
 
     def test_write_deck_payload_commit_failure_rolls_back_existing_files(self):
         cards = convert_lines(["front\tback\ttag"], 0, 1, 2)

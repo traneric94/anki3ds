@@ -116,6 +116,20 @@ class VerifyTextDeckTests(unittest.TestCase):
             self.assert_error_contains(errors, "name is required")
             self.assert_error_contains(errors, "card_count must be an integer")
 
+            long_name = "a" * 64
+            (deck_dir / "deck.json").write_text(
+                (
+                    '{"format_version":1,'
+                    '"deck_id":"Bad Deck",'
+                    f'"name":"{long_name}",'
+                    '"card_count":1}\n'
+                ),
+                encoding="utf-8",
+            )
+            errors = self.verify(deck_dir)
+
+            self.assert_error_contains(errors, "name exceeds 63 UTF-8 bytes")
+
     def test_rejects_progress_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             deck_dir = self.write_deck(Path(temp_dir))
