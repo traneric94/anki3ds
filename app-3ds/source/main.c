@@ -985,6 +985,13 @@ static void draw_battery_warning(const struct app_state *app)
 	);
 }
 
+static void draw_due_legend(int row, bool include_suspended)
+{
+	printf("\x1b[%d;1HN new  L learn  R review", row);
+	if (include_suspended)
+		printf("\x1b[%d;1HS suspended", row + 1);
+}
+
 static void draw_scanning_screen(const struct app_state *app)
 {
 	select_top_screen();
@@ -1049,6 +1056,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					(unsigned long)summary->card_count,
 					(unsigned long)summary->suspended_count
 				);
+				draw_due_legend(18, true);
 			}
 			else
 			{
@@ -1088,6 +1096,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			app->session.review_count_today,
 			review_limit
 		);
+		draw_due_legend(18, false);
 
 		if (app->revealed)
 		{
@@ -1132,6 +1141,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			app->session.review_count_today,
 			review_limit
 		);
+		draw_due_legend(15, false);
 		printf(
 			"\x1b[13;1HSettings: %s",
 			app_settings_load_result_name(app->settings_load_result)
