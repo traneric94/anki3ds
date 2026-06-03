@@ -112,3 +112,19 @@ Result: pass for launch command only
 Notes:
 - Media status-row layout is covered by host tests, but the rendered colors and
   spacing still need a visual emulator or hardware pass.
+
+## 2026-06-03 - D-pad Hold Wake Launch Check
+
+Build: `0fcf72a`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- D-pad hold repeat now stays on a one-VBlank wait while held, but selector
+  feel still needs a manual emulator or hardware pass.
