@@ -166,11 +166,11 @@ silently reset all progress and then be overwritten as fresh state. If every
 available state copy is malformed, review-state saves are blocked until the
 user resets deck progress. Opening that deck enters a reset-needed summary
 screen instead of a review queue, and normal study controls such as undo remain
-disabled until reset succeeds. Reset removes `state.tsv`, `state.tsv.tmp`, and
-`state.tsv.bak` for the active deck. The shared `storage` module owns the
-remove/rename order for both review state and settings. This remains simple to
-inspect on the SD card while avoiding the known remove-before-rename data-loss
-window.
+disabled until reset succeeds. Reset removes `state.tsv.tmp` and
+`state.tsv.bak` before the primary `state.tsv` for the active deck. The shared
+`storage` module owns the remove/rename order for both review state and
+settings. This remains simple to inspect on the SD card while avoiding the
+known remove-before-rename data-loss window.
 
 The storage transaction checks whether the primary or backup file exists before
 removing or renaming it. Azahar/libctru SD-card operations do not behave exactly
@@ -309,7 +309,8 @@ the app appends diagnostic rows to `review-log.tsv` with the before/after
 scheduler fields for the affected cards. Review logging is best-effort and
 append-only until the next row would exceed the configured size cap or the
 existing file ends with a partial non-newline row. A log append failure does not
-roll back a saved study action.
+roll back a saved study action; the bottom status reports `log skipped` so the
+diagnostic gap is visible.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant

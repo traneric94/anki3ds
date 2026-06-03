@@ -1921,7 +1921,7 @@ static void app_set_review_save_failed_status(
 	app_set_status(app, fallback_message);
 }
 
-static void append_review_log_entry(
+static bool append_review_log_entry(
 	struct app_state *app,
 	enum review_log_event event,
 	size_t card_index,
@@ -1933,11 +1933,11 @@ static void append_review_log_entry(
 	time_t timestamp;
 
 	if (before == NULL)
-		return;
+		return false;
 	if (app->active_review_log_path[0] == '\0')
-		return;
+		return false;
 	if (card_index >= app->deck.card_count || card_index >= app->session.card_count)
-		return;
+		return false;
 
 	timestamp = time(NULL);
 	if (timestamp == (time_t)-1)
@@ -1950,7 +1950,7 @@ static void append_review_log_entry(
 	entry.rating = rating;
 	entry.before = *before;
 	entry.after = app->session.cards[card_index];
-	(void)review_log_append(app->active_review_log_path, &entry);
+	return review_log_append(app->active_review_log_path, &entry);
 }
 
 static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
@@ -1958,6 +1958,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	const char *rating_name = scheduler_rating_name(rating);
 	size_t card_index;
 	struct scheduler_card before;
+	bool log_saved;
 
 	if (!app->revealed)
 		return false;
@@ -1976,7 +1977,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		return true;
 	}
 
-	append_review_log_entry(
+	log_saved = append_review_log_entry(
 		app,
 		REVIEW_LOG_EVENT_RATING,
 		card_index,
@@ -1990,7 +1991,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"%s saved; no cards due",
+			log_saved ? "%s saved; no cards due" : "%s saved; log skipped",
 			rating_name
 		);
 		app->mode = APP_MODE_SUMMARY;
@@ -2000,7 +2001,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"%s saved; card %lu/%lu",
+			log_saved ? "%s saved; card %lu/%lu" : "%s saved; log skipped",
 			rating_name,
 			(unsigned long)(scheduler_current_index(&app->session) + 1),
 			(unsigned long)app->session.card_count
@@ -2015,6 +2016,7 @@ static bool undo_last_action(struct app_state *app)
 	size_t card_index = 0;
 	struct scheduler_card before;
 	bool can_log_undo = false;
+	bool log_saved = true;
 
 	save_session_rollback(app);
 	if (
@@ -2044,7 +2046,7 @@ static bool undo_last_action(struct app_state *app)
 
 	if (can_log_undo)
 	{
-		append_review_log_entry(
+		log_saved = append_review_log_entry(
 			app,
 			REVIEW_LOG_EVENT_UNDO,
 			card_index,
@@ -2053,7 +2055,7 @@ static bool undo_last_action(struct app_state *app)
 		);
 	}
 	app->state_message = "undone";
-	app_set_status(app, "Undo saved");
+	app_set_status(app, log_saved ? "Undo saved" : "Undo saved; log skipped");
 	app->revealed = false;
 	app->mode = APP_MODE_REVIEW;
 	return true;
@@ -2064,6 +2066,7 @@ static bool suspend_current_card(struct app_state *app)
 	size_t card_index = 0;
 	struct scheduler_card before;
 	bool can_log_suspend = false;
+	bool log_saved = true;
 
 	save_session_rollback(app);
 	if (
@@ -2094,7 +2097,7 @@ static bool suspend_current_card(struct app_state *app)
 
 	if (can_log_suspend)
 	{
-		append_review_log_entry(
+		log_saved = append_review_log_entry(
 			app,
 			REVIEW_LOG_EVENT_SUSPEND,
 			card_index,
@@ -2103,12 +2106,15 @@ static bool suspend_current_card(struct app_state *app)
 		);
 	}
 	app->state_message = "suspended";
-	app_set_status(app, "Suspend saved");
+	app_set_status(app, log_saved ? "Suspend saved" : "Suspend saved; log skipped");
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
 	{
-		app_set_status(app, "Suspend saved; no cards due");
+		app_set_status(
+			app,
+			log_saved ? "Suspend saved; no cards due" : "Suspend saved; log skipped"
+		);
 		app->mode = APP_MODE_SUMMARY;
 	}
 	else
@@ -2152,6 +2158,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 {
 	unsigned int unsuspended_count;
 	bool was_suspended[DECK_MAX_CARDS];
+	bool logs_saved = true;
 
 	save_session_rollback(app);
 	memset(was_suspended, 0, sizeof(was_suspended));
@@ -2184,20 +2191,23 @@ static bool unsuspend_all_cards(struct app_state *app)
 
 		before = app->session.cards[index];
 		before.suspended = true;
-		append_review_log_entry(
+		if (!append_review_log_entry(
 			app,
 			REVIEW_LOG_EVENT_RESTORE,
 			index,
 			SCHEDULER_RATING_COUNT,
 			&before
-		);
+		))
+		{
+			logs_saved = false;
+		}
 	}
 
 	app->state_message = "unsuspended";
 	snprintf(
 		app->status_message,
 		sizeof(app->status_message),
-		"Restored %u suspended",
+		logs_saved ? "Restored %u suspended" : "Restored %u; log skipped",
 		unsuspended_count
 	);
 	app->revealed = false;

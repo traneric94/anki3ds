@@ -67,7 +67,8 @@ selected by default so the repair flow is immediately reachable.
 - Restoring suspended cards requires `X` on the restore confirmation screen if
   any suspended cards exist.
 - Reset progress requires `X` on the reset confirmation screen.
-- A successful reset reloads the deck and shows `Progress reset`.
+- A successful reset reloads the deck and shows `Progress reset`; if only the
+  diagnostic log cleanup fails, it shows `Progress reset; log kept`.
 - If a deck opens with malformed saved state, use this reset flow before study;
   normal study controls such as undo remain disabled until reset succeeds.
 

@@ -225,7 +225,8 @@ general-purpose image decoding.
 The app appends study transitions to `review-log.tsv` beside `state.tsv` after
 a rating, suspend, undo, or restore-suspended action has been accepted and
 `state.tsv` has saved. The log is diagnostic and append-only; a failed append
-does not roll back the review state or block the study action.
+does not roll back the review state or block the study action. The app reports
+`log skipped` in the status line when a saved action could not be logged.
 
 ```text
 timestamp<TAB>day<TAB>event<TAB>card_id<TAB>rating<TAB>old_review_count<TAB>old_due_day<TAB>old_interval_days<TAB>old_ease_permille<TAB>old_lapses<TAB>old_suspended<TAB>new_review_count<TAB>new_due_day<TAB>new_interval_days<TAB>new_ease_permille<TAB>new_lapses<TAB>new_suspended
