@@ -47,6 +47,7 @@ Azahar SD data directory:
 ```sh
 make install-azahar-sample-decks
 make prepare-azahar-samples-fresh
+make verify-azahar-fresh-samples
 make run-emulator-fresh-samples
 ```
 

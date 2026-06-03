@@ -75,6 +75,12 @@ For a clean sample-deck pass in Azahar:
 make prepare-azahar-samples-fresh
 ```
 
+To prepare and verify the fresh Azahar sample decks without launching:
+
+```sh
+make verify-azahar-fresh-samples
+```
+
 Or install the sample decks and launch the current build in one command:
 
 ```sh
@@ -86,6 +92,9 @@ For a clean sample-deck launch that clears tracked sample progress first:
 ```sh
 make run-emulator-fresh-samples
 ```
+
+That launch path verifies the fresh Azahar text sample decks before opening the
+current `.3dsx`.
 
 The fresh targets clear only tracked sample progress files:
 

@@ -39,6 +39,7 @@ make verify-ci
 make verify-sample-decks
 make verify-local
 make verify-local-sd
+make verify-azahar-fresh-samples
 make package-sd
 make verify-package-sd
 make install-local-sd
@@ -69,9 +70,12 @@ Verification gates:
   five-field text-card rows, valid settings, no optional media fixture, no
   generated progress files, and no media or extra files inside those text deck
   folders.
-- `make verify-local-sd` builds the local SD mirror and verifies that it
-  contains the app artifacts, default text decks, no optional media fixture, and
-  no progress or stray files inside those text deck folders.
+- `make verify-local-sd` builds a fresh tracked-sample local SD mirror and
+  verifies that it contains the app artifacts, default text decks, no optional
+  media fixture, and no progress or stray files inside those text deck folders.
+- `make verify-azahar-fresh-samples` installs fresh tracked sample decks into
+  Azahar's SD data directory and verifies that the emulator sample folders are
+  text-only and progress-free.
 - `make verify-local` is the local pre-checkpoint gate. It runs tests,
   sample-deck verification, local SD staging and verification, and
   package-payload verification. It requires the local 3DS toolchain.

@@ -70,11 +70,13 @@ To copy the build and tracked sample decks into the gitignored local SD mirror:
 make install-local-sd
 ```
 
-To copy and verify that local SD mirror in one step:
+To copy and verify a fresh tracked-sample local SD mirror in one step:
 
 ```sh
 make verify-local-sd
 ```
+
+That target clears tracked sample progress before verification.
 
 To stage a clean SD-card payload under `dist/sdmc/` for release or manual copy:
 
@@ -125,6 +127,12 @@ For a fresh Azahar sample-deck pass, use:
 
 ```sh
 make prepare-azahar-samples-fresh
+```
+
+To prepare and verify those fresh Azahar sample decks before launch:
+
+```sh
+make verify-azahar-fresh-samples
 ```
 
 By default this uses:

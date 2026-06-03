@@ -11,7 +11,7 @@ OPTIONAL_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
-.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
 all: app-3ds
 
@@ -99,7 +99,7 @@ install-local-sd: app-3ds install-local-sample-decks
 	cp app-3ds/anki3ds.3dsx "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.3dsx"
 	cp app-3ds/anki3ds.smdh "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.smdh"
 
-verify-local-sd: install-local-sd
+verify-local-sd: prepare-local-samples-fresh
 	@set -e; \
 	app_dir="$(LOCAL_SDMC)/$(APP_SD_DIR)"; \
 	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
@@ -161,6 +161,16 @@ reset-azahar-sample-progress:
 
 prepare-azahar-samples-fresh: install-azahar-sample-decks reset-azahar-sample-progress
 
+verify-azahar-fresh-samples: prepare-azahar-samples-fresh
+	@set -e; \
+	app_dir="$(AZAHAR_SDMC)/$(APP_SD_DIR)"; \
+	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed by default"; exit 1; }; \
+	done; \
+	for deck in $(SAMPLE_DECKS); do \
+		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \
+	done
+
 check-emulator:
 	@test -d "$(AZAHAR_APP)" || \
 		(echo "Azahar not found at $(AZAHAR_APP). Set AZAHAR_APP=/path/to/Azahar.app"; exit 1)
@@ -170,4 +180,4 @@ run-emulator: app-3ds check-emulator
 
 run-emulator-samples: install-azahar-sample-decks run-emulator
 
-run-emulator-fresh-samples: prepare-azahar-samples-fresh run-emulator
+run-emulator-fresh-samples: verify-azahar-fresh-samples run-emulator
