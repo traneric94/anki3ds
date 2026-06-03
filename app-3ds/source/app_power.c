@@ -1,5 +1,7 @@
 #include "app_power.h"
 
+#define APP_POWER_BATTERY_POLL_WHEN_CLOCK_AVAILABLE ((time_t)-2)
+
 void app_power_schedule_next_battery_poll(time_t *next_poll_time, time_t now)
 {
 	if (next_poll_time == NULL || now == (time_t)-1)
@@ -22,7 +24,7 @@ void app_power_schedule_next_battery_poll_after_sample(
 		if (now == (time_t)-1)
 		{
 			/* Retry as soon as a real clock reading appears. */
-			*next_poll_time = APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS;
+			*next_poll_time = APP_POWER_BATTERY_POLL_WHEN_CLOCK_AVAILABLE;
 			return;
 		}
 
@@ -40,6 +42,8 @@ bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now)
 {
 	if (next_poll_time == NULL || now == (time_t)-1)
 		return false;
+	if (*next_poll_time == APP_POWER_BATTERY_POLL_WHEN_CLOCK_AVAILABLE)
+		return true;
 	if (*next_poll_time == 0)
 	{
 		app_power_schedule_next_battery_poll(next_poll_time, now);
