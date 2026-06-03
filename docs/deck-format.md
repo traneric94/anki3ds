@@ -208,7 +208,9 @@ Limits:
 - zero dimensions are invalid
 - extra or missing pixel data is invalid
 
-The converter can currently convert binary PPM `P6` images into `.a3i` files.
+The converter can currently convert binary PPM `P6` images into `.a3i` files
+when `--media-root` is provided. Without `--media-root`, media fields must
+already reference `.a3i` files that will be copied beside the deck manually.
 Common image formats such as PNG/JPEG should be converted to PPM first or added
 through a future optional desktop dependency. The 3DS app intentionally does no
 general-purpose image decoding.

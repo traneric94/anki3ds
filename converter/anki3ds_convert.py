@@ -473,6 +473,18 @@ def convert_media_file(media_root: Path, source_name: str, output_media_dir: Pat
     return output_name
 
 
+def validate_passthrough_media(cards: list[ConvertedCard]) -> None:
+    for card_number, card in enumerate(cards, start=1):
+        for label, media_name in (
+            ("front_media", card.front_media),
+            ("back_media", card.back_media),
+        ):
+            if media_name and Path(media_name).suffix.lower() != ".a3i":
+                raise ValueError(
+                    f"card {card_number}: {label} must be .a3i unless --media-root is used"
+                )
+
+
 def write_deck(
     output_dir: Path,
     deck_id: str,
@@ -496,7 +508,9 @@ def write_deck(
     media_names: dict[str, str] = {}
     media_outputs: dict[str, str] = {}
     media_sources: set[str] = set()
-    if media_root is not None:
+    if media_root is None:
+        validate_passthrough_media(cards)
+    else:
         for card in cards:
             for source_name in (card.front_media, card.back_media):
                 if source_name and source_name not in media_sources:

@@ -342,6 +342,22 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(fields[5], "front.a3i")
             self.assertEqual(fields[6], "")
 
+    def test_write_deck_rejects_unconverted_media_names(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.ppm\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "must be .a3i"):
+                write_deck(output, "sample", "Sample", cards)
+
     def test_write_deck_converts_ppm_media(self):
         cards = convert_lines(
             ["front\tback\ttag\tfront.ppm\t"],
