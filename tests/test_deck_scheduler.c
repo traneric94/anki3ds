@@ -4404,6 +4404,32 @@ static void test_daily_use_workflow_persists_two_decks(void)
 		&index.entries[beta_index],
 		"daily workflow beta review saves"
 	);
+
+	deck_summary_load(&summary, &index.entries[alpha_index], TEST_TODAY);
+	check(summary.deck_load_result == DECK_LOAD_OK, "daily workflow alpha summary reloads");
+	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "daily workflow alpha summary settings");
+	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "daily workflow alpha summary state");
+	check(summary.card_count == 3, "daily workflow alpha summary card count persists");
+	check(summary.due_count == 1, "daily workflow alpha summary due limit applies");
+	check(summary.new_due_count == 1, "daily workflow alpha summary new count applies");
+	check(summary.learning_due_count == 0, "daily workflow alpha summary has no learning due");
+	check(summary.review_due_count == 0, "daily workflow alpha summary has no review due");
+	check(summary.suspended_count == 0, "daily workflow alpha summary stays unsuspended");
+
+	deck_summary_load(&summary, &index.entries[beta_index], TEST_TODAY);
+	check(summary.deck_load_result == DECK_LOAD_OK, "daily workflow beta summary reloads");
+	check(
+		summary.settings_load_result == APP_SETTINGS_LOAD_NOT_FOUND,
+		"daily workflow beta summary uses default settings"
+	);
+	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "daily workflow beta summary state");
+	check(summary.card_count == 2, "daily workflow beta summary card count persists");
+	check(summary.due_count == 1, "daily workflow beta summary due count persists");
+	check(summary.new_due_count == 1, "daily workflow beta summary new count persists");
+	check(summary.learning_due_count == 0, "daily workflow beta summary has no learning due");
+	check(summary.review_due_count == 0, "daily workflow beta summary has no review due");
+	check(summary.suspended_count == 0, "daily workflow beta summary restore persists");
+
 	check(
 		file_line_count(index.entries[alpha_index].review_log_path) == 3,
 		"daily workflow alpha keeps three log rows"
