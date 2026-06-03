@@ -189,6 +189,7 @@ The app loop is a small mode machine:
   resetting progress.
 - `SETTINGS`: edit per-deck daily limits.
 - `CONTROLS`: show the in-app key map, then return to the previous mode.
+- `CONFIRM_RESTORE`: require explicit `X` before restoring suspended cards.
 - `CONFIRM_SUSPEND`: require explicit `X` before hiding the current card.
 - `CONFIRM_RESET`: require explicit `X` before deleting saved review state.
 - `CONFIRM_EXIT`: require explicit `A` before leaving the app.
@@ -269,10 +270,12 @@ before restoring cards.
 
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset
-progress during normal study. If a deck opens with malformed saved state, reset
-is selected by default so the recovery path is direct. Daily limits can be
-edited from the same actions screen. Reset remains available by moving the
-action selection first, then confirming on a separate reset screen with `X`.
+progress during normal study. If suspended cards exist, restore opens a
+confirmation screen and `X` performs the restore because restore-all clears the
+one-step undo slot. If a deck opens with malformed saved state, reset is
+selected by default so the recovery path is direct. Daily limits can be edited
+from the same actions screen. Reset remains available by moving the action
+selection first, then confirming on a separate reset screen with `X`.
 
 Cards may reference front/back `.a3i` media. The app keeps a two-slot media
 cache for the active deck, enough for the current card's front and back images.

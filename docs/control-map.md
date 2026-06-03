@@ -8,7 +8,7 @@ letters do not match the 3DS button label.
 | --- | --- | --- |
 | `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
 | `B` | `S` | Choose Good after reveal, go back, cancel |
-| `X` | `Z` | Choose Hard after reveal, confirm suspend/reset |
+| `X` | `Z` | Choose Hard after reveal, confirm restore/suspend/reset |
 | `Y` | `X` | Choose Again after reveal, open controls where available |
 | `L` | `Q` | Undo last rating or suspend action |
 | `R` | `W` | Open suspend confirmation |
@@ -27,9 +27,9 @@ Pressing multiple D-pad directions together does not move or change values.
 D-pad directions pressed together with command buttons are ignored. Face-button
 actions such as reveal, rating, save, reset, and exit remain single-press
 actions. After reveal, pressing more than one rating button at the same time
-does not save a rating. Save, suspend-confirm, reset, action-confirm, exit-open,
-and exit-confirm buttons are also ignored when pressed together with another
-button.
+does not save a rating. Save, restore-confirm, suspend-confirm, reset,
+action-confirm, exit-open, and exit-confirm buttons are also ignored when
+pressed together with another button.
 
 The deck selector shows the current position as `selected/total` on both
 screens. Basic terminal-style colors are used for status: blue headings, green
@@ -62,8 +62,10 @@ restore suspended cards. If a deck opens with malformed saved state, reset is
 selected by default so the repair flow is immediately reachable.
 
 - Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
-- Press `A` to confirm the selected action.
+- Press `A` to choose the selected action.
 - Press `B` or `SELECT` to cancel.
+- Restoring suspended cards requires `X` on the restore confirmation screen if
+  any suspended cards exist.
 - Reset progress requires `X` on the reset confirmation screen.
 - A successful reset reloads the deck and shows `Progress reset`.
 - If a deck opens with malformed saved state, use this reset flow before study;
