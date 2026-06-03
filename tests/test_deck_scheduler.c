@@ -1529,6 +1529,38 @@ static void test_review_state_missing_file(void)
 	check(session.due_count == deck.card_count, "missing state leaves scheduler unchanged");
 }
 
+static void test_review_state_load_rejects_null_arguments(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+
+	check(
+		review_state_load(NULL, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"state load rejects null deck"
+	);
+	check(
+		session.due_count == deck.card_count,
+		"null deck state load leaves scheduler unchanged"
+	);
+	check(
+		review_state_load(&deck, NULL, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"state load rejects null session"
+	);
+	check(
+		review_state_load(&deck, &session, NULL) == REVIEW_STATE_LOAD_BAD_FORMAT,
+		"state load rejects null path"
+	);
+	check(
+		session.due_count == deck.card_count,
+		"null path state load leaves scheduler unchanged"
+	);
+}
+
 static void test_review_state_round_trip(void)
 {
 	struct deck deck;
@@ -3166,6 +3198,7 @@ int main(void)
 	test_scheduler_restored_started_new_card_stays_due_after_limit();
 	test_scheduler_restored_started_review_card_stays_due_after_limit();
 	test_review_state_missing_file();
+	test_review_state_load_rejects_null_arguments();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
 	test_review_state_save_rejects_count_mismatch();

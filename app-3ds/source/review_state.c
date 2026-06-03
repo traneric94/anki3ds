@@ -460,6 +460,9 @@ enum review_state_load_result review_state_load(
 	bool primary_missing;
 	enum review_state_load_result result;
 
+	if (deck == NULL || session == NULL || path == NULL)
+		return REVIEW_STATE_LOAD_BAD_FORMAT;
+
 	result = review_state_load_file(deck, session, path, &loaded_file);
 	if (result == REVIEW_STATE_LOAD_OK)
 		return REVIEW_STATE_LOAD_OK;
