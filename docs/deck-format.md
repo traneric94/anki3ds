@@ -70,6 +70,7 @@ Rules:
 
 - UTF-8 text
 - one card per line
+- the final card line may omit its trailing newline
 - tabs separate fields
 - `card_id` values must be unique within the deck
 - `card_id` values may not contain control characters after unescaping; this

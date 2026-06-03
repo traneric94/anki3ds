@@ -137,6 +137,23 @@ static void test_deck_load_rejects_duplicate_card_ids(void)
 	remove(TEST_CARDS_PATH);
 }
 
+static void test_deck_load_accepts_final_line_without_newline(void)
+{
+	struct deck deck;
+
+	write_file(TEST_CARDS_PATH, "card-1\tnote-1\tfront\tback\ttag");
+	deck_init(&deck, "no-final-newline");
+
+	check(
+		deck_load_cards(&deck, TEST_CARDS_PATH) == DECK_LOAD_OK,
+		"deck load accepts final row without newline"
+	);
+	check(deck.card_count == 1, "deck load stores no-newline card");
+	check(strcmp(deck.cards[0].front, "front") == 0, "no-newline card front loads");
+
+	remove(TEST_CARDS_PATH);
+}
+
 static void test_deck_load_card_limit(void)
 {
 	struct deck deck;
@@ -2482,6 +2499,7 @@ int main(void)
 	test_reject_bad_card_line();
 	test_parse_card_line_with_media();
 	test_deck_load_rejects_duplicate_card_ids();
+	test_deck_load_accepts_final_line_without_newline();
 	test_deck_load_card_limit();
 	test_tracked_sample_decks_load();
 	test_app_power_battery_poll_schedule();

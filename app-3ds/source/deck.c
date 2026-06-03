@@ -29,14 +29,14 @@ static bool trim_line_end(char *line)
 	return true;
 }
 
-static bool line_has_complete_read(const char *line)
+static bool line_has_complete_read(FILE *file, const char *line)
 {
 	size_t length = strlen(line);
 
 	if (length == 0)
 		return true;
 
-	return line[length - 1] == '\n' || line[length - 1] == '\r';
+	return line[length - 1] == '\n' || line[length - 1] == '\r' || feof(file);
 }
 
 static void consume_line_remainder(FILE *file)
@@ -267,7 +267,7 @@ enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 		struct card card;
 		enum deck_parse_result parse_result = deck_parse_card_line(&card, line);
 
-		if (!line_has_complete_read(line))
+		if (!line_has_complete_read(file, line))
 		{
 			consume_line_remainder(file);
 			result = DECK_LOAD_BAD_FORMAT;
