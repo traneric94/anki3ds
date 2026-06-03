@@ -41,6 +41,11 @@ test-host:
 		app-3ds/source/storage.c \
 		-o /tmp/anki3ds-test-deck-scheduler
 	/tmp/anki3ds-test-deck-scheduler
+	$(HOST_CC) $(HOST_CFLAGS) -D__3DS__ -Itests/stubs \
+		tests/test_app_controls_3ds_keys.c \
+		app-3ds/source/app_controls.c \
+		-o /tmp/anki3ds-test-app-controls-3ds-keys
+	/tmp/anki3ds-test-app-controls-3ds-keys
 
 test-converter:
 	python3 -m unittest tests/test_converter.py
