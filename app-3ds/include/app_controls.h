@@ -28,8 +28,8 @@
 	APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT)
 #define APP_CONTROL_BUTTON_INPUT_MASK \
 	(APP_CONTROL_COMMAND_BUTTON_MASK | APP_CONTROL_BUTTON_NAVIGATION_MASK)
-#define APP_CONTROL_REPEAT_INITIAL_TICKS 6
-#define APP_CONTROL_REPEAT_INTERVAL_TICKS 2
+#define APP_CONTROL_REPEAT_INITIAL_TICKS 3
+#define APP_CONTROL_REPEAT_INTERVAL_TICKS 1
 
 enum app_control_mode
 {
@@ -57,6 +57,11 @@ unsigned int app_controls_repeat_buttons(
 	struct app_control_repeat *repeat,
 	unsigned int buttons_down,
 	unsigned int buttons_held
+);
+bool app_controls_input_is_active(
+	unsigned int buttons_down,
+	unsigned int buttons_held,
+	unsigned int repeat_buttons
 );
 bool app_controls_can_open(
 	enum app_control_mode mode,

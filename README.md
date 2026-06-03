@@ -160,18 +160,20 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
 
 Multi-deck text and small-image review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
-shows new/learning/review due counts in the deck selector, loads optional per-deck
-`settings.tsv` daily limits, can edit those daily limits from the `SELECT`
-actions screen, reveals answers, records ratings, schedules cards with a
+shows the selected deck position plus new/learning/review due counts in the
+multi-deck selector, loads optional per-deck `settings.tsv` daily limits, can
+edit those daily limits from the `SELECT` actions screen, reveals answers,
+records ratings, schedules cards with a
 day-level spaced repetition algorithm, saves local `state.tsv` progress beside
 that deck, and can undo the last rating or suspend action with `L`, suspend
 cards with `R`, see suspended-card counts in deck, action, and summary views,
 restore suspended cards from the actions screen, or reset saved progress after
 opening the reset action and confirming with `X`. Cards may optionally reference
 bounded `.a3i` images under the deck's `media/` folder. The top screen shows
-deck/card content, while the bottom screen shows controls, review status, save
-feedback, and the last valid sampled battery level, including charging and low
-battery states. Successful ratings, suspend actions, undo actions, and
+deck/card content with basic terminal-style color cues, while the bottom screen
+shows controls, review status, save feedback, and the last valid sampled
+battery level, including charging and low battery states. Successful ratings,
+suspend actions, undo actions, and
 restore-suspended actions append best-effort `review-log.tsv` rows for
 debugging. An in-app controls screen is available with `Y` from non-rating
 screens and unrevealed review cards.

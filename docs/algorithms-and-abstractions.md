@@ -165,8 +165,9 @@ matching the current deck are treated as malformed, so a truncated save cannot
 silently reset all progress and then be overwritten as fresh state. If every
 available state copy is malformed, review-state saves are blocked until the
 user resets deck progress. Opening that deck enters a reset-needed summary
-screen instead of a review queue. Reset removes `state.tsv`, `state.tsv.tmp`,
-and `state.tsv.bak` for the active deck. The shared `storage` module owns the
+screen instead of a review queue, and normal study controls such as undo remain
+disabled until reset succeeds. Reset removes `state.tsv`, `state.tsv.tmp`, and
+`state.tsv.bak` for the active deck. The shared `storage` module owns the
 remove/rename order for both review state and settings. This remains simple to
 inspect on the SD card while avoiding the known remove-before-rename data-loss
 window.
@@ -194,7 +195,9 @@ The app loop is a small mode machine:
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
-framework yet.
+framework yet. Rendering uses simple ANSI foreground colors: blue headings,
+green selected or successful state, red errors and destructive reset prompts,
+and yellow cautions.
 
 The review button map lives in the small `app_controls` module so the
 reveal/rating rules can be host-tested without libctru. `main.c` still owns
@@ -204,14 +207,16 @@ Ambiguous post-reveal face-button combinations are ignored so a fat-fingered
 rating does not save the wrong answer.
 D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
 deck select, actions, and settings modes, so ratings and destructive actions
-stay single-press.
+stay single-press. Held input keeps the idle wait counter short while a button
+is down, so selector movement does not slow down as if the app were idle.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
 When the screen is unchanged, the app waits for HID input with an adaptive
 timeout before scanning controls again. The wait starts short for responsive
 input, then backs off while idle to avoid busy redraw/poll loops while still
-letting `aptMainLoop` run regularly.
+letting `aptMainLoop` run regularly. Any held, newly pressed, or repeated input
+resets the idle wait counter.
 
 The app tracks the current local calendar day while it is open. The main loop
 checks for a local-day change at most once per minute, using the loop's existing

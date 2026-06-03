@@ -104,6 +104,18 @@ unsigned int app_controls_repeat_buttons(
 	return 0;
 }
 
+bool app_controls_input_is_active(
+	unsigned int buttons_down,
+	unsigned int buttons_held,
+	unsigned int repeat_buttons
+)
+{
+	return (
+		(buttons_down | buttons_held | repeat_buttons) &
+		APP_CONTROL_BUTTON_INPUT_MASK
+	) != 0;
+}
+
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed

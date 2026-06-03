@@ -881,6 +881,26 @@ static void test_app_controls_navigation_repeat(void)
 	check(repeated == 0, "navigation repeat release stays quiet");
 }
 
+static void test_app_controls_input_activity(void)
+{
+	check(
+		app_controls_input_is_active(APP_CONTROL_BUTTON_DOWN, 0, 0),
+		"input activity sees pressed button"
+	);
+	check(
+		app_controls_input_is_active(0, APP_CONTROL_BUTTON_DOWN, 0),
+		"input activity sees held button"
+	);
+	check(
+		app_controls_input_is_active(0, 0, APP_CONTROL_BUTTON_DOWN),
+		"input activity sees repeated button"
+	);
+	check(
+		!app_controls_input_is_active(0, 0, 0),
+		"input activity ignores idle loop"
+	);
+}
+
 static void test_scheduler_rejects_invalid_rating(void)
 {
 	struct scheduler_session session;
@@ -3490,6 +3510,7 @@ int main(void)
 	test_app_controls_requires_single_command();
 	test_app_controls_modal_controls();
 	test_app_controls_navigation_repeat();
+	test_app_controls_input_activity();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();

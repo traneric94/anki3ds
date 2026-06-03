@@ -20,13 +20,19 @@ letters do not match the 3DS button label.
 | `START` | `M` | Open exit confirmation |
 
 Holding a single D-pad direction repeats movement or daily-limit value changes
-after a short delay. Pressing multiple D-pad directions together does not move
-or change values. D-pad directions pressed together with command buttons are
-ignored. Face-button actions such as reveal, rating, save, reset, and exit
-remain single-press actions. After reveal, pressing more than one rating button
-at the same time does not save a rating. Save, reset, action-confirm, exit-open,
-and exit-confirm buttons are also ignored when pressed together with another
+after a short delay. The app keeps the input loop responsive while a button is
+held so deck and action selection do not fall into the idle backoff cadence.
+Pressing multiple D-pad directions together does not move or change values.
+D-pad directions pressed together with command buttons are ignored. Face-button
+actions such as reveal, rating, save, reset, and exit remain single-press
+actions. After reveal, pressing more than one rating button at the same time
+does not save a rating. Save, reset, action-confirm, exit-open, and
+exit-confirm buttons are also ignored when pressed together with another
 button.
+
+The deck selector shows the current position as `selected/total` on both
+screens. Basic terminal-style colors are used for status: blue headings, green
+selected/saved/safe items, red errors/reset actions, and yellow cautions.
 
 ## Review Flow
 
@@ -59,7 +65,8 @@ selected by default so the repair flow is immediately reachable.
 - Press `B` or `SELECT` to cancel.
 - Reset progress requires `X` on the reset confirmation screen.
 - A successful reset reloads the deck and shows `Progress reset`.
-- If a deck opens with malformed saved state, use this reset flow before study.
+- If a deck opens with malformed saved state, use this reset flow before study;
+  normal study controls such as undo remain disabled until reset succeeds.
 
 ## Daily Limits
 
