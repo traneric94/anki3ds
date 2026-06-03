@@ -80,3 +80,19 @@ Result: pass for launch command only
 Notes:
 - Button-level review, actions, reset, and controls acceptance was not run in
   this checkpoint.
+
+## 2026-06-03 - Selector UI Launch Check
+
+Build: `6f3f917`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- D-pad responsiveness and color rendering still need a manual emulator or
+  hardware pass.
