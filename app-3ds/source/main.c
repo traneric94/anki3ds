@@ -2072,6 +2072,7 @@ static bool suspend_current_card(struct app_state *app)
 	{
 		app->state_message = "nothing to suspend";
 		app_set_status(app, "Nothing to suspend");
+		app->mode = app_review_mode_for_session(app);
 		return true;
 	}
 
@@ -2079,6 +2080,7 @@ static bool suspend_current_card(struct app_state *app)
 	{
 		restore_session_rollback(app);
 		app_set_review_save_failed_status(app, "Save failed; card not suspended");
+		app->mode = APP_MODE_REVIEW;
 		return true;
 	}
 
@@ -2100,6 +2102,10 @@ static bool suspend_current_card(struct app_state *app)
 	{
 		app_set_status(app, "Suspend saved; no cards due");
 		app->mode = APP_MODE_SUMMARY;
+	}
+	else
+	{
+		app->mode = APP_MODE_REVIEW;
 	}
 
 	return true;
@@ -2157,6 +2163,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 	{
 		restore_session_rollback(app);
 		app_set_review_save_failed_status(app, "Save failed; restore undone");
+		app->mode = APP_MODE_ACTIONS;
 		return true;
 	}
 

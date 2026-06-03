@@ -296,8 +296,11 @@ deck or restoring saved card state clears the undo slot.
 The app keeps a scheduler rollback snapshot before review actions that mutate
 state and then save `state.tsv`. If the save fails after a rating, suspend,
 undo, or restore-suspended action, the app restores that snapshot and leaves the
-user on the current workflow screen with the save error visible. This keeps the
-in-memory review queue from advancing past the durable SD-card state.
+user on a normal workflow screen with the save error visible. Ratings and
+failed suspends return to review with the original card active; failed
+restore-suspended actions return to the actions screen. This keeps the in-memory
+review queue from advancing past the durable SD-card state without leaving a
+stale confirmation prompt open.
 
 After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
 the app appends diagnostic rows to `review-log.tsv` with the before/after
