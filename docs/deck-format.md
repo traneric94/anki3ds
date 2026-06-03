@@ -88,6 +88,9 @@ Rules:
 - if a converter-generated single-folder deck grows into split chunks, matching
   saved state rows and daily-limit settings are copied into the new chunk
   folders before the obsolete single folder is removed
+- if converter-generated split chunks shrink back into one deck, matching saved
+  state rows and daily-limit settings are copied into the new single folder
+  before the obsolete chunks are removed
 - text-only re-import removes a stale `media/` directory from the active output
   folder while preserving progress and settings files
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping

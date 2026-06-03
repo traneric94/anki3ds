@@ -709,6 +709,83 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(deck_json["deck_id"], "large")
             self.assertEqual(deck_json["card_count"], 10)
 
+    def test_write_split_decks_migrates_split_progress_when_deck_becomes_single(self):
+        old_cards = convert_lines(
+            [
+                f"source-{index}\tnote-{index}\told front {index}\told back {index}"
+                for index in range(DECK_MAX_CARDS + 1)
+            ],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+        new_cards = convert_lines(
+            [
+                "source-0\tnote-0\tnew front 0\tnew back 0",
+                (
+                    f"source-{DECK_MAX_CARDS}\tnote-{DECK_MAX_CARDS}"
+                    f"\tnew front {DECK_MAX_CARDS}\tnew back {DECK_MAX_CARDS}"
+                ),
+            ] + [
+                f"new-source-{index}\tnew-note-{index}\tfront {index}\tback {index}"
+                for index in range(8)
+            ],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            write_split_decks(output, "large", "Large", old_cards)
+            first_chunk = root / "large-01"
+            second_chunk = root / "large-02"
+            (first_chunk / "state.tsv").write_text(
+                (
+                    "#anki3ds-state-v1\t1\n"
+                    f"{old_cards[0].card_id}\t1\t2\t20001\t1\t2500\t0\t0\t20000\t20000\n"
+                    "#anki3ds-state-complete\t1\n"
+                ),
+                encoding="utf-8",
+            )
+            (second_chunk / "state.tsv").write_text(
+                (
+                    "#anki3ds-state-v1\t1\n"
+                    f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
+                    "#anki3ds-state-complete\t1\n"
+                ),
+                encoding="utf-8",
+            )
+            (first_chunk / "settings.tsv").write_text(
+                "new_limit\t3\nreview_limit\t4\n",
+                encoding="utf-8",
+            )
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            self.assertEqual(written_paths, [output])
+            self.assertTrue(output.exists())
+            self.assertFalse(first_chunk.exists())
+            self.assertFalse(second_chunk.exists())
+            self.assertEqual(
+                (output / "state.tsv").read_text(encoding="utf-8"),
+                (
+                    "#anki3ds-state-v1\t2\n"
+                    f"{old_cards[0].card_id}\t1\t2\t20001\t1\t2500\t0\t0\t20000\t20000\n"
+                    f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
+                    "#anki3ds-state-complete\t2\n"
+                ),
+            )
+            self.assertEqual(
+                (output / "settings.tsv").read_text(encoding="utf-8"),
+                "new_limit\t3\nreview_limit\t4\n",
+            )
+
     def test_write_split_decks_removes_stale_single_when_deck_becomes_split(self):
         old_cards = convert_lines(
             [f"old front {index}\told back {index}" for index in range(10)],

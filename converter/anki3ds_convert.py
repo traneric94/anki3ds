@@ -516,10 +516,7 @@ def state_metadata_row_count(line: str, marker: str) -> int | None:
     return row_count
 
 
-def filter_state_rows_for_cards(
-    state_text: str,
-    target_card_ids: set[str],
-) -> str | None:
+def parse_state_rows(state_text: str) -> tuple[bool, list[str]] | None:
     lines = state_text.splitlines()
     framed = (
         len(lines) >= 2
@@ -541,26 +538,56 @@ def filter_state_rows_for_cards(
     else:
         rows = [line for line in lines if line and not line.startswith("#")]
 
-    matching_rows = [
-        row for row in rows if state_row_card_id(row) in target_card_ids
-    ]
-    if not matching_rows:
-        return None
+    return framed, rows
 
+
+def format_state_rows(rows: list[str], framed: bool) -> str:
     if framed:
-        row_count = len(matching_rows)
+        row_count = len(rows)
         return (
             "\n".join(
                 [
                     f"{STATE_FILE_HEADER}\t{row_count}",
-                    *matching_rows,
+                    *rows,
                     f"{STATE_FILE_FOOTER}\t{row_count}",
                 ]
             )
             + "\n"
         )
 
-    return "\n".join(matching_rows) + "\n"
+    return "\n".join(rows) + "\n"
+
+
+def matching_state_rows_for_cards(
+    state_text: str,
+    target_card_ids: set[str],
+) -> tuple[bool, list[str]] | None:
+    parsed_state = parse_state_rows(state_text)
+
+    if parsed_state is None:
+        return None
+
+    framed, rows = parsed_state
+    return (
+        framed,
+        [row for row in rows if state_row_card_id(row) in target_card_ids],
+    )
+
+
+def filter_state_rows_for_cards(
+    state_text: str,
+    target_card_ids: set[str],
+) -> str | None:
+    matched_state = matching_state_rows_for_cards(state_text, target_card_ids)
+
+    if matched_state is None:
+        return None
+
+    framed, matching_rows = matched_state
+    if not matching_rows:
+        return None
+
+    return format_state_rows(matching_rows, framed)
 
 
 def migrate_review_state_file(
@@ -581,6 +608,61 @@ def migrate_review_state_file(
 
     if migrated_state is not None:
         target_path.write_text(migrated_state, encoding="utf-8")
+
+
+def collect_matching_state_rows(
+    source_dirs: list[Path],
+    state_filename: str,
+    target_card_ids: set[str],
+) -> list[str]:
+    matching_rows: list[str] = []
+    seen_card_ids: set[str] = set()
+
+    for source_dir in source_dirs:
+        source_path = source_dir / state_filename
+
+        if not source_path.is_file():
+            continue
+
+        try:
+            matched_state = matching_state_rows_for_cards(
+                source_path.read_text(encoding="utf-8"),
+                target_card_ids,
+            )
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        if matched_state is None:
+            continue
+
+        for row in matched_state[1]:
+            card_id = state_row_card_id(row)
+
+            if card_id in seen_card_ids:
+                continue
+
+            seen_card_ids.add(card_id)
+            matching_rows.append(row)
+
+    return matching_rows
+
+
+def migrate_combined_review_state_file(
+    source_dirs: list[Path],
+    target_path: Path,
+    state_filename: str,
+    target_card_ids: set[str],
+) -> None:
+    if target_path.exists():
+        return
+
+    matching_rows = collect_matching_state_rows(
+        source_dirs,
+        state_filename,
+        target_card_ids,
+    )
+    if matching_rows:
+        target_path.write_text(format_state_rows(matching_rows, True), encoding="utf-8")
 
 
 def copy_settings_file(
@@ -623,11 +705,45 @@ def migrate_single_deck_progress_to_split_outputs(
             )
 
 
-def remove_obsolete_split_outputs(
+def migrate_split_progress_to_single_output(
+    output_dir: Path,
+    cards: list[ConvertedCard],
+    source_dirs: list[Path],
+    replace_default_settings: bool,
+) -> None:
+    target_card_ids = {card.card_id for card in cards}
+
+    if not source_dirs:
+        return
+
+    for state_filename in REVIEW_STATE_FILES:
+        migrate_combined_review_state_file(
+            source_dirs,
+            output_dir / state_filename,
+            state_filename,
+            target_card_ids,
+        )
+
+    for settings_filename in SETTINGS_FILES:
+        for source_dir in source_dirs:
+            source_path = source_dir / settings_filename
+
+            if not source_path.is_file():
+                continue
+
+            copy_settings_file(
+                source_path,
+                output_dir / settings_filename,
+                replace_default_settings,
+            )
+            break
+
+
+def obsolete_converter_split_outputs(
     output_dir: Path,
     deck_id: str,
     current_outputs: set[Path],
-) -> None:
+) -> list[Path]:
     parent = output_dir.parent
     candidates: list[Path] = []
 
@@ -640,9 +756,27 @@ def remove_obsolete_split_outputs(
             if split_chunk_name_is_for_base(entry.name, deck_id):
                 candidates.append(entry)
 
-    for candidate in candidates:
-        if converter_deck_dir_is_removable(candidate):
-            shutil.rmtree(candidate)
+    return sorted(
+        (
+            candidate
+            for candidate in candidates
+            if converter_deck_dir_is_removable(candidate)
+        ),
+        key=lambda path: path.name,
+    )
+
+
+def remove_obsolete_split_outputs(
+    output_dir: Path,
+    deck_id: str,
+    current_outputs: set[Path],
+) -> None:
+    for candidate in obsolete_converter_split_outputs(
+        output_dir,
+        deck_id,
+        current_outputs,
+    ):
+        shutil.rmtree(candidate)
 
 
 def write_split_decks(
@@ -653,7 +787,19 @@ def write_split_decks(
     media_root: Path | None = None,
 ) -> list[Path]:
     if len(cards) <= DECK_MAX_CARDS:
+        old_split_outputs = obsolete_converter_split_outputs(
+            output_dir,
+            deck_id,
+            {output_dir},
+        )
+        output_existed = output_dir.exists()
         write_deck(output_dir, deck_id, deck_name, cards, media_root)
+        migrate_split_progress_to_single_output(
+            output_dir,
+            cards,
+            old_split_outputs,
+            not output_existed,
+        )
         remove_obsolete_split_outputs(output_dir, deck_id, {output_dir})
         return [output_dir]
 

@@ -239,6 +239,9 @@ changes between single-folder and split-folder output.
 When a converter-generated single-folder deck grows into split chunks, matching
 saved state rows and daily-limit settings are copied into the new chunk folders
 before the obsolete single folder is removed.
+When split chunks shrink back into a single deck, matching state rows from the
+obsolete chunks and daily-limit settings are copied into the new single folder
+before the chunks are removed.
 
 ## Current Status
 
