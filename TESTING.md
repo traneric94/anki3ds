@@ -198,8 +198,9 @@ make test-host
 ```
 
 The host C suite includes an M7-shaped daily-use workflow covering two decks,
-rating undo, suspension restore, daily limits, relaunch persistence, and the
-review key map for reveal and Again/Hard/Good/Easy ratings. It also checks
+rating undo, suspension restore, daily limits, reset progress while preserving
+deck settings, relaunch persistence, and the review key map for reveal and
+Again/Hard/Good/Easy ratings. It also checks
 app-level input priority for controls, exit confirmation, deck-list return,
 actions, undo gating, suspend confirmation, review text scrolling, reveal, and
 rating dispatch. The input coverage also checks which screens accept held-D-pad

@@ -3880,6 +3880,7 @@ static void cleanup_deck_index_test_root(void)
 	remove_test_deck_dir("beta");
 	remove_test_deck_dir("broken");
 	remove_test_deck_dir("empty");
+	remove_test_deck_dir("reset");
 	remove_test_deck_dir("summary");
 	remove_test_deck_dir("zeta");
 
@@ -4588,6 +4589,132 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	cleanup_deck_index_test_root();
 }
 
+static void test_daily_use_reset_clears_progress_and_keeps_settings(void)
+{
+	struct deck_index index;
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session reloaded;
+	struct app_settings settings;
+	struct app_settings loaded_settings;
+	struct deck_summary summary;
+	size_t reset_index = 0;
+	size_t card_index;
+	struct scheduler_card before;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/reset", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+	snprintf(path, sizeof(path), "%s/reset/cards.tsv", TEST_DECK_ROOT);
+	write_file(
+		path,
+		"reset-1\tnote-1\treset front 1\treset back 1\ttag\n"
+		"reset-2\tnote-2\treset front 2\treset back 2\ttag\n"
+		"reset-3\tnote-3\treset front 3\treset back 3\ttag\n"
+	);
+
+	deck_index_scan(&index, TEST_DECK_ROOT);
+	check(index.count == 1, "daily reset scans one deck");
+	check(deck_index_find(&index, "reset", &reset_index), "daily reset finds deck");
+
+	settings.new_limit = 2;
+	settings.review_limit = 4;
+	check(
+		app_settings_save(&settings, index.entries[reset_index].settings_path) ==
+			APP_SETTINGS_SAVE_OK,
+		"daily reset settings save"
+	);
+
+	load_entry_deck(&deck, &index.entries[reset_index], "daily reset deck loads");
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(&session, settings.new_limit, settings.review_limit);
+	check(
+		review_state_load(&deck, &session, index.entries[reset_index].state_path) ==
+			REVIEW_STATE_LOAD_NOT_FOUND,
+		"daily reset starts without state"
+	);
+	check(session.due_count == 2, "daily reset settings limit initial due cards");
+
+	card_index = scheduler_current_index(&session);
+	before = session.cards[card_index];
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	append_review_log_transition(
+		index.entries[reset_index].review_log_path,
+		12351,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_RATING,
+		deck.cards[card_index].card_id,
+		SCHEDULER_RATING_GOOD,
+		&before,
+		&session.cards[card_index],
+		"daily reset rating logs"
+	);
+	save_entry_state(
+		&deck,
+		&session,
+		&index.entries[reset_index],
+		"daily reset rating saves"
+	);
+	check(access(index.entries[reset_index].state_path, F_OK) == 0, "daily reset state exists");
+	check(access(index.entries[reset_index].review_log_path, F_OK) == 0, "daily reset log exists");
+
+	deck_summary_load(&summary, &index.entries[reset_index], TEST_TODAY);
+	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "daily reset summary settings");
+	check(summary.state_load_result == REVIEW_STATE_LOAD_OK, "daily reset summary state");
+	check(summary.due_count == 1, "daily reset summary reflects saved progress");
+
+	check(
+		review_state_delete(index.entries[reset_index].state_path),
+		"daily reset deletes state artifacts"
+	);
+	check(
+		review_log_delete(index.entries[reset_index].review_log_path),
+		"daily reset deletes review log artifacts"
+	);
+	check(access(index.entries[reset_index].state_path, F_OK) != 0, "daily reset state removed");
+	check(access(index.entries[reset_index].review_log_path, F_OK) != 0, "daily reset log removed");
+	check(
+		access(index.entries[reset_index].settings_path, F_OK) == 0,
+		"daily reset settings remain"
+	);
+
+	check(
+		app_settings_load(&loaded_settings, index.entries[reset_index].settings_path) ==
+			APP_SETTINGS_LOAD_OK,
+		"daily reset settings reload"
+	);
+	check(loaded_settings.new_limit == 2, "daily reset new limit persists");
+	check(loaded_settings.review_limit == 4, "daily reset review limit persists");
+
+	deck_summary_load(&summary, &index.entries[reset_index], TEST_TODAY);
+	check(summary.settings_load_result == APP_SETTINGS_LOAD_OK, "daily reset summary settings persist");
+	check(
+		summary.state_load_result == REVIEW_STATE_LOAD_NOT_FOUND,
+		"daily reset summary reports cleared state"
+	);
+	check(summary.due_count == 2, "daily reset due cards return under saved limits");
+	check(summary.new_due_count == 2, "daily reset new count returns under saved limits");
+	check(summary.suspended_count == 0, "daily reset has no suspended cards");
+
+	scheduler_init(&reloaded, deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(
+		&reloaded,
+		loaded_settings.new_limit,
+		loaded_settings.review_limit
+	);
+	check(
+		review_state_load(&deck, &reloaded, index.entries[reset_index].state_path) ==
+			REVIEW_STATE_LOAD_NOT_FOUND,
+		"daily reset reload sees no state"
+	);
+	check(reloaded.due_count == 2, "daily reset reload applies preserved limits");
+	check(reloaded.cards[0].review_count == 0, "daily reset clears reviewed card");
+
+	cleanup_deck_index_test_root();
+}
+
 int main(void)
 {
 	test_parse_card_line();
@@ -4695,6 +4822,7 @@ int main(void)
 	test_deck_summary_from_session_counts_due_cards();
 	test_deck_summary_reports_load_error();
 	test_daily_use_workflow_persists_two_decks();
+	test_daily_use_reset_clears_progress_and_keeps_settings();
 
 	if (failures != 0)
 	{
