@@ -177,3 +177,20 @@ Notes:
 - `R` now opens suspend confirmation and `X` performs suspend. Host tests cover
   the new modal controls rule; full button acceptance is deferred to the final
   manual emulator or hardware pass.
+
+## 2026-06-03 - Restore Confirmation Launch Check
+
+Build: `4f751c9`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Restoring suspended cards now requires `X` confirmation when suspended cards
+  exist. Host tests cover the new modal controls rule; full button acceptance is
+  deferred to the final manual emulator or hardware pass.
