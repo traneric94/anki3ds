@@ -11,7 +11,6 @@ The 3DS app should read a simple format that avoids full Anki complexity.
   settings.tsv
   state.tsv
   review-log.tsv
-  media/
 ```
 
 Folder ids should use only letters, numbers, `_`, and `-`. The current app uses
@@ -65,7 +64,6 @@ Draft columns:
 
 ```text
 card_id<TAB>note_id<TAB>front<TAB>back<TAB>tags
-card_id<TAB>note_id<TAB>front<TAB>back<TAB>tags<TAB>front_media<TAB>back_media
 ```
 
 Rules:
@@ -85,6 +83,8 @@ Rules:
 - split re-import removes stale converter-generated sibling chunks after the
   current output is written
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
+- long front/back fields can be scrolled on the review screen with D-pad
+  Up/Down
 - `tags` may use at most 127 UTF-8 bytes after unescaping
 - converter-generated `card_id` and `note_id` values are short stable hashes
   with numeric suffixes for duplicates; by default they come from normalized
@@ -93,10 +93,8 @@ Rules:
 - embedded newlines are encoded as `\n`
 - literal backslashes are escaped as `\\`
 - converter output simplifies simple HTML to text before writing these fields
-- `front_media` and `back_media` are optional plain filenames under `media/`
-- media filenames may use only letters, numbers, `_`, `-`, and `.`, and may not
-  start with `.`
-- media filenames may use at most 95 UTF-8 bytes
+- media fields, inline image tags, audio, and arbitrary template output are not
+  part of the supported deck format
 - each physical `cards.tsv` row must fit in the current 1024-byte parser buffer
 
 Example:
@@ -104,7 +102,6 @@ Example:
 ```text
 card-0001	note-0001	front text	back text	tag1 tag2
 card-0002	note-0002	What is 2 + 2?	4	math
-card-0003	note-0003	What is shown?	diagram explanation	media	front-diagram.a3i	back-diagram.a3i
 ```
 
 ## settings.tsv
@@ -191,43 +188,6 @@ This is an early day-level spaced repetition format. Minute-level learning
 steps, single-card unsuspend UI, burying, and filtered decks are planned later.
 Older app builds that only accept unframed seven- or eight-column rows will
 reject state saved by this version.
-
-## media/*.a3i
-
-The 3DS app can display bounded raw `.a3i` images referenced by `front_media`
-or `back_media`.
-
-File layout:
-
-```text
-bytes 0-3:  A3I1
-bytes 4-5:  little-endian width
-bytes 6-7:  little-endian height
-bytes 8-:   little-endian RGB565 pixels, row-major
-```
-
-Limits:
-
-- maximum width: 160 pixels
-- maximum height: 72 pixels
-- zero dimensions are invalid
-- extra or missing pixel data is invalid
-- if a referenced image is missing or invalid, the app shows a compact media
-  error line while keeping card text readable
-
-The converter can convert binary PPM `P6` images into `.a3i` files when
-`--media-root` is provided. It can also validate and copy existing `.a3i` files
-from that media root. Without `--media-root`, media fields must reference
-existing valid `.a3i` files already present in the output deck's `media/`
-directory; missing or malformed passthrough media is rejected before `cards.tsv`
-is written.
-If an exported front/back field contains an inline `<img>` tag, that side must
-also provide a non-empty media field; otherwise the converter rejects the card
-so the image is not silently dropped. Image-only cards still need non-empty text
-because `cards.tsv` front/back fields are required.
-Common image formats such as PNG/JPEG should be converted to PPM first or added
-through a future optional desktop dependency. The 3DS app intentionally does no
-general-purpose image decoding.
 
 ## Review Log
 

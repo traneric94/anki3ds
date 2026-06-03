@@ -12,17 +12,18 @@ letters do not match the 3DS button label.
 | `Y` | `X` | Choose Again after reveal, open controls where available |
 | `L` | `Q` | Undo last rating or suspend action |
 | `R` | `W` | Open suspend confirmation |
-| D-pad Up | `T` | Move selection up |
-| D-pad Down | `G` | Move selection down |
+| D-pad Up | `T` | Move selection up, scroll review text up |
+| D-pad Down | `G` | Move selection down, scroll review text down |
 | D-pad Left | `F` | Decrease daily-limit preset |
 | D-pad Right | `H` | Increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
 | `START` | `M` | Open exit confirmation |
 
-Tapping a D-pad direction moves once. Holding a single D-pad direction for
-roughly 300 ms starts repeat movement or daily-limit value changes, then repeats
-roughly every 80 ms. The app keeps the input loop responsive while a button is
-held so deck and action selection do not fall into the idle backoff cadence.
+Tapping a D-pad direction moves or scrolls once. Holding a single D-pad
+direction for roughly 300 ms starts repeat movement, review-text scrolling, or
+daily-limit value changes, then repeats roughly every 80 ms. The app keeps the
+input loop responsive while a button is held so deck selection, action
+selection, and review text scrolling do not fall into the idle backoff cadence.
 Pressing multiple D-pad directions together does not move or change values.
 D-pad directions pressed or held together with command buttons are ignored.
 Face-button actions such as reveal, rating, save, reset, and exit remain
@@ -39,9 +40,10 @@ selected/saved/safe items, red errors/reset actions, and yellow cautions.
 
 1. Press `A` to reveal the answer.
 2. Rate the card with `Y` Again, `X` Hard, `B` Good, or `A` Easy.
-3. Press `L` to undo the last rating or suspend action.
-4. Press `R`, then `X`, to suspend the current card.
-5. Press `SELECT` to open deck actions.
+3. Use D-pad Up/Down to scroll long front text before reveal or long back text after reveal.
+4. Press `L` to undo the last rating or suspend action.
+5. Press `R`, then `X`, to suspend the current card.
+6. Press `SELECT` to open deck actions.
 
 After a rating, the bottom status line shows whether the rating saved and which
 card is next. If saving fails, the app keeps the old scheduler state and shows

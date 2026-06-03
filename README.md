@@ -20,7 +20,7 @@ The first version does not:
 - sync with AnkiWeb
 - parse arbitrary Anki templates on-device
 - run JavaScript or full card CSS on-device
-- treat image/media review as optional non-MVP work
+- support image, audio, or other media review
 - modify a user's main Anki collection directly
 
 ## Components
@@ -35,8 +35,7 @@ anki3ds/
 
 ## Build
 
-The 3DS app currently builds a text-card multi-deck reviewer. Existing media
-helpers are optional fixtures, not part of the daily-use MVP.
+The 3DS app currently builds a text-card multi-deck reviewer.
 
 ```sh
 make
@@ -195,8 +194,9 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
-`--text-only` is the recommended daily-use mode: it accepts plain text front
-and back fields, but rejects media options and inline image tags.
+Text flash cards are the only supported import path. `--text-only` is accepted
+for compatibility with earlier commands; the converter always accepts plain
+text front/back fields and rejects media options plus inline image tags.
 
 Conversion failures print a concise `error: ...` message and exit nonzero so
 the input can be fixed without reading a Python traceback.
@@ -232,28 +232,6 @@ converter-generated split siblings for that deck after the current output is
 written, so old chunks do not remain visible on the 3DS after a deck shrinks or
 changes between single-folder and split-folder output.
 
-Text cards are the supported daily-use scope. Optional media fields can be
-copied from existing `.a3i` images or converted from binary PPM `P6` images
-into the device-side `.a3i` format only when `--text-only` is omitted:
-
-```sh
-python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
-  --deck-id my-deck \
-  --deck-name "My Deck" \
-  --front-media-field 3 \
-  --media-root path/to/media
-```
-
-Use `--media-root` for new media decks. If media fields are used without
-`--media-root`, each referenced `.a3i` file must already exist under the output
-deck's `media/` directory and pass `.a3i` validation before `cards.tsv` is
-written.
-
-If exported front/back HTML contains an inline `<img>` tag, map that side to a
-non-empty `--front-media-field` or `--back-media-field`. The converter rejects
-inline images without an explicit media filename so images are not silently
-dropped.
-
 ## Current Status
 
 Multi-deck text review works at build level: the app scans
@@ -267,9 +245,8 @@ that deck, and can undo the last rating or suspend action with `L`, suspend
 cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
-progress after opening the reset action and confirming with `X`. Optional
-media references remain non-MVP. The top screen shows
-deck/card content with basic terminal-style color cues, while the bottom screen
+progress after opening the reset action and confirming with `X`. The top screen
+shows deck/card text with basic terminal-style color cues, while the bottom screen
 shows controls, review status, save feedback, and the last valid sampled
 battery level, including charging and low battery states. Successful ratings,
 suspend actions, undo actions, and

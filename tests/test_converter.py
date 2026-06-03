@@ -9,18 +9,12 @@ from unittest import mock
 from converter.anki3ds_convert import (
     DECK_INDEX_MAX_DECKS,
     DECK_MAX_CARDS,
-    DECK_MAX_MEDIA_NAME_LENGTH,
     DECK_MAX_TEXT_LENGTH,
-    MEDIA_IMAGE_MAX_HEIGHT,
-    MEDIA_IMAGE_MAX_WIDTH,
     convert_lines,
     deck_id_is_valid,
     escape_tsv_field,
-    load_ppm_rgb,
     main,
     normalize_text,
-    resize_rgb_nearest,
-    write_a3i_image,
     write_deck,
     write_split_decks,
 )
@@ -77,8 +71,8 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(cards[0].front, "front\nline")
         self.assertEqual(cards[0].back, "back text")
 
-    def test_convert_lines_requires_media_field_for_front_image_tags(self):
-        with self.assertRaisesRegex(ValueError, "front image tags"):
+    def test_convert_lines_rejects_image_tags(self):
+        with self.assertRaisesRegex(ValueError, "cannot include image tags"):
             convert_lines(
                 ['front text <img src="front.ppm">\tback\ttag'],
                 front_field=0,
@@ -86,16 +80,7 @@ class ConverterTests(unittest.TestCase):
                 tags_field=2,
             )
 
-        with self.assertRaisesRegex(ValueError, "front image tags"):
-            convert_lines(
-                ['<img src="front.ppm">\tback\ttag'],
-                front_field=0,
-                back_field=1,
-                tags_field=2,
-            )
-
-    def test_convert_lines_requires_media_field_for_back_image_tags(self):
-        with self.assertRaisesRegex(ValueError, "back image tags"):
+        with self.assertRaisesRegex(ValueError, "cannot include image tags"):
             convert_lines(
                 ['front\tback text <img src="back.ppm">\ttag'],
                 front_field=0,
@@ -103,18 +88,8 @@ class ConverterTests(unittest.TestCase):
                 tags_field=2,
             )
 
-    def test_convert_lines_text_only_rejects_image_tags(self):
-        with self.assertRaisesRegex(ValueError, "text-only decks cannot include"):
-            convert_lines(
-                ['front <img src="front.ppm">\tback\ttag'],
-                front_field=0,
-                back_field=1,
-                tags_field=2,
-                text_only=True,
-            )
-
-    def test_convert_lines_text_only_rejects_media_fields(self):
-        with self.assertRaisesRegex(ValueError, "text-only decks cannot use media"):
+    def test_convert_lines_rejects_media_fields(self):
+        with self.assertRaisesRegex(ValueError, "cannot use media fields"):
             convert_lines(
                 ["front\tback\ttag\tfront.a3i"],
                 front_field=0,
@@ -124,46 +99,13 @@ class ConverterTests(unittest.TestCase):
                 text_only=True,
             )
 
-    def test_convert_lines_requires_non_empty_media_for_image_tags(self):
-        with self.assertRaisesRegex(ValueError, "non-empty media field"):
+        with self.assertRaisesRegex(ValueError, "cannot use media fields"):
             convert_lines(
-                ['front text <img src="front.ppm">\tback\ttag\t'],
-                front_field=0,
-                back_field=1,
-                tags_field=2,
-                front_media_field=3,
-            )
-
-        with self.assertRaisesRegex(ValueError, "non-empty media field"):
-            convert_lines(
-                ['front\tback text <img src="back.ppm">\ttag\t'],
+                ["front\tback\ttag\tback.a3i"],
                 front_field=0,
                 back_field=1,
                 tags_field=2,
                 back_media_field=3,
-            )
-
-    def test_convert_lines_reads_media_fields(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.ppm\tback.ppm"],
-            front_field=0,
-            back_field=1,
-            tags_field=2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        self.assertEqual(cards[0].front_media, "front.ppm")
-        self.assertEqual(cards[0].back_media, "back.ppm")
-
-    def test_convert_lines_rejects_media_paths(self):
-        with self.assertRaisesRegex(ValueError, "plain filenames"):
-            convert_lines(
-                ["front\tback\ttag\tbad/path.ppm"],
-                front_field=0,
-                back_field=1,
-                tags_field=2,
-                front_media_field=3,
             )
 
     def test_convert_lines_disambiguates_duplicate_ids(self):
@@ -422,428 +364,16 @@ class ConverterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "row exceeds"):
                 write_deck(output, "sample", "Sample", cards)
 
-    def test_convert_lines_rejects_media_name_beyond_device_limit(self):
-        long_media_name = "a" * (DECK_MAX_MEDIA_NAME_LENGTH - len(".ppm")) + ".ppm"
-
-        with self.assertRaisesRegex(ValueError, "under 96"):
-            convert_lines(
-                [f"front\tback\ttag\t{long_media_name}"],
-                0,
-                1,
-                2,
-                front_media_field=3,
-            )
-
-    def test_write_deck_writes_existing_media_names(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.a3i\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "sample"
-            media_dir = output / "media"
-            media_content = b"A3I1\x01\x00\x01\x00\x00\xf8"
-            media_dir.mkdir(parents=True)
-            (media_dir / "front.a3i").write_bytes(media_content)
-
-            write_deck(output, "sample", "Sample", cards)
-
-            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
-            fields = line.split("\t")
-            self.assertEqual(len(fields), 7)
-            self.assertEqual(fields[5], "front.a3i")
-            self.assertEqual(fields[6], "")
-            self.assertEqual((media_dir / "front.a3i").read_bytes(), media_content)
-
-    def test_write_deck_rejects_missing_passthrough_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.a3i\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "sample"
-
-            with self.assertRaisesRegex(ValueError, "passthrough media is missing"):
-                write_deck(output, "sample", "Sample", cards)
-
-            self.assertFalse((output / "deck.json").exists())
-            self.assertFalse((output / "cards.tsv").exists())
-
-    def test_write_deck_rejects_invalid_passthrough_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.a3i\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "sample"
-            media_dir = output / "media"
-            media_dir.mkdir(parents=True)
-            (media_dir / "front.a3i").write_bytes(b"A3I1\x02\x00\x01\x00\x00\xf8")
-
-            with self.assertRaisesRegex(ValueError, "A3I pixel data"):
-                write_deck(output, "sample", "Sample", cards)
-
-            self.assertFalse((output / "deck.json").exists())
-
-    def test_write_deck_rejects_unconverted_media_names(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.ppm\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "sample"
-
-            with self.assertRaisesRegex(ValueError, "must be .a3i"):
-                write_deck(output, "sample", "Sample", cards)
-
-    def test_write_deck_rejects_missing_media_root(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.ppm\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-
-            with self.assertRaisesRegex(ValueError, "media root must be"):
-                write_deck(
-                    root / "sample",
-                    "sample",
-                    "Sample",
-                    cards,
-                    media_root=root / "missing-media",
-                )
-
-    def test_write_deck_rejects_unsupported_media_extension(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.png\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
+    def test_write_deck_rejects_media_root(self):
+        cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             media_root = root / "source-media"
-            output = root / "sample"
             media_root.mkdir()
 
-            with self.assertRaisesRegex(ValueError, "media must be .ppm or .a3i"):
-                write_deck(output, "sample", "Sample", cards, media_root)
-
-            self.assertFalse((output / "deck.json").exists())
-
-    def test_write_deck_converts_ppm_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.ppm\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-            (media_root / "front.ppm").write_bytes(
-                b"P6\n2 1\n255\n" +
-                bytes([255, 0, 0, 0, 255, 0])
-            )
-
-            write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
-            self.assertEqual(line.split("\t")[5], "front.a3i")
-            media = (output / "media" / "front.a3i").read_bytes()
-            self.assertEqual(media[:8], b"A3I1\x02\x00\x01\x00")
-            self.assertEqual(media[8:12], b"\x00\xf8\xe0\x07")
-
-    def test_write_deck_converts_inline_image_with_media_field(self):
-        cards = convert_lines(
-            ['front <img src="front.ppm">\tback\ttag\tfront.ppm'],
-            0,
-            1,
-            2,
-            front_media_field=3,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-            (media_root / "front.ppm").write_bytes(
-                b"P6\n1 1\n255\n" + bytes([255, 0, 0])
-            )
-
-            write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
-            self.assertEqual(line.split("\t")[2], "front")
-            self.assertEqual(line.split("\t")[5], "front.a3i")
-            self.assertTrue((output / "media" / "front.a3i").exists())
-
-    def test_load_ppm_rgb_accepts_crlf_header(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            source = Path(temp_dir) / "front.ppm"
-            pixels = bytes([255, 0, 0, 0, 255, 0])
-            source.write_bytes(b"P6\r\n2 1\r\n255\r\n" + pixels)
-
-            width, height, loaded_pixels = load_ppm_rgb(source)
-
-            self.assertEqual(width, 2)
-            self.assertEqual(height, 1)
-            self.assertEqual(loaded_pixels, pixels)
-
-    def test_write_deck_media_failure_does_not_write_deck_files(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tmissing.ppm\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-
-            with self.assertRaises(FileNotFoundError):
-                write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-            self.assertFalse((output / "deck.json").exists())
-            self.assertFalse((output / "cards.tsv").exists())
-            self.assertFalse((output / "settings.tsv").exists())
-
-    def test_write_deck_media_failure_preserves_existing_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.ppm\tmissing.ppm"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_dir = output / "media"
-            old_media = b"A3I1\x01\x00\x01\x00\x00\xf8"
-            media_root.mkdir()
-            media_dir.mkdir(parents=True)
-            (media_root / "front.ppm").write_bytes(
-                b"P6\n1 1\n255\n" + bytes([0, 0, 255])
-            )
-            (media_dir / "front.a3i").write_bytes(old_media)
-            (output / "cards.tsv").write_text("old cards\n", encoding="utf-8")
-
-            with self.assertRaises(FileNotFoundError):
-                write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-            self.assertEqual((media_dir / "front.a3i").read_bytes(), old_media)
-            self.assertEqual(
-                (output / "cards.tsv").read_text(encoding="utf-8"),
-                "old cards\n",
-            )
-            self.assertFalse((output / ".anki3ds-media.tmp").exists())
-
-    def test_write_deck_media_commit_failure_rolls_back_existing_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tone.ppm\ttwo.ppm"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_dir = output / "media"
-            old_one = b"A3I1\x01\x00\x01\x00\x00\xf8"
-            old_two = b"A3I1\x01\x00\x01\x00\xe0\x07"
-            original_replace = Path.replace
-
-            media_root.mkdir()
-            media_dir.mkdir(parents=True)
-            (media_root / "one.ppm").write_bytes(
-                b"P6\n1 1\n255\n" + bytes([0, 0, 255])
-            )
-            (media_root / "two.ppm").write_bytes(
-                b"P6\n1 1\n255\n" + bytes([255, 0, 0])
-            )
-            (media_dir / "one.a3i").write_bytes(old_one)
-            (media_dir / "two.a3i").write_bytes(old_two)
-            (output / "cards.tsv").write_text("old cards\n", encoding="utf-8")
-
-            def fail_second_temp_replace(source: Path, target: Path) -> Path:
-                if source.name == "two.a3i" and source.parent.name == ".anki3ds-media.tmp":
-                    raise OSError("simulated media replace failure")
-                return original_replace(source, target)
-
-            with self.assertRaisesRegex(OSError, "simulated media replace failure"):
-                with mock.patch.object(Path, "replace", fail_second_temp_replace):
-                    write_deck(
-                        output,
-                        "sample",
-                        "Sample",
-                        cards,
-                        media_root=media_root,
-                    )
-
-            self.assertEqual((media_dir / "one.a3i").read_bytes(), old_one)
-            self.assertEqual((media_dir / "two.a3i").read_bytes(), old_two)
-            self.assertEqual(
-                (output / "cards.tsv").read_text(encoding="utf-8"),
-                "old cards\n",
-            )
-            self.assertFalse((output / ".anki3ds-media.tmp").exists())
-            self.assertFalse((output / ".anki3ds-media.bak").exists())
-
-    def test_write_deck_copies_existing_a3i_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.a3i\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-        media_content = b"A3I1\x01\x00\x01\x00\x00\xf8"
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-            (media_root / "front.a3i").write_bytes(media_content)
-
-            write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
-            self.assertEqual(line.split("\t")[5], "front.a3i")
-            self.assertEqual(
-                (output / "media" / "front.a3i").read_bytes(),
-                media_content,
-            )
-
-    def test_write_deck_rejects_invalid_a3i_media(self):
-        cards = convert_lines(
-            ["front\tback\ttag\tfront.a3i\t"],
-            0,
-            1,
-            2,
-            front_media_field=3,
-            back_media_field=4,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-            (media_root / "front.a3i").write_bytes(b"A3I1\x02\x00\x01\x00\x00\xf8")
-
-            with self.assertRaisesRegex(ValueError, "A3I pixel data"):
-                write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-    def test_write_deck_rejects_media_output_collision(self):
-        cards = convert_lines(
-            [
-                "front 1\tback 1\ttag\timage.ppm",
-                "front 2\tback 2\ttag\timage.png",
-            ],
-            0,
-            1,
-            2,
-            front_media_field=3,
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            media_root = root / "source-media"
-            output = root / "sample"
-            media_root.mkdir()
-
-            with self.assertRaisesRegex(ValueError, "collision"):
-                write_deck(output, "sample", "Sample", cards, media_root=media_root)
-
-    def test_write_a3i_image_writes_header_and_pixels(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "image.a3i"
-
-            write_a3i_image(output, 1, 1, bytes([0, 0, 255]))
-
-            self.assertEqual(output.read_bytes(), b"A3I1\x01\x00\x01\x00\x1f\x00")
-
-    def test_write_a3i_image_rejects_invalid_image_data(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "image.a3i"
-
-            with self.assertRaisesRegex(ValueError, "positive"):
-                write_a3i_image(output, 0, 1, b"")
-
-            with self.assertRaisesRegex(ValueError, "bounds"):
-                write_a3i_image(
-                    output,
-                    MEDIA_IMAGE_MAX_WIDTH + 1,
-                    1,
-                    bytes((MEDIA_IMAGE_MAX_WIDTH + 1) * 3),
-                )
-
-            with self.assertRaisesRegex(ValueError, "length"):
-                write_a3i_image(output, 1, 1, bytes([0, 0]))
-
-    def test_resize_rgb_nearest_keeps_large_images_within_media_bounds(self):
-        source_width = MEDIA_IMAGE_MAX_WIDTH * 2
-        source_height = MEDIA_IMAGE_MAX_HEIGHT * 2
-        source_pixels = bytes(source_width * source_height * 3)
-
-        width, height, pixels = resize_rgb_nearest(
-            source_width,
-            source_height,
-            source_pixels,
-        )
-
-        self.assertLessEqual(width, MEDIA_IMAGE_MAX_WIDTH)
-        self.assertLessEqual(height, MEDIA_IMAGE_MAX_HEIGHT)
-        self.assertEqual(len(pixels), width * height * 3)
+            with self.assertRaisesRegex(ValueError, "cannot use media options"):
+                write_deck(root / "sample", "sample", "Sample", cards, media_root)
 
     def test_write_deck_rejects_invalid_folder_id(self):
         cards = convert_lines(["front\tback"], 0, 1, None)
@@ -973,7 +503,7 @@ class ConverterTests(unittest.TestCase):
                     "3",
                 ],
             ):
-                with self.assertRaisesRegex(SystemExit, "text-only decks"):
+                with self.assertRaisesRegex(SystemExit, "text flash-card decks"):
                     main()
 
     def test_cli_text_only_reports_image_tags_without_traceback(self):
@@ -999,7 +529,7 @@ class ConverterTests(unittest.TestCase):
 
             self.assertEqual(stdout.getvalue(), "")
             self.assertIn(
-                "text-only decks cannot include image tags",
+                "text flash-card decks cannot include image tags",
                 stderr.getvalue(),
             )
             self.assertNotIn("Traceback", stderr.getvalue())

@@ -67,12 +67,11 @@ Verification gates:
   files. The default tracked sample set is text-only.
 - `make verify-package-sd` builds the copy-ready `dist/sdmc/` payload and
   verifies that it contains the app artifacts, the default text decks, valid
-  five-field text-card rows, valid settings, no optional media fixture, no
-  generated progress files, and no media or extra files inside those text deck
-  folders.
+  five-field text-card rows, valid settings, no generated progress files, and
+  no media or extra files inside those text deck folders.
 - `make verify-local-sd` builds a fresh tracked-sample local SD mirror and
-  verifies that it contains the app artifacts, default text decks, no optional
-  media fixture, and no progress or stray files inside those text deck folders.
+  verifies that it contains the app artifacts, default text decks, and no
+  progress or stray files inside those text deck folders.
 - `make verify-azahar-fresh-samples` installs fresh tracked sample decks into
   Azahar's SD data directory and verifies that the emulator sample folders are
   text-only and progress-free.
@@ -116,9 +115,9 @@ Sample install targets replace source-owned files such as `deck.json`,
 `settings.tsv.bak`, and preserve `state.tsv` and `review-log.tsv`; fresh
 targets clear those files plus `state.tsv.tmp`, `state.tsv.bak`,
 `review-log.tsv.tmp`, and `review-log.tsv.bak` so stale progress should not
-carry into a pass. Default sample installs also remove the old optional
-`media-demo` fixture from the sample root so a text-only acceptance pass shows
-exactly the text decks.
+carry into a pass. Default sample installs also remove old `media-demo` folders
+from the sample root so a text-only acceptance pass shows exactly the text
+decks.
 The singular `install-local-sample-deck` and `install-azahar-sample-deck`
 targets are compatibility aliases for the plural targets; the plural names
 describe the current multi-deck sample workflow more accurately.
@@ -202,9 +201,9 @@ The host C suite includes an M7-shaped daily-use workflow covering two decks,
 rating undo, suspension restore, daily limits, relaunch persistence, and the
 review key map for reveal and Again/Hard/Good/Easy ratings. It also checks
 app-level input priority for controls, exit confirmation, deck-list return,
-actions, undo gating, suspend confirmation, reveal, and rating dispatch. That
-workflow also checks per-deck review-log rows for rating, undo, suspend, and
-restore actions.
+actions, undo gating, suspend confirmation, review text scrolling, reveal, and
+rating dispatch. That workflow also checks per-deck review-log rows for rating,
+undo, suspend, and restore actions.
 It also checks that malformed review state blocks normal saves and suppresses
 selector due counts until deck progress is reset. Opening a deck with malformed
 state should land on a reset-needed summary instead of the normal review queue.
@@ -245,8 +244,8 @@ make test-tools
 ```
 
 The text-deck verifier is part of the package safety net because it rejects
-source or staged sample decks that the 3DS app would fail to load, plus media
-or stray files in the default text-only deck folders.
+source or staged sample decks that the 3DS app would fail to load, plus stray
+media folders or extra files in the default text-only deck folders.
 
 Minimum converter tests:
 
@@ -289,6 +288,7 @@ Acceptance steps:
 - open the deck selector and confirm at least two sample decks appear
 - review due cards from two different decks
 - reveal and rate with each rating path needed for the pass
+- scroll the long text card in the tracked `sample` deck with D-pad Up/Down
 - suspend one card, then restore suspended cards from the actions screen
 - undo one rating and confirm the queue/status updates sensibly
 - change `new_limit` and `review_limit` from the actions screen

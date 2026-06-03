@@ -4,8 +4,8 @@
 
 Build a practical Nintendo 3DS flashcard reviewer for Anki-derived decks.
 
-The 3DS app should stay small and predictable. Complex Anki parsing and media
-cleanup should happen on the desktop before files are copied to the SD card.
+The 3DS app should stay small and predictable. Complex Anki parsing should
+happen on the desktop before files are copied to the SD card.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ Responsibilities:
 
 - discover decks on the SD card
 - load a simple deck format
-- show front and back text plus bounded `.a3i` images
+- show front and back text
 - collect ratings: Again, Hard, Good, Easy
 - update scheduling state
 - save after every review
@@ -44,7 +44,7 @@ Responsibilities:
 - strip or simplify HTML
 - generate stable card IDs
 - preserve progress when importing updated card content
-- convert binary PPM images or copy existing `.a3i` media
+- reject image, audio, media, and arbitrary template output
 
 ## Milestones
 
@@ -161,19 +161,17 @@ Exit criteria:
 
 - user can complete one real study session without editing files manually
 
-### M8: Media And Polish
+### M8: Polish And Packaging
 
 Deliverables:
 
-- image conversion pipeline
-- image display in reviewer
 - better typography
 - nicer deck stats
 - optional `.cia` package
 
 Exit criteria:
 
-- small image-based cards display correctly on hardware
+- text-card review feels readable and predictable on hardware
 
 ## Scheduling Strategy
 
@@ -212,5 +210,5 @@ Do not attempt FSRS parity in the first version.
 - Move parsing and conversion complexity to the desktop.
 - Make every hardware test small and repeatable.
 - Preserve review state separately from imported card content.
-- Keep media bounded and optional; preserve text correctness first.
+- Keep the supported deck format text-only.
 - Follow the C conventions in `docs/c-style-and-architecture.md`.

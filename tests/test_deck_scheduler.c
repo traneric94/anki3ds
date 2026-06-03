@@ -16,8 +16,6 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
-#include "media_cache.h"
-#include "media_image.h"
 #include "review_log.h"
 #include "review_state.h"
 #include "scheduler.h"
@@ -33,7 +31,6 @@
 #define TEST_STORAGE_TEMP_PATH TEST_STORAGE_PATH ".tmp"
 #define TEST_STORAGE_BACKUP_PATH TEST_STORAGE_PATH ".bak"
 #define TEST_CARDS_PATH "/tmp/anki3ds-cards-test.tsv"
-#define TEST_MEDIA_PATH "/tmp/anki3ds-media-test.a3i"
 #define TEST_REVIEW_LOG_PATH "/tmp/anki3ds-review-log-test.tsv"
 #define TEST_REVIEW_LOG_TEMP_PATH TEST_REVIEW_LOG_PATH ".tmp"
 #define TEST_REVIEW_LOG_BACKUP_PATH TEST_REVIEW_LOG_PATH ".bak"
@@ -45,7 +42,6 @@ static int failures;
 
 static void write_file(const char *path, const char *content);
 static void write_numbered_cards_file(const char *path, size_t card_count);
-static void write_binary_file(const char *path, const unsigned char *content, size_t size);
 static void write_newline_terminated_filler_file(const char *path, size_t size);
 static bool file_equals(const char *path, const char *content);
 static long file_size(const char *path);
@@ -87,8 +83,6 @@ static void test_parse_card_line(void)
 	check(strcmp(card.front, "front\nline") == 0, "front escaped newline parses");
 	check(strcmp(card.back, "back\\slash") == 0, "back escaped slash parses");
 	check(strcmp(card.tags, "tag1 tag2") == 0, "tags parse");
-	check(strcmp(card.front_media, "") == 0, "missing front media defaults empty");
-	check(strcmp(card.back_media, "") == 0, "missing back media defaults empty");
 }
 
 static void test_reject_bad_card_line(void)
@@ -127,23 +121,10 @@ static void test_reject_bad_card_line(void)
 		"card id state metadata prefix rejected"
 	);
 	check(
-		deck_parse_card_line(&card, "card\tnote\tfront\tback\ttag\tbad/name\t") ==
-			DECK_PARSE_BAD_MEDIA_NAME,
-		"media path separators rejected"
+		deck_parse_card_line(&card, "card\tnote\tfront\tback\ttag\textra") ==
+			DECK_PARSE_BAD_FIELD_COUNT,
+		"extra text card fields rejected"
 	);
-}
-
-static void test_parse_card_line_with_media(void)
-{
-	struct card card;
-	enum deck_parse_result result = deck_parse_card_line(
-		&card,
-		"card-1\tnote-1\tfront\tback\ttag1\tfront.a3i\tback.a3i\n"
-	);
-
-	check(result == DECK_PARSE_OK, "media card line parses");
-	check(strcmp(card.front_media, "front.a3i") == 0, "front media parses");
-	check(strcmp(card.back_media, "back.a3i") == 0, "back media parses");
 }
 
 static void test_deck_load_rejects_duplicate_card_ids(void)
@@ -218,7 +199,7 @@ static void test_tracked_text_sample_decks_load(void)
 		deck_load_cards(&deck, "sample-decks/sample/cards.tsv") == DECK_LOAD_OK,
 		"tracked sample deck loads"
 	);
-	check(deck.card_count == 10, "tracked sample deck card count");
+	check(deck.card_count == 11, "tracked sample deck card count");
 	check(
 		app_settings_load(&settings, "sample-decks/sample/settings.tsv") ==
 			APP_SETTINGS_LOAD_OK,
@@ -384,6 +365,42 @@ static void test_app_text_counts_utf8_columns(void)
 	check(
 		app_text_byte_count_for_columns(text, 20) == strlen(text),
 		"UTF-8 byte count can include full text"
+	);
+}
+
+static void test_app_text_counts_wrapped_rows(void)
+{
+	check(app_text_wrapped_row_count("abc", 3) == 1, "exact text fits one row");
+	check(app_text_wrapped_row_count("abcd", 3) == 2, "wrapped text counts rows");
+	check(
+		app_text_wrapped_row_count("ab\ncd", 3) == 2,
+		"explicit newline counts rows"
+	);
+	check(
+		app_text_wrapped_row_count("ab\r\ncd", 3) == 2,
+		"carriage return is ignored in row count"
+	);
+	check(
+		app_text_wrapped_row_count("\xc3" "\xa9" "bc", 3) == 1,
+		"UTF-8 row count keeps codepoint columns"
+	);
+	check(
+		app_text_wrapped_row_count("\xc3" "\xa9" "bcd", 3) == 2,
+		"UTF-8 wrapped text counts rows"
+	);
+	check(app_text_wrapped_row_count("", 3) == 1, "empty text still has one row");
+	check(app_text_wrapped_row_count("abc", 0) == 0, "zero columns has zero rows");
+	check(
+		app_text_max_scroll_offset("abcd", 3, 1) == 1,
+		"scroll offset exposes wrapped row"
+	);
+	check(
+		app_text_max_scroll_offset("abcd", 3, 2) == 0,
+		"no scroll when visible rows fit"
+	);
+	check(
+		app_text_max_scroll_offset("abc", 3, 0) == 0,
+		"zero visible rows has no scroll"
 	);
 }
 
@@ -1131,6 +1148,42 @@ static void test_app_controls_classifies_app_actions(void)
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_NONE, "unsafe summary blocks undo");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_DOWN,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_SCROLL_DOWN, "D-pad down scrolls review text");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_UP,
+		APP_CONTROL_BUTTON_UP,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_SCROLL_UP, "D-pad up scrolls review text");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "scroll ignores command chords");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SUMMARY,
+		false,
+		true,
+		APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_DOWN,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "summary does not scroll review text");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_REVIEW,
 		false,
@@ -3417,18 +3470,6 @@ static void write_numbered_cards_file(const char *path, size_t card_count)
 	fclose(file);
 }
 
-static void write_binary_file(const char *path, const unsigned char *content, size_t size)
-{
-	FILE *file = fopen(path, "wb");
-
-	check(file != NULL, "test binary file opens");
-	if (file == NULL)
-		return;
-
-	fwrite(content, 1, size, file);
-	fclose(file);
-}
-
 static void write_newline_terminated_filler_file(const char *path, size_t size)
 {
 	FILE *file = fopen(path, "wb");
@@ -3576,7 +3617,6 @@ static void test_deck_index_builds_paths(void)
 		strcmp(entry.settings_path, "/root/sample/settings.tsv") == 0,
 		"settings path builds"
 	);
-	check(strcmp(entry.media_path, "/root/sample/media") == 0, "media path builds");
 	check(!deck_index_build_entry(&entry, "/root", ".hidden"), "hidden id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
@@ -3590,196 +3630,6 @@ static void test_deck_index_builds_paths(void)
 		"longest deck id stores without truncation"
 	);
 	check(!deck_index_build_entry(&entry, "/root", too_long_id), "too-long deck id rejected");
-}
-
-static void test_media_image_loads_rgb565(void)
-{
-	static const unsigned char content[] = {
-		'A', '3', 'I', '1',
-		2, 0,
-		1, 0,
-		0x00, 0xf8,
-		0xe0, 0x07,
-	};
-	struct media_image image;
-
-	write_binary_file(TEST_MEDIA_PATH, content, sizeof(content));
-
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_OK,
-		"media image loads"
-	);
-	check(image.loaded, "media image loaded flag");
-	check(image.width == 2, "media image width loads");
-	check(image.height == 1, "media image height loads");
-	check(image.pixels[0] == 0xf800, "media image first pixel loads");
-	check(image.pixels[1] == 0x07e0, "media image second pixel loads");
-
-	remove(TEST_MEDIA_PATH);
-}
-
-static void test_app_layout_media_images_fit_top_screen(void)
-{
-	check(
-		app_layout_rect_fits_top_screen(
-			APP_LAYOUT_MEDIA_IMAGE_X,
-			APP_LAYOUT_MEDIA_FRONT_Y,
-			MEDIA_IMAGE_MAX_WIDTH,
-			MEDIA_IMAGE_MAX_HEIGHT
-		),
-		"front media image fits top screen"
-	);
-	check(
-		app_layout_rect_fits_top_screen(
-			APP_LAYOUT_MEDIA_IMAGE_X,
-			APP_LAYOUT_MEDIA_BACK_Y,
-			MEDIA_IMAGE_MAX_WIDTH,
-			MEDIA_IMAGE_MAX_HEIGHT
-		),
-		"back media image fits top screen"
-	);
-	check(
-		!app_layout_rect_fits_top_screen(-1, 0, 1, 1),
-		"layout rejects negative x"
-	);
-	check(
-		!app_layout_rect_fits_top_screen(
-			APP_LAYOUT_TOP_SCREEN_WIDTH - MEDIA_IMAGE_MAX_WIDTH + 1,
-			0,
-			MEDIA_IMAGE_MAX_WIDTH,
-			MEDIA_IMAGE_MAX_HEIGHT
-		),
-		"layout rejects overflowing width"
-	);
-	check(
-		!app_layout_rect_fits_top_screen(
-			0,
-			APP_LAYOUT_TOP_SCREEN_HEIGHT - MEDIA_IMAGE_MAX_HEIGHT + 1,
-			MEDIA_IMAGE_MAX_WIDTH,
-			MEDIA_IMAGE_MAX_HEIGHT
-		),
-		"layout rejects overflowing height"
-	);
-	check(
-		!app_layout_rect_fits_top_screen(0, 0, 0, MEDIA_IMAGE_MAX_HEIGHT),
-		"layout rejects zero width"
-	);
-	check(
-		APP_LAYOUT_REVIEW_FRONT_TEXT_ROW +
-			APP_LAYOUT_REVIEW_FRONT_MEDIA_TEXT_ROWS <=
-			APP_LAYOUT_REVIEW_FRONT_MEDIA_STATUS_ROW,
-		"unrevealed front media status row stays below text"
-	);
-	check(
-		APP_LAYOUT_REVIEW_FRONT_TEXT_ROW +
-			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS <=
-			APP_LAYOUT_REVIEW_REVEALED_FRONT_MEDIA_STATUS_ROW,
-		"revealed front media status row stays below text"
-	);
-	check(
-		APP_LAYOUT_REVIEW_BACK_TEXT_ROW + APP_LAYOUT_REVIEW_BACK_TEXT_ROWS <=
-			APP_LAYOUT_REVIEW_BACK_MEDIA_STATUS_ROW,
-		"back media status row stays below text"
-	);
-}
-
-static void test_media_image_rejects_bad_files(void)
-{
-	static const unsigned char bad_magic[] = {
-		'B', 'A', 'D', '!',
-		1, 0,
-		1, 0,
-		0, 0,
-	};
-	static const unsigned char too_large[] = {
-		'A', '3', 'I', '1',
-		(MEDIA_IMAGE_MAX_WIDTH + 1) & 0xff,
-		((MEDIA_IMAGE_MAX_WIDTH + 1) >> 8) & 0xff,
-		1, 0,
-		0, 0,
-	};
-	static const unsigned char truncated_pixels[] = {
-		'A', '3', 'I', '1',
-		2, 0,
-		1, 0,
-		0x00, 0xf8,
-	};
-	static const unsigned char trailing_pixels[] = {
-		'A', '3', 'I', '1',
-		1, 0,
-		1, 0,
-		0x00, 0xf8,
-		0xff,
-	};
-	struct media_image image;
-
-	remove(TEST_MEDIA_PATH);
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_NOT_FOUND,
-		"missing media image reports not found"
-	);
-
-	write_binary_file(TEST_MEDIA_PATH, bad_magic, sizeof(bad_magic));
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
-		"bad media image magic rejected"
-	);
-
-	write_binary_file(TEST_MEDIA_PATH, too_large, sizeof(too_large));
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_TOO_LARGE,
-		"oversized media image rejected"
-	);
-
-	write_binary_file(TEST_MEDIA_PATH, truncated_pixels, sizeof(truncated_pixels));
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
-		"truncated media image pixels rejected"
-	);
-
-	write_binary_file(TEST_MEDIA_PATH, trailing_pixels, sizeof(trailing_pixels));
-	check(
-		media_image_load(&image, TEST_MEDIA_PATH) == MEDIA_IMAGE_LOAD_BAD_FORMAT,
-		"trailing media image bytes rejected"
-	);
-
-	remove(TEST_MEDIA_PATH);
-}
-
-static void test_media_cache_reuses_loaded_image(void)
-{
-	static const unsigned char content[] = {
-		'A', '3', 'I', '1',
-		1, 0,
-		1, 0,
-		0x00, 0xf8,
-	};
-	struct media_cache cache;
-	const struct media_cache_slot *first;
-	const struct media_cache_slot *second;
-	const struct media_cache_slot *after_clear;
-
-	media_cache_init(&cache);
-	write_binary_file(TEST_MEDIA_PATH, content, sizeof(content));
-
-	first = media_cache_load(&cache, TEST_MEDIA_PATH);
-	check(first->result == MEDIA_IMAGE_LOAD_OK, "media cache first load succeeds");
-	check(first->image.pixels[0] == 0xf800, "media cache first load pixel");
-
-	remove(TEST_MEDIA_PATH);
-	second = media_cache_load(&cache, TEST_MEDIA_PATH);
-	check(second == first, "media cache reuses loaded slot");
-	check(second->result == MEDIA_IMAGE_LOAD_OK, "media cache avoids second file read");
-	check(second->image.pixels[0] == 0xf800, "media cache preserves cached pixel");
-
-	media_cache_clear(&cache);
-	after_clear = media_cache_load(&cache, TEST_MEDIA_PATH);
-	check(
-		after_clear->result == MEDIA_IMAGE_LOAD_NOT_FOUND,
-		"media cache clear allows reload"
-	);
-
-	remove(TEST_MEDIA_PATH);
 }
 
 static void remove_test_deck_dir(const char *deck_id)
@@ -4502,7 +4352,6 @@ int main(void)
 {
 	test_parse_card_line();
 	test_reject_bad_card_line();
-	test_parse_card_line_with_media();
 	test_deck_load_rejects_duplicate_card_ids();
 	test_deck_load_accepts_final_line_without_newline();
 	test_deck_load_card_limit();
@@ -4511,6 +4360,7 @@ int main(void)
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
 	test_app_text_counts_utf8_columns();
+	test_app_text_counts_wrapped_rows();
 	test_app_time_local_calendar_day();
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();
@@ -4592,10 +4442,6 @@ int main(void)
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();
-	test_app_layout_media_images_fit_top_screen();
-	test_media_image_loads_rgb565();
-	test_media_image_rejects_bad_files();
-	test_media_cache_reuses_loaded_image();
 	test_deck_index_scans_sorted_decks_with_cards();
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();

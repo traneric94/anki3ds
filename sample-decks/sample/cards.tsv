@@ -4,7 +4,8 @@ card-0003	note-0003	What character separates fields in cards.tsv?	A tab characte
 card-0004	note-0004	How many fields does each sample card line use?	Five fields: card id, note id, front, back, and tags.	sample format
 card-0005	note-0005	What is the answer side called in this simple deck format?	The back field.	sample format
 card-0006	note-0006	What does the front field contain?	The prompt shown before revealing the answer.	sample review
-card-0007	note-0007	What should sample decks avoid?	Personal data and copyrighted media.	sample policy
+card-0007	note-0007	What should sample decks avoid?	Personal data and copyrighted material.	sample policy
 card-0008	note-0008	What local folder mirrors the 3DS SD card during development?	local/sdmc/	sample paths
 card-0009	note-0009	What escape sequence represents an embedded newline?	\\n	sample escaping
 card-0010	note-0010	What is the deck id for this tracked sample?	sample	sample metadata
+card-0011	note-0011	What should D-pad Up/Down do on long review text?	They scroll the active text pane.\\nBefore reveal, the front side scrolls.\\nAfter reveal, the back side scrolls.\\nClean D-pad holds repeat after a short delay.\\nButton chords are ignored.\\nRatings stay on Y, X, B, and A.\\nThis sample card is intentionally long.\\nAll lines should be reachable.	controls scrolling

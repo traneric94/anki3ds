@@ -7,7 +7,7 @@ HOST_CFLAGS ?= -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3d
 
 APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo sample
-OPTIONAL_SAMPLE_DECKS := media-demo
+REMOVED_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
@@ -27,7 +27,6 @@ test-host:
 	$(HOST_CC) $(HOST_CFLAGS) \
 		tests/test_deck_scheduler.c \
 		app-3ds/source/app_controls.c \
-		app-3ds/source/app_layout.c \
 		app-3ds/source/app_power.c \
 		app-3ds/source/app_review.c \
 		app-3ds/source/app_settings.c \
@@ -36,8 +35,6 @@ test-host:
 		app-3ds/source/deck.c \
 		app-3ds/source/deck_index.c \
 		app-3ds/source/deck_summary.c \
-		app-3ds/source/media_cache.c \
-		app-3ds/source/media_image.c \
 		app-3ds/source/review_log.c \
 		app-3ds/source/review_state.c \
 		app-3ds/source/scheduler.c \
@@ -87,8 +84,8 @@ verify-package-sd: package-sd
 	app_dir="$(PACKAGE_SDMC)/$(APP_SD_DIR)"; \
 	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
 	test -f "$$app_dir/anki3ds.smdh" || { echo "$$app_dir/anki3ds.smdh missing"; exit 1; }; \
-	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
-		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be packaged by default"; exit 1; }; \
+	for deck in $(REMOVED_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be packaged"; exit 1; }; \
 	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \
@@ -104,8 +101,8 @@ verify-local-sd: prepare-local-samples-fresh
 	app_dir="$(LOCAL_SDMC)/$(APP_SD_DIR)"; \
 	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
 	test -f "$$app_dir/anki3ds.smdh" || { echo "$$app_dir/anki3ds.smdh missing"; exit 1; }; \
-	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
-		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed by default"; exit 1; }; \
+	for deck in $(REMOVED_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed"; exit 1; }; \
 	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \
@@ -115,7 +112,7 @@ install-local-sample-deck: install-local-sample-decks
 
 install-local-sample-decks: verify-sample-decks
 	set -e; \
-	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+	for deck in $(REMOVED_SAMPLE_DECKS); do \
 		rm -rf "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 	done; \
 	for deck in $(SAMPLE_DECKS); do \
@@ -140,7 +137,7 @@ install-azahar-sample-deck: install-azahar-sample-decks
 
 install-azahar-sample-decks: verify-sample-decks
 	set -e; \
-	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+	for deck in $(REMOVED_SAMPLE_DECKS); do \
 		rm -rf "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 	done; \
 	for deck in $(SAMPLE_DECKS); do \
@@ -164,8 +161,8 @@ prepare-azahar-samples-fresh: install-azahar-sample-decks reset-azahar-sample-pr
 verify-azahar-fresh-samples: prepare-azahar-samples-fresh
 	@set -e; \
 	app_dir="$(AZAHAR_SDMC)/$(APP_SD_DIR)"; \
-	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
-		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed by default"; exit 1; }; \
+	for deck in $(REMOVED_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed"; exit 1; }; \
 	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \

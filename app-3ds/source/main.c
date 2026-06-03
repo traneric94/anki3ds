@@ -14,8 +14,6 @@
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
-#include "media_cache.h"
-#include "media_image.h"
 #include "review_log.h"
 #include "review_state.h"
 #include "scheduler.h"
@@ -100,11 +98,11 @@ struct app_state
 	const char *settings_message;
 	enum setting_item selected_setting;
 	size_t selected_deck_index;
+	size_t review_scroll_offset;
 	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_review_log_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
-	char active_media_path[DECK_INDEX_MAX_PATH_LENGTH];
 	struct app_settings settings;
 	struct app_settings edited_settings;
 	struct deck_index deck_index;
@@ -117,7 +115,6 @@ struct app_state
 
 static PrintConsole top_screen;
 static PrintConsole bottom_screen;
-static struct media_cache media_cache;
 
 static void draw_scanning_progress_screen(
 	const struct app_state *app,
@@ -178,6 +175,7 @@ static bool app_mode_uses_navigation_repeat(enum app_mode mode)
 {
 	return (
 		mode == APP_MODE_DECK_SELECT ||
+		mode == APP_MODE_REVIEW ||
 		mode == APP_MODE_ACTIONS ||
 		mode == APP_MODE_SETTINGS
 	);
@@ -202,44 +200,35 @@ static void draw_wrapped_text_columns(
 	const char *text,
 	int row,
 	int max_rows,
-	int max_columns
+	int max_columns,
+	size_t scroll_offset
 )
 {
-	int current_row = row;
+	size_t text_row = 0;
 	int column = APP_LAYOUT_TEXT_LEFT;
-	bool truncated = false;
 
-	console_move(current_row, APP_LAYOUT_TEXT_LEFT);
+	if (text == NULL || max_rows <= 0 || max_columns <= 0)
+		return;
 
 	for (size_t index = 0; text[index] != '\0'; )
 	{
 		char value = text[index];
 		size_t char_length = app_text_utf8_char_length(&text[index]);
 
-		if (current_row >= row + max_rows)
-		{
-			truncated = true;
-			break;
-		}
 		if (char_length == 0)
 			break;
-
 		if (value == '\r')
 		{
 			index += char_length;
 			continue;
 		}
-
 		if (value == '\n')
 		{
-			current_row++;
+			text_row++;
 			column = APP_LAYOUT_TEXT_LEFT;
-			if (current_row < row + max_rows)
-				console_move(current_row, APP_LAYOUT_TEXT_LEFT);
 			index += char_length;
 			continue;
 		}
-
 		if (value == '\t')
 		{
 			value = ' ';
@@ -248,29 +237,27 @@ static void draw_wrapped_text_columns(
 
 		if (column >= APP_LAYOUT_TEXT_LEFT + max_columns)
 		{
-			current_row++;
+			text_row++;
 			column = APP_LAYOUT_TEXT_LEFT;
-			if (current_row >= row + max_rows)
-			{
-				truncated = true;
-				break;
-			}
-			console_move(current_row, APP_LAYOUT_TEXT_LEFT);
 		}
 
-		if (value == ' ' && text[index] == '\t')
-			putchar(value);
-		else
-			fwrite(&text[index], 1, char_length, stdout);
+		if (
+			text_row >= scroll_offset &&
+			text_row < scroll_offset + (size_t)max_rows
+		)
+		{
+			console_move(
+				row + (int)(text_row - scroll_offset),
+				column
+			);
+			if (value == ' ' && text[index] == '\t')
+				putchar(value);
+			else
+				fwrite(&text[index], 1, char_length, stdout);
+		}
 
 		index += char_length;
 		column++;
-	}
-
-	if (truncated && max_rows > 0 && max_columns >= 3)
-	{
-		console_move(row + max_rows - 1, APP_LAYOUT_TEXT_LEFT + max_columns - 3);
-		printf("...");
 	}
 }
 
@@ -461,6 +448,60 @@ static const struct card *current_card(const struct app_state *app)
 	return &app->deck.cards[scheduler_current_index(&app->session)];
 }
 
+static bool review_scroll_metrics(
+	const struct app_state *app,
+	const char **text,
+	size_t *max_columns,
+	size_t *visible_rows
+)
+{
+	const struct card *card;
+
+	if (
+		app == NULL ||
+		text == NULL ||
+		max_columns == NULL ||
+		visible_rows == NULL
+	)
+	{
+		return false;
+	}
+
+	card = current_card(app);
+	if (card == NULL)
+		return false;
+
+	if (app->revealed)
+	{
+		*text = card->back;
+		*max_columns = APP_LAYOUT_TEXT_WIDTH;
+		*visible_rows = APP_LAYOUT_REVIEW_BACK_TEXT_ROWS;
+		return true;
+	}
+
+	*text = card->front;
+	*max_columns = APP_LAYOUT_TEXT_WIDTH;
+	*visible_rows = APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS;
+	return true;
+}
+
+static size_t review_max_scroll_offset(const struct app_state *app)
+{
+	const char *text;
+	size_t max_columns;
+	size_t visible_rows;
+
+	if (!review_scroll_metrics(app, &text, &max_columns, &visible_rows))
+		return 0;
+
+	return app_text_max_scroll_offset(text, max_columns, visible_rows);
+}
+
+static void reset_review_scroll(struct app_state *app)
+{
+	app->review_scroll_offset = 0;
+}
+
 static void copy_string(char *destination, size_t destination_size, const char *source)
 {
 	if (destination_size == 0)
@@ -472,6 +513,51 @@ static void copy_string(char *destination, size_t destination_size, const char *
 static void app_set_status(struct app_state *app, const char *message)
 {
 	copy_string(app->status_message, sizeof(app->status_message), message);
+}
+
+static bool scroll_review_text(struct app_state *app, bool scroll_down)
+{
+	size_t max_offset = review_max_scroll_offset(app);
+	bool edge_message = false;
+
+	if (max_offset == 0)
+	{
+		app_set_status(app, "Text fits");
+		return true;
+	}
+
+	if (scroll_down)
+	{
+		if (app->review_scroll_offset < max_offset)
+			app->review_scroll_offset++;
+		else
+		{
+			app_set_status(app, "Text bottom");
+			edge_message = true;
+		}
+	}
+	else if (app->review_scroll_offset > 0)
+	{
+		app->review_scroll_offset--;
+	}
+	else
+	{
+		app_set_status(app, "Text top");
+		edge_message = true;
+	}
+
+	if (!edge_message)
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Text %lu/%lu",
+			(unsigned long)(app->review_scroll_offset + 1),
+			(unsigned long)(max_offset + 1)
+		);
+	}
+
+	return true;
 }
 
 static const char *status_message_color(const char *message)
@@ -552,118 +638,6 @@ static bool day_check_is_due(time_t *next_check_time, time_t now)
 		return true;
 
 	return now >= *next_check_time;
-}
-
-static unsigned char rgb565_red(uint16_t pixel)
-{
-	return (unsigned char)((((pixel >> 11) & 0x1f) * 255u) / 31u);
-}
-
-static unsigned char rgb565_green(uint16_t pixel)
-{
-	return (unsigned char)((((pixel >> 5) & 0x3f) * 255u) / 63u);
-}
-
-static unsigned char rgb565_blue(uint16_t pixel)
-{
-	return (unsigned char)(((pixel & 0x1f) * 255u) / 31u);
-}
-
-static void draw_top_image(const struct media_image *image, int x, int y)
-{
-	u16 frame_width;
-	u16 frame_height;
-	u8 *framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &frame_width, &frame_height);
-
-	(void)frame_width;
-	(void)frame_height;
-
-	if (framebuffer == NULL || !image->loaded)
-		return;
-
-	for (unsigned int source_y = 0; source_y < image->height; source_y++)
-	{
-		int screen_y = y + (int)source_y;
-
-		if (screen_y < 0 || screen_y >= APP_LAYOUT_TOP_SCREEN_HEIGHT)
-			continue;
-
-		for (unsigned int source_x = 0; source_x < image->width; source_x++)
-		{
-			int screen_x = x + (int)source_x;
-			uint16_t pixel;
-			size_t offset;
-
-			if (screen_x < 0 || screen_x >= APP_LAYOUT_TOP_SCREEN_WIDTH)
-				continue;
-
-			pixel = image->pixels[source_y * image->width + source_x];
-			offset = (
-				(size_t)(APP_LAYOUT_TOP_SCREEN_HEIGHT - screen_y - 1) +
-				(size_t)screen_x * APP_LAYOUT_TOP_SCREEN_HEIGHT
-			) * 3;
-
-			framebuffer[offset] = rgb565_blue(pixel);
-			framebuffer[offset + 1] = rgb565_green(pixel);
-			framebuffer[offset + 2] = rgb565_red(pixel);
-		}
-	}
-}
-
-static bool build_media_file_path(
-	char *destination,
-	size_t destination_size,
-	const struct app_state *app,
-	const char *media_name
-)
-{
-	int written = snprintf(
-		destination,
-		destination_size,
-		"%s/%s",
-		app->active_media_path,
-		media_name
-	);
-
-	return written >= 0 && (size_t)written < destination_size;
-}
-
-static void draw_card_media(
-	const struct app_state *app,
-	const char *media_name,
-	int x,
-	int y,
-	int status_row
-)
-{
-	const struct media_cache_slot *slot;
-	char path[DECK_INDEX_MAX_PATH_LENGTH];
-
-	if (media_name[0] == '\0')
-		return;
-
-	if (!build_media_file_path(path, sizeof(path), app, media_name))
-	{
-		printf(
-			"\x1b[%d;1H" APP_COLOR_RED "Media path too long" APP_COLOR_RESET,
-			status_row
-		);
-		return;
-	}
-
-	slot = media_cache_load(&media_cache, path);
-	if (slot->result == MEDIA_IMAGE_LOAD_OK)
-	{
-		draw_top_image(&slot->image, x, y);
-		return;
-	}
-
-	printf("\x1b[%d;1H" APP_COLOR_RED "Media " APP_COLOR_RESET, status_row);
-	print_truncated(media_name, 24);
-	printf(
-		": " APP_COLOR_RED "%s" APP_COLOR_RESET,
-		media_image_load_result_name(slot->result)
-	);
 }
 
 static void app_scan_decks(struct app_state *app)
@@ -823,10 +797,9 @@ static void app_load_selected_deck(struct app_state *app)
 		sizeof(app->active_settings_path),
 		entry->settings_path
 	);
-	copy_string(app->active_media_path, sizeof(app->active_media_path), entry->media_path);
-	media_cache_clear(&media_cache);
 	deck_init(&app->deck, entry->display_name);
 	app->revealed = false;
+	reset_review_scroll(app);
 	app_settings_default(&app->settings);
 	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
 	app->settings_save_result = APP_SETTINGS_SAVE_OK;
@@ -936,7 +909,6 @@ static void app_init(struct app_state *app)
 	app->current_day = app_time_current_day();
 	app->battery_service_available = R_SUCCEEDED(ptmuInit());
 	app_sample_battery(app);
-	media_cache_init(&media_cache);
 	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;
 }
@@ -1094,8 +1066,6 @@ static void draw_load_error_screen(const struct app_state *app)
 static void draw_review_screen(const struct app_state *app)
 {
 	const struct card *card = current_card(app);
-	bool front_has_media;
-	bool back_has_media;
 
 	app_console_clear();
 	draw_header(app);
@@ -1105,9 +1075,6 @@ static void draw_review_screen(const struct app_state *app)
 		printf("\x1b[6;1HNo cards are due today.");
 		return;
 	}
-
-	front_has_media = card->front_media[0] != '\0';
-	back_has_media = card->back_media[0] != '\0';
 
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
 	printf("\x1b[7;1H" APP_COLOR_BLUE "Front" APP_COLOR_RESET);
@@ -1119,7 +1086,8 @@ static void draw_review_screen(const struct app_state *app)
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
 			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS,
-			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
+			APP_LAYOUT_TEXT_WIDTH,
+			0
 		);
 		printf("\x1b[15;1H" APP_COLOR_BLUE "Back" APP_COLOR_RESET);
 		printf("\x1b[16;1H" APP_COLOR_BLUE "------------------------------------------------" APP_COLOR_RESET);
@@ -1127,21 +1095,8 @@ static void draw_review_screen(const struct app_state *app)
 			card->back,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROWS,
-			back_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
-		);
-		draw_card_media(
-			app,
-			card->front_media,
-			APP_LAYOUT_MEDIA_IMAGE_X,
-			APP_LAYOUT_MEDIA_FRONT_Y,
-			APP_LAYOUT_REVIEW_REVEALED_FRONT_MEDIA_STATUS_ROW
-		);
-		draw_card_media(
-			app,
-			card->back_media,
-			APP_LAYOUT_MEDIA_IMAGE_X,
-			APP_LAYOUT_MEDIA_BACK_Y,
-			APP_LAYOUT_REVIEW_BACK_MEDIA_STATUS_ROW
+			APP_LAYOUT_TEXT_WIDTH,
+			app->review_scroll_offset
 		);
 	}
 	else
@@ -1149,17 +1104,9 @@ static void draw_review_screen(const struct app_state *app)
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
-			front_has_media ?
-				APP_LAYOUT_REVIEW_FRONT_MEDIA_TEXT_ROWS :
-				APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS,
-			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
-		);
-		draw_card_media(
-			app,
-			card->front_media,
-			APP_LAYOUT_MEDIA_IMAGE_X,
-			APP_LAYOUT_MEDIA_FRONT_Y,
-			APP_LAYOUT_REVIEW_FRONT_MEDIA_STATUS_ROW
+			APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS,
+			APP_LAYOUT_TEXT_WIDTH,
+			app->review_scroll_offset
 		);
 	}
 }
@@ -1468,6 +1415,7 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[15;1H" APP_COLOR_YELLOW
 				"Use one rating button only." APP_COLOR_RESET
 			);
+			printf("\x1b[17;1HD-pad U/D: scroll back");
 		}
 		else
 		{
@@ -1481,6 +1429,7 @@ static void draw_controls_screen(const struct app_state *app)
 			printf("\x1b[11;1HR: confirm suspend");
 			printf("\x1b[13;1HSELECT: actions");
 			printf("\x1b[15;1HY: controls");
+			printf("\x1b[17;1HD-pad U/D: scroll front");
 		}
 		break;
 	}
@@ -1663,6 +1612,7 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 
 	scheduler_set_today(&app->session, today);
 	app->revealed = false;
+	reset_review_scroll(app);
 	app_refresh_selected_deck_summary(app);
 	target_mode = app_review_mode_for_session(app);
 	app_update_review_return_modes_for_day_change(app, target_mode);
@@ -1798,6 +1748,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	{
 		char new_limit[16];
 		char review_limit[16];
+		size_t max_scroll_offset = review_max_scroll_offset(app);
 
 		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
 		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
@@ -1845,6 +1796,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
 			printf("\x1b[20;1HY: controls");
+		}
+		if (max_scroll_offset > 0)
+		{
+			printf(
+				"\x1b[22;1HD-pad U/D: text %lu/%lu",
+				(unsigned long)(app->review_scroll_offset + 1),
+				(unsigned long)(max_scroll_offset + 1)
+			);
 		}
 		printf(
 			"\x1b[27;1HSettings: %s",
@@ -2101,6 +2060,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		&before
 	);
 	app->revealed = false;
+	reset_review_scroll(app);
 	queue_complete = scheduler_is_complete(&app->session);
 	same_card_due =
 		!queue_complete && scheduler_current_index(&app->session) == card_index;
@@ -2193,6 +2153,7 @@ static bool undo_last_action(struct app_state *app)
 	app->state_message = "undone";
 	app_set_status(app, log_saved ? "Undo saved" : "Undo saved; log skipped");
 	app->revealed = false;
+	reset_review_scroll(app);
 	app->mode = APP_MODE_REVIEW;
 	return true;
 }
@@ -2244,6 +2205,7 @@ static bool suspend_current_card(struct app_state *app)
 	app->state_message = "suspended";
 	app_set_status(app, log_saved ? "Suspend saved" : "Suspend saved; log skipped");
 	app->revealed = false;
+	reset_review_scroll(app);
 
 	if (scheduler_is_complete(&app->session))
 	{
@@ -2347,6 +2309,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 		unsuspended_count
 	);
 	app->revealed = false;
+	reset_review_scroll(app);
 
 	if (scheduler_is_complete(&app->session))
 		app->mode = APP_MODE_SUMMARY;
@@ -2378,6 +2341,7 @@ static bool save_daily_limits(struct app_state *app)
 		app->settings.review_limit
 	);
 	app->revealed = false;
+	reset_review_scroll(app);
 	app->mode = app_review_mode_for_session(app);
 
 	if (!app_state_allows_study(app))
@@ -2696,8 +2660,13 @@ static bool app_handle_input(
 	case APP_CONTROL_ACTION_OPEN_SUSPEND:
 		app_open_suspend_confirmation(app);
 		return true;
+	case APP_CONTROL_ACTION_SCROLL_UP:
+		return scroll_review_text(app, false);
+	case APP_CONTROL_ACTION_SCROLL_DOWN:
+		return scroll_review_text(app, true);
 	case APP_CONTROL_ACTION_SHOW_ANSWER:
 		app->revealed = true;
+		reset_review_scroll(app);
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);

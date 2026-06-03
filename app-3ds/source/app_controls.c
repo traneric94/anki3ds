@@ -356,6 +356,7 @@ enum app_control_action app_controls_classify_action(
 )
 {
 	enum scheduler_rating selected_rating;
+	bool scroll_down;
 
 	if (mode == APP_CONTROL_MODE_CONFIRM_EXIT)
 	{
@@ -498,6 +499,19 @@ enum app_control_action app_controls_classify_action(
 
 	if (mode != APP_CONTROL_MODE_REVIEW)
 		return APP_CONTROL_ACTION_NONE;
+
+	if (
+		app_controls_up_down_triggered(
+			trigger_buttons,
+			active_buttons,
+			&scroll_down
+		)
+	)
+	{
+		return scroll_down ?
+			APP_CONTROL_ACTION_SCROLL_DOWN :
+			APP_CONTROL_ACTION_SCROLL_UP;
+	}
 
 	if (
 		app_controls_command_triggered(

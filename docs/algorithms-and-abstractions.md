@@ -41,10 +41,9 @@ Algorithm:
 9. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
 
 `deck_index_scan` stores a compact `deck_entry` for each deck: folder id,
-display name, cards path, state path, review-log path, settings path, media
-path, and metadata path. The folder id remains the stable runtime id. The
-display name falls back to the folder id when `deck.json` is missing or
-malformed.
+display name, cards path, state path, review-log path, settings path, and
+metadata path. The folder id remains the stable runtime id. The display name
+falls back to the folder id when `deck.json` is missing or malformed.
 
 Current practical constraints:
 
@@ -209,19 +208,21 @@ return, actions, undo, suspend confirmation, reveal, and rating. The stable
 review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
 Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
 ignored so a fat-fingered rating does not save the wrong answer.
-D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
-deck select, actions, and settings modes, so ratings and destructive actions
-stay single-press. Held input keeps the idle wait counter short while a button
-is down, so selector movement does not slow down as if the app were idle. This
-short wait only applies to a clean single-direction D-pad hold; diagonal holds
-and command chords fall back to the adaptive idle path. While a repeatable
-D-pad key was held on the previous scan, the unchanged-screen path waits for
-one VBlank instead of entering the longer HID idle wait; after release it
-returns to the adaptive low-power idle path. Repeat buttons stay in the
-abstract `APP_CONTROL_BUTTON_*` layer after the initial HID scan instead of
-being synthesized back into raw libctru key bits. Repeat starts after about
-300 ms and then fires about every 80 ms, keeping normal taps to one movement
-while still making long deck lists usable.
+D-pad hold repeat also lives in `app_controls`; `main.c` applies it in deck
+select, review, actions, and settings modes. In review mode, D-pad Up/Down
+scrolls the active text pane: front before reveal, back after reveal. Ratings
+and destructive actions stay single-press. Held input keeps the idle wait
+counter short while a button is down, so selector movement and text scrolling
+do not slow down as if the app were idle. This short wait only applies to a
+clean single-direction D-pad hold; diagonal holds and command chords fall back
+to the adaptive idle path. While a repeatable D-pad key was held on the
+previous scan, the unchanged-screen path waits for one VBlank instead of
+entering the longer HID idle wait; after release it returns to the adaptive
+low-power idle path. Repeat buttons stay in the abstract
+`APP_CONTROL_BUTTON_*` layer after the initial HID scan instead of being
+synthesized back into raw libctru key bits. Repeat starts after about 300 ms
+and then fires about every 80 ms, keeping normal taps to one movement while
+still making long deck lists usable.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
@@ -285,14 +286,6 @@ one-step undo slot. If a deck opens with malformed saved state, reset is
 selected by default so the recovery path is direct. Daily limits can be edited
 from the same actions screen. Reset remains available by moving the action
 selection first, then confirming on a separate reset screen with `X`.
-
-Cards may reference front/back `.a3i` media. The app keeps a two-slot media
-cache for the active deck, enough for the current card's front and back images.
-This avoids repeated SD reads on redraws while keeping memory bounded. The
-review-screen image positions live in `app_layout`, and host tests check that
-maximum-size front and back images fit within the top screen. Media cards also
-reserve status rows for missing or bad image files so load errors do not
-overwrite wrapped card text. Loading a deck clears the cache.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
@@ -434,20 +427,12 @@ Algorithm:
    `note_id` and `card_id` from `--note-id-field`/`--card-id-field` when
    durable source IDs are provided, otherwise `note_id` from front/back/tags
    and `card_id` from note/front/back.
-7. In `--text-only` mode, reject media options and inline `<img>` tags.
-8. Reject inline `<img>` tags unless the same side has a non-empty mapped
-   media field, so image-bearing exports do not silently become text-only
-   cards.
-9. If media fields and `--media-root` are provided, convert referenced binary
-   PPM `P6` files into bounded raw `.a3i` files under a temporary media
-   directory, then replace final media files with rollback if a commit step
-   fails.
-10. If media fields are used without `--media-root`, validate the existing
-   passthrough `.a3i` files before changing deck payload files.
-11. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
+7. Reject media options and inline `<img>` tags so image-bearing exports do not
+   silently become text-only cards.
+8. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
     final files with rollback if either commit step fails.
-12. Write default `settings.tsv` if it does not already exist.
-13. For `--split-large-decks`, remove obsolete converter-generated sibling
+9. Write default `settings.tsv` if it does not already exist.
+10. For `--split-large-decks`, remove obsolete converter-generated sibling
     chunk folders after the current single-folder or split-folder output has
     been written.
 
@@ -460,10 +445,9 @@ studiable on the 3DS. To keep progress attached to edited card text, pass
 stable source ID fields during conversion; otherwise content-derived fallback
 IDs change when the normalized front/back/tags content changes. The folder id
 is the runtime deck id on the 3DS, so the converter defaults `deck_id` from the
-output folder name and rejects mismatches. Current converter media support is
-deliberately narrow: PPM `P6` in, `.a3i` out. Rich HTML/template rendering and
-Anki collection parsing still belong on the desktop side rather than on the
-3DS.
+output folder name and rejects mismatches. Rich HTML/template rendering, media
+conversion, and Anki collection parsing still belong outside this 3DS text-card
+scope.
 
 ## C Boundaries We Want
 
@@ -482,8 +466,6 @@ Keep the portable logic separate from the libctru shell:
 | `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
 | `app_controls` | abstract button bits, repeat timing, app command classification | scheduler mutation, file I/O, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
-| `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
-| `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
 | converter | desktop import, stable IDs, deck folder writes | local 3DS progress mutation |
 

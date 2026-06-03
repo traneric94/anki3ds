@@ -3,13 +3,12 @@
 These decks are tiny, original fixtures for local, emulator, and hardware
 acceptance passes. The default daily-use sample set is text-only. All fixtures
 are safe to commit and should not contain personal Anki data or copyrighted
-media.
+material.
 
 ## Deck Coverage
 
-- `sample`: text-card SD path and parser smoke coverage.
+- `sample`: text-card SD path, parser smoke, and long-text scroll coverage.
 - `limits-demo`: multi-deck selection and daily-limit workflow coverage.
-- `media-demo`: optional non-MVP `.a3i` fixture, not installed by default.
 
 ## Verification
 
@@ -30,8 +29,8 @@ The same text-deck rules are applied to the copy-ready SD payload by:
 make verify-package-sd
 ```
 
-That target also rejects the optional `media-demo` fixture from the default
-packaged payload.
+That target also rejects stray files or media folders in the packaged text
+decks.
 
 ## Install And Fresh Passes
 
@@ -68,11 +67,10 @@ The install targets replace source-owned files such as `deck.json`,
 `cards.tsv`, and `settings.tsv`, remove stale `settings.tsv.tmp` and
 `settings.tsv.bak`, and preserve `state.tsv` and `review-log.tsv` unless a
 fresh target is used.
-They also remove the old optional `media-demo` fixture from the installed
-sample root so the default pass remains text-only.
+They also remove old installed `media-demo` folders so the default pass remains
+text-only.
 The singular install targets remain compatibility aliases, but the plural
 targets describe the current multi-deck workflow more accurately.
 
 Tracked text sample directories should contain only `deck.json`, `cards.tsv`,
-and `settings.tsv`. Optional media fixtures are kept outside the daily-use
-sample set.
+and `settings.tsv`.

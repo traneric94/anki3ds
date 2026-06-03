@@ -175,15 +175,16 @@ Pass condition:
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result
 
-## M8: Optional Media And Polish
+## M8: Polish And Packaging
 
 Acceptance test:
 
-1. Convert a deck with small images.
-2. Install `sample-decks/media-demo` or the converted deck to SD.
-3. Review cards on hardware.
-4. Confirm images fit the screen and text remains readable.
+1. Install a text deck with long and short cards.
+2. Review cards on hardware.
+3. Confirm text wrapping, scrolling, colors, deck stats, and controls remain
+   readable on the original 3DS screen.
+4. Build any release package target added for this milestone.
 
 Pass condition:
 
-- optional image cards are useful on the original 3DS screen
+- text-card review feels polished enough for repeated daily use

@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CARD_MIN_FIELD_COUNT 5
-#define CARD_MAX_FIELD_COUNT 7
+#define CARD_FIELD_COUNT 5
 
 static void copy_string(char *destination, size_t destination_size, const char *source)
 {
@@ -109,33 +108,9 @@ static enum deck_parse_result copy_card_field(
 		return copy_unescaped_field(card->back, sizeof(card->back), field);
 	case 4:
 		return copy_unescaped_field(card->tags, sizeof(card->tags), field);
-	case 5:
-		return copy_unescaped_field(
-			card->front_media,
-			sizeof(card->front_media),
-			field
-		);
-	case 6:
-		return copy_unescaped_field(
-			card->back_media,
-			sizeof(card->back_media),
-			field
-		);
 	default:
 		return DECK_PARSE_BAD_FIELD_COUNT;
 	}
-}
-
-static bool media_name_character_is_valid(char value)
-{
-	if (value >= 'a' && value <= 'z')
-		return true;
-	if (value >= 'A' && value <= 'Z')
-		return true;
-	if (value >= '0' && value <= '9')
-		return true;
-
-	return value == '-' || value == '_' || value == '.';
 }
 
 static bool card_id_is_valid(const char *card_id)
@@ -148,22 +123,6 @@ static bool card_id_is_valid(const char *card_id)
 		unsigned char value = (unsigned char)card_id[index];
 
 		if (value < 32 || value == 127)
-			return false;
-	}
-
-	return true;
-}
-
-static bool media_name_is_valid(const char *name)
-{
-	if (name[0] == '\0')
-		return true;
-	if (name[0] == '.')
-		return false;
-
-	for (size_t index = 0; name[index] != '\0'; index++)
-	{
-		if (!media_name_character_is_valid(name[index]))
 			return false;
 	}
 
@@ -213,7 +172,7 @@ enum deck_parse_result deck_parse_card_line(struct card *card, const char *line)
 
 			*cursor = '\0';
 
-			if (field_index >= CARD_MAX_FIELD_COUNT)
+			if (field_index >= CARD_FIELD_COUNT)
 				return DECK_PARSE_BAD_FIELD_COUNT;
 
 			result = copy_card_field(card, field_index, field_start);
@@ -229,15 +188,13 @@ enum deck_parse_result deck_parse_card_line(struct card *card, const char *line)
 		}
 	}
 
-	if (field_index != CARD_MIN_FIELD_COUNT && field_index != CARD_MAX_FIELD_COUNT)
+	if (field_index != CARD_FIELD_COUNT)
 		return DECK_PARSE_BAD_FIELD_COUNT;
 
 	if (card->card_id[0] == '\0' || card->front[0] == '\0' || card->back[0] == '\0')
 		return DECK_PARSE_MISSING_REQUIRED_FIELD;
 	if (!card_id_is_valid(card->card_id))
 		return DECK_PARSE_BAD_CARD_ID;
-	if (!media_name_is_valid(card->front_media) || !media_name_is_valid(card->back_media))
-		return DECK_PARSE_BAD_MEDIA_NAME;
 
 	return DECK_PARSE_OK;
 }
@@ -331,8 +288,6 @@ const char *deck_parse_result_name(enum deck_parse_result result)
 		return "bad escape";
 	case DECK_PARSE_BAD_CARD_ID:
 		return "bad card id";
-	case DECK_PARSE_BAD_MEDIA_NAME:
-		return "bad media name";
 	}
 
 	return "unknown";

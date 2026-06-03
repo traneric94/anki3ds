@@ -136,3 +136,61 @@ size_t app_text_byte_count_for_columns(const char *text, size_t max_columns)
 
 	return bytes;
 }
+
+size_t app_text_wrapped_row_count(const char *text, size_t max_columns)
+{
+	size_t rows = 1;
+	size_t columns = 0;
+
+	if (text == NULL || max_columns == 0)
+		return 0;
+
+	for (size_t index = 0; text[index] != '\0'; )
+	{
+		char value = text[index];
+		size_t char_length = app_text_utf8_char_length(&text[index]);
+
+		if (char_length == 0)
+			break;
+		if (value == '\r')
+		{
+			index += char_length;
+			continue;
+		}
+		if (value == '\n')
+		{
+			rows++;
+			columns = 0;
+			index += char_length;
+			continue;
+		}
+		if (columns >= max_columns)
+		{
+			rows++;
+			columns = 0;
+		}
+
+		index += char_length;
+		columns++;
+	}
+
+	return rows;
+}
+
+size_t app_text_max_scroll_offset(
+	const char *text,
+	size_t max_columns,
+	size_t visible_rows
+)
+{
+	size_t rows;
+
+	if (visible_rows == 0)
+		return 0;
+
+	rows = app_text_wrapped_row_count(text, max_columns);
+	if (rows <= visible_rows)
+		return 0;
+
+	return rows - visible_rows;
+}

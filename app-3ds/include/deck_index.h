@@ -19,7 +19,6 @@ struct deck_entry
 	char state_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char review_log_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char settings_path[DECK_INDEX_MAX_PATH_LENGTH];
-	char media_path[DECK_INDEX_MAX_PATH_LENGTH];
 };
 
 struct deck_index
