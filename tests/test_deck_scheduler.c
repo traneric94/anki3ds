@@ -274,6 +274,63 @@ static void test_app_power_battery_poll_arms_after_missing_clock(void)
 	);
 }
 
+static void test_app_power_battery_sample_policy(void)
+{
+	time_t next_poll_time = 1600;
+
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		1600,
+		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
+	);
+	check(next_poll_time == 1600, "closed shell leaves battery poll due");
+	check(
+		!app_power_battery_sample_changes_display(
+			APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
+		),
+		"closed shell does not change battery display"
+	);
+	check(
+		!app_power_battery_sample_changes_display(
+			APP_POWER_BATTERY_SAMPLE_READ_FAILED
+		),
+		"battery read failure keeps previous display"
+	);
+	check(
+		!app_power_battery_sample_changes_display(
+			APP_POWER_BATTERY_SAMPLE_UNCHANGED
+		),
+		"unchanged battery sample stays quiet"
+	);
+	check(
+		app_power_battery_sample_changes_display(
+			APP_POWER_BATTERY_SAMPLE_CHANGED
+		),
+		"changed battery sample redraws display"
+	);
+
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		1600,
+		APP_POWER_BATTERY_SAMPLE_READ_FAILED
+	);
+	check(
+		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"battery read failure schedules retry interval"
+	);
+
+	next_poll_time = 1600;
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		1600,
+		APP_POWER_BATTERY_SAMPLE_CHANGED
+	);
+	check(
+		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"battery sample schedules next open-shell poll"
+	);
+}
+
 static void set_test_timezone(const char *timezone)
 {
 	check(setenv("TZ", timezone, 1) == 0, "test timezone sets");
@@ -2766,6 +2823,7 @@ int main(void)
 	test_tracked_sample_decks_load();
 	test_app_power_battery_poll_schedule();
 	test_app_power_battery_poll_arms_after_missing_clock();
+	test_app_power_battery_sample_policy();
 	test_app_time_local_calendar_day();
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();

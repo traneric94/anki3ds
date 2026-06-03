@@ -615,7 +615,7 @@ static void app_scan_decks(struct app_state *app)
 		deck_index_find(&app->deck_index, selected_deck_id, &app->selected_deck_index);
 }
 
-static bool app_sample_battery(struct app_state *app)
+static enum app_power_battery_sample_result app_sample_battery(struct app_state *app)
 {
 	u8 shell_state;
 	u8 level;
@@ -630,10 +630,12 @@ static bool app_sample_battery(struct app_state *app)
 	u8 old_level;
 
 	if (!app->battery_service_available)
-		return false;
+		return APP_POWER_BATTERY_SAMPLE_UNAVAILABLE;
 
-	if (R_FAILED(PTMU_GetShellState(&shell_state)) || shell_state == 0)
-		return false;
+	if (R_FAILED(PTMU_GetShellState(&shell_state)))
+		return APP_POWER_BATTERY_SAMPLE_READ_FAILED;
+	if (shell_state == 0)
+		return APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED;
 
 	old_status_available = app->battery_status_available;
 	old_low = app->battery_low;
@@ -642,6 +644,9 @@ static bool app_sample_battery(struct app_state *app)
 	status_available =
 		R_SUCCEEDED(PTMU_GetBatteryLevel(&level)) &&
 		R_SUCCEEDED(PTMU_GetBatteryChargeState(&charge_state));
+	if (!status_available)
+		return APP_POWER_BATTERY_SAMPLE_READ_FAILED;
+
 	charging = status_available && charge_state != 0;
 	low = status_available && !charging && level <= APP_POWER_BATTERY_LOW_LEVEL;
 	changed =
@@ -655,13 +660,14 @@ static bool app_sample_battery(struct app_state *app)
 			)
 		);
 
-	app->battery_status_available = status_available;
+	app->battery_status_available = true;
 	app->battery_low = low;
 	app->battery_charging = charging;
-	if (status_available)
-		app->battery_level = level;
+	app->battery_level = level;
 
-	return changed;
+	return changed ?
+		APP_POWER_BATTERY_SAMPLE_CHANGED :
+		APP_POWER_BATTERY_SAMPLE_UNCHANGED;
 }
 
 static void app_refresh_selected_deck_summary(struct app_state *app)
@@ -2138,13 +2144,27 @@ int main(int argc, char *argv[])
 			&next_battery_poll_time,
 			now
 		);
-		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
+		enum app_power_battery_sample_result battery_sample_result =
+			APP_POWER_BATTERY_SAMPLE_UNCHANGED;
+		bool battery_changed = false;
+		if (battery_poll_due)
+		{
+			battery_sample_result = app_sample_battery(&app);
+			battery_changed =
+				app_power_battery_sample_changes_display(battery_sample_result);
+		}
 		bool day_check_due = day_check_is_due(&next_day_check_time, now);
 		bool day_changed = day_check_due ?
 			app_refresh_day_if_changed(&app, app_time_local_day_from_time(now)) :
 			false;
 		if (battery_poll_due)
-			app_power_schedule_next_battery_poll(&next_battery_poll_time, now);
+		{
+			app_power_schedule_next_battery_poll_after_sample(
+				&next_battery_poll_time,
+				now,
+				battery_sample_result
+			);
+		}
 		if (day_check_due)
 			schedule_next_day_check(&next_day_check_time, now);
 

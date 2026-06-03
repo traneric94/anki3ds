@@ -390,6 +390,11 @@ Keep the portable logic separate from the libctru shell:
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
 | converter | desktop import, stable IDs, deck folder writes | local 3DS progress mutation |
 
+Battery sampling is intentionally coarse. The main loop samples PTMU at startup
+and then at most every ten minutes while the shell is open. A closed-shell skip
+does not move the next real sample time forward, and transient PTMU read
+failures keep the last valid battery display instead of clearing it.
+
 Likely next boundaries:
 
 - `ui`: screen drawing and button labels, once the app has more than a few

@@ -8,6 +8,18 @@ void app_power_schedule_next_battery_poll(time_t *next_poll_time, time_t now)
 	*next_poll_time = now + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS;
 }
 
+void app_power_schedule_next_battery_poll_after_sample(
+	time_t *next_poll_time,
+	time_t now,
+	enum app_power_battery_sample_result result
+)
+{
+	if (result == APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED)
+		return;
+
+	app_power_schedule_next_battery_poll(next_poll_time, now);
+}
+
 bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now)
 {
 	if (next_poll_time == NULL || now == (time_t)-1)
@@ -19,4 +31,9 @@ bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now)
 	}
 
 	return now >= *next_poll_time;
+}
+
+bool app_power_battery_sample_changes_display(enum app_power_battery_sample_result result)
+{
+	return result == APP_POWER_BATTERY_SAMPLE_CHANGED;
 }
