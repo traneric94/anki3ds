@@ -8,10 +8,10 @@ letters do not match the 3DS button label.
 | --- | --- | --- |
 | `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
 | `B` | `S` | Choose Good after reveal, go back, cancel |
-| `X` | `Z` | Choose Hard after reveal, confirm reset progress |
+| `X` | `Z` | Choose Hard after reveal, confirm suspend/reset |
 | `Y` | `X` | Choose Again after reveal, open controls where available |
 | `L` | `Q` | Undo last rating or suspend action |
-| `R` | `W` | Suspend current card |
+| `R` | `W` | Open suspend confirmation |
 | D-pad Up | `T` | Move selection up |
 | D-pad Down | `G` | Move selection down |
 | D-pad Left | `F` | Decrease daily-limit preset |
@@ -27,8 +27,8 @@ Pressing multiple D-pad directions together does not move or change values.
 D-pad directions pressed together with command buttons are ignored. Face-button
 actions such as reveal, rating, save, reset, and exit remain single-press
 actions. After reveal, pressing more than one rating button at the same time
-does not save a rating. Save, reset, action-confirm, exit-open, and
-exit-confirm buttons are also ignored when pressed together with another
+does not save a rating. Save, suspend-confirm, reset, action-confirm, exit-open,
+and exit-confirm buttons are also ignored when pressed together with another
 button.
 
 The deck selector shows the current position as `selected/total` on both
@@ -40,7 +40,7 @@ selected/saved/safe items, red errors/reset actions, and yellow cautions.
 1. Press `A` to reveal the answer.
 2. Rate the card with `Y` Again, `X` Hard, `B` Good, or `A` Easy.
 3. Press `L` to undo the last rating or suspend action.
-4. Press `R` to suspend the current card.
+4. Press `R`, then `X`, to suspend the current card.
 5. Press `SELECT` to open deck actions.
 
 After a rating, the bottom status line shows whether the rating saved and which
@@ -68,6 +68,12 @@ selected by default so the repair flow is immediately reachable.
 - A successful reset reloads the deck and shows `Progress reset`.
 - If a deck opens with malformed saved state, use this reset flow before study;
   normal study controls such as undo remain disabled until reset succeeds.
+
+Suspending from review also uses a confirmation screen:
+
+- Press `R` on the current card to open suspend confirmation.
+- Press `X` to suspend the card.
+- Press `B` or `SELECT` to cancel.
 
 ## Daily Limits
 

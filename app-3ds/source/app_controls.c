@@ -123,6 +123,8 @@ bool app_controls_can_open(
 {
 	if (mode == APP_CONTROL_MODE_CONFIRM_EXIT || mode == APP_CONTROL_MODE_CONFIRM_RESET)
 		return false;
+	if (mode == APP_CONTROL_MODE_CONFIRM_SUSPEND)
+		return false;
 	if (mode == APP_CONTROL_MODE_CONTROLS)
 		return false;
 	if (mode == APP_CONTROL_MODE_REVIEW && review_answer_revealed)

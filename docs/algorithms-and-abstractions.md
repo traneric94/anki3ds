@@ -189,6 +189,7 @@ The app loop is a small mode machine:
   resetting progress.
 - `SETTINGS`: edit per-deck daily limits.
 - `CONTROLS`: show the in-app key map, then return to the previous mode.
+- `CONFIRM_SUSPEND`: require explicit `X` before hiding the current card.
 - `CONFIRM_RESET`: require explicit `X` before deleting saved review state.
 - `CONFIRM_EXIT`: require explicit `A` before leaving the app.
 
@@ -258,10 +259,13 @@ Review algorithm:
 9. Advance to the next due card, wrapping through the fixed card array.
 10. Enter summary when no cards remain due today.
 
-`R` suspends the current card without counting a review. Suspended cards are
-saved in `state.tsv`, treated as not due, skipped by queue advancement, and
-included in total card counts. The selector, actions screen, and summary screen
-show suspended-card counts so a hidden queue is visible before restoring cards.
+`R` opens a confirmation screen for suspending the current card; `X` on that
+screen performs the suspend. This keeps an accidental `R` press from hiding a
+card during normal rating flow. Suspending does not count as a review.
+Suspended cards are saved in `state.tsv`, treated as not due, skipped by queue
+advancement, and included in total card counts. The selector, actions screen,
+and summary screen show suspended-card counts so a hidden queue is visible
+before restoring cards.
 
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset

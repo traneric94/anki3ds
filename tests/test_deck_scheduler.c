@@ -798,6 +798,10 @@ static void test_app_controls_modal_controls(void)
 		"controls cannot open from exit confirmation"
 	);
 	check(
+		!app_controls_can_open(APP_CONTROL_MODE_CONFIRM_SUSPEND, false),
+		"controls cannot open from suspend confirmation"
+	);
+	check(
 		!app_controls_can_open(APP_CONTROL_MODE_CONFIRM_RESET, false),
 		"controls cannot open from reset confirmation"
 	);

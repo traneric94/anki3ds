@@ -166,9 +166,10 @@ edit those daily limits from the `SELECT` actions screen, reveals answers,
 records ratings, schedules cards with a
 day-level spaced repetition algorithm, saves local `state.tsv` progress beside
 that deck, and can undo the last rating or suspend action with `L`, suspend
-cards with `R`, see suspended-card counts in deck, action, and summary views,
-restore suspended cards from the actions screen, or reset saved progress after
-opening the reset action and confirming with `X`. Cards may optionally reference
+cards after opening suspend confirmation with `R` and confirming with `X`, see
+suspended-card counts in deck, action, and summary views, restore suspended
+cards from the actions screen, or reset saved progress after opening the reset
+action and confirming with `X`. Cards may optionally reference
 bounded `.a3i` images under the deck's `media/` folder. The top screen shows
 deck/card content with basic terminal-style color cues, while the bottom screen
 shows controls, review status, save feedback, and the last valid sampled

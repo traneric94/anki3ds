@@ -55,6 +55,7 @@ enum app_mode
 	APP_MODE_ACTIONS,
 	APP_MODE_SETTINGS,
 	APP_MODE_CONTROLS,
+	APP_MODE_CONFIRM_SUSPEND,
 	APP_MODE_CONFIRM_RESET,
 	APP_MODE_CONFIRM_EXIT,
 };
@@ -159,6 +160,8 @@ static enum app_control_mode app_control_mode_for_app_mode(enum app_mode mode)
 		return APP_CONTROL_MODE_SETTINGS;
 	case APP_MODE_CONTROLS:
 		return APP_CONTROL_MODE_CONTROLS;
+	case APP_MODE_CONFIRM_SUSPEND:
+		return APP_CONTROL_MODE_CONFIRM_SUSPEND;
 	case APP_MODE_CONFIRM_RESET:
 		return APP_CONTROL_MODE_CONFIRM_RESET;
 	case APP_MODE_CONFIRM_EXIT:
@@ -179,7 +182,11 @@ static bool app_mode_uses_navigation_repeat(enum app_mode mode)
 
 static bool app_mode_is_review_surface(enum app_mode mode)
 {
-	return mode == APP_MODE_REVIEW || mode == APP_MODE_SUMMARY;
+	return (
+		mode == APP_MODE_REVIEW ||
+		mode == APP_MODE_SUMMARY ||
+		mode == APP_MODE_CONFIRM_SUSPEND
+	);
 }
 
 static u32 keys_for_repeat_buttons(unsigned int buttons)
@@ -891,6 +898,12 @@ static void app_open_reset_confirmation(struct app_state *app)
 	app->mode = APP_MODE_CONFIRM_RESET;
 }
 
+static void app_open_suspend_confirmation(struct app_state *app)
+{
+	app_set_status(app, "Suspend requires X");
+	app->mode = APP_MODE_CONFIRM_SUSPEND;
+}
+
 static void app_open_exit_confirmation(struct app_state *app)
 {
 	app->exit_return_mode = app->mode;
@@ -1287,6 +1300,26 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
+static void draw_suspend_confirmation_screen(const struct app_state *app)
+{
+	const struct card *card = current_card(app);
+
+	app_console_clear();
+	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_YELLOW "Suspend current card?" APP_COLOR_RESET);
+	printf("\x1b[5;1HDeck: ");
+	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	if (card != NULL)
+	{
+		printf("\x1b[8;1HCard: ");
+		print_truncated(card->front, APP_LAYOUT_TEXT_WIDTH - 6);
+	}
+	printf("\x1b[11;1HThis hides the card from");
+	printf("\x1b[12;1Hreview until restored.");
+	printf("\x1b[15;1HUse " APP_COLOR_RED "X" APP_COLOR_RESET " to suspend.");
+	printf("\x1b[17;1HUse B or SELECT to cancel.");
+}
+
 static void draw_exit_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
@@ -1316,7 +1349,7 @@ static void draw_controls_screen(const struct app_state *app)
 		"       " APP_COLOR_BLUE "A Easy" APP_COLOR_RESET
 	);
 	printf("\x1b[13;1HL: undo last action");
-	printf("\x1b[15;1HR: suspend current card");
+	printf("\x1b[15;1HR: confirm suspend");
 	printf("\x1b[17;1HD-pad: move / daily limits");
 	printf("\x1b[19;1HSELECT: actions / rescan / cancel");
 	printf("\x1b[21;1HSTART: confirm exit");
@@ -1649,7 +1682,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				"       " APP_COLOR_BLUE "A: Easy" APP_COLOR_RESET
 			);
 			printf("\x1b[10;1HL: undo last action");
-			printf("\x1b[12;1HR: suspend card");
+			printf("\x1b[12;1HR: confirm suspend");
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
 		}
@@ -1658,7 +1691,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[6;1HA: show answer");
 			printf("\x1b[8;1HB: deck list");
 			printf("\x1b[10;1HL: undo last action");
-			printf("\x1b[12;1HR: suspend card");
+			printf("\x1b[12;1HR: confirm suspend");
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
 			printf("\x1b[20;1HY: controls");
@@ -1733,6 +1766,12 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1HB, Y, or SELECT: back");
 		printf("\x1b[5;1HSTART: confirm exit");
 		break;
+	case APP_MODE_CONFIRM_SUSPEND:
+		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm suspend" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_RED "X: suspend card" APP_COLOR_RESET);
+		printf("\x1b[5;1HB or SELECT: cancel");
+		printf("\x1b[7;1HSTART: confirm exit");
+		break;
 	case APP_MODE_CONFIRM_RESET:
 		printf("\x1b[1;1H" APP_COLOR_RED "Confirm reset" APP_COLOR_RESET);
 		printf("\x1b[3;1H" APP_COLOR_RED "X: reset progress" APP_COLOR_RESET);
@@ -1776,6 +1815,9 @@ static void draw_app(const struct app_state *app)
 		break;
 	case APP_MODE_CONTROLS:
 		draw_controls_screen(app);
+		break;
+	case APP_MODE_CONFIRM_SUSPEND:
+		draw_suspend_confirmation_screen(app);
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		draw_reset_confirmation_screen(app);
@@ -2275,6 +2317,27 @@ static bool app_handle_reset_confirmation_input(
 	return false;
 }
 
+static bool app_handle_suspend_confirmation_input(
+	struct app_state *app,
+	unsigned int buttons_down
+)
+{
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_X))
+		return suspend_current_card(app);
+
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
+	{
+		app->mode = APP_MODE_REVIEW;
+		app_set_status(app, "Suspend canceled");
+		return true;
+	}
+
+	return false;
+}
+
 static bool app_handle_exit_confirmation_input(
 	struct app_state *app,
 	unsigned int buttons_down
@@ -2386,6 +2449,8 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return app_handle_actions_input(app, buttons);
 	if (app->mode == APP_MODE_SETTINGS)
 		return app_handle_settings_input(app, buttons);
+	if (app->mode == APP_MODE_CONFIRM_SUSPEND)
+		return app_handle_suspend_confirmation_input(app, buttons);
 	if (app->mode == APP_MODE_CONFIRM_RESET)
 		return app_handle_reset_confirmation_input(app, buttons);
 
@@ -2435,7 +2500,10 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return false;
 
 	if (app_command_pressed(buttons, APP_CONTROL_BUTTON_R))
-		return suspend_current_card(app);
+	{
+		app_open_suspend_confirmation(app);
+		return true;
+	}
 
 	if (!app->revealed)
 	{
