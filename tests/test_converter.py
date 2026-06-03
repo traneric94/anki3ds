@@ -16,6 +16,7 @@ from converter.anki3ds_convert import (
     convert_lines,
     deck_id_is_valid,
     escape_tsv_field,
+    load_ppm_rgb,
     main,
     normalize_text,
     resize_rgb_nearest,
@@ -391,6 +392,75 @@ class ConverterTests(unittest.TestCase):
             media = (output / "media" / "front.a3i").read_bytes()
             self.assertEqual(media[:8], b"A3I1\x02\x00\x01\x00")
             self.assertEqual(media[8:12], b"\x00\xf8\xe0\x07")
+
+    def test_load_ppm_rgb_accepts_crlf_header(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "front.ppm"
+            pixels = bytes([255, 0, 0, 0, 255, 0])
+            source.write_bytes(b"P6\r\n2 1\r\n255\r\n" + pixels)
+
+            width, height, loaded_pixels = load_ppm_rgb(source)
+
+            self.assertEqual(width, 2)
+            self.assertEqual(height, 1)
+            self.assertEqual(loaded_pixels, pixels)
+
+    def test_write_deck_media_failure_does_not_write_deck_files(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tmissing.ppm\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+
+            with self.assertRaises(FileNotFoundError):
+                write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+            self.assertFalse((output / "deck.json").exists())
+            self.assertFalse((output / "cards.tsv").exists())
+            self.assertFalse((output / "settings.tsv").exists())
+
+    def test_write_deck_media_failure_preserves_existing_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.ppm\tmissing.ppm"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_dir = output / "media"
+            old_media = b"A3I1\x01\x00\x01\x00\x00\xf8"
+            media_root.mkdir()
+            media_dir.mkdir(parents=True)
+            (media_root / "front.ppm").write_bytes(
+                b"P6\n1 1\n255\n" + bytes([0, 0, 255])
+            )
+            (media_dir / "front.a3i").write_bytes(old_media)
+            (output / "cards.tsv").write_text("old cards\n", encoding="utf-8")
+
+            with self.assertRaises(FileNotFoundError):
+                write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+            self.assertEqual((media_dir / "front.a3i").read_bytes(), old_media)
+            self.assertEqual(
+                (output / "cards.tsv").read_text(encoding="utf-8"),
+                "old cards\n",
+            )
+            self.assertFalse((output / ".anki3ds-media.tmp").exists())
 
     def test_write_deck_copies_existing_a3i_media(self):
         cards = convert_lines(

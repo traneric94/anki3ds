@@ -7,6 +7,7 @@ import argparse
 import hashlib
 from html.parser import HTMLParser
 import json
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -393,6 +394,12 @@ def load_ppm_rgb(path: Path) -> tuple[int, int, bytes]:
 
     if offset >= len(content) or not chr(content[offset]).isspace():
         raise ValueError(f"{path}: bad PPM header separator")
+    if (
+        content[offset] == ord("\r")
+        and offset + 1 < len(content)
+        and content[offset + 1] == ord("\n")
+    ):
+        offset += 1
     offset += 1
 
     expected_size = width * height * 3
@@ -515,6 +522,38 @@ def convert_media_file(media_root: Path, source_name: str, output_media_dir: Pat
     return output_name
 
 
+def convert_media_files(
+    media_root: Path,
+    media_outputs: dict[str, str],
+    output_media_dir: Path,
+) -> dict[str, str]:
+    media_names: dict[str, str] = {}
+    temp_media_dir = output_media_dir.parent / ".anki3ds-media.tmp"
+
+    if not media_outputs:
+        return media_names
+
+    if temp_media_dir.exists():
+        shutil.rmtree(temp_media_dir)
+
+    try:
+        for source_name in media_outputs.values():
+            media_names[source_name] = convert_media_file(
+                media_root,
+                source_name,
+                temp_media_dir,
+            )
+
+        output_media_dir.mkdir(parents=True, exist_ok=True)
+        for output_name in media_names.values():
+            (temp_media_dir / output_name).replace(output_media_dir / output_name)
+    finally:
+        if temp_media_dir.exists():
+            shutil.rmtree(temp_media_dir)
+
+    return media_names
+
+
 def validate_passthrough_media(cards: list[ConvertedCard]) -> None:
     for card_number, card in enumerate(cards, start=1):
         for label, media_name in (
@@ -573,6 +612,11 @@ def write_deck(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if media_root is not None:
+        media_names.update(
+            convert_media_files(media_root, media_outputs, output_dir / "media")
+        )
+
     deck_json = {
         "format_version": 1,
         "deck_id": deck_id,
@@ -585,14 +629,6 @@ def write_deck(
         json.dumps(deck_json, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-
-    if media_root is not None:
-        for source_name in media_outputs.values():
-            media_names[source_name] = convert_media_file(
-                media_root,
-                source_name,
-                output_dir / "media",
-            )
 
     with (output_dir / "cards.tsv").open("w", encoding="utf-8", newline="\n") as file:
         for card in cards:
