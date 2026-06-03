@@ -140,6 +140,9 @@ static bool media_name_character_is_valid(char value)
 
 static bool card_id_is_valid(const char *card_id)
 {
+	if (card_id[0] == '#')
+		return false;
+
 	for (size_t index = 0; card_id[index] != '\0'; index++)
 	{
 		unsigned char value = (unsigned char)card_id[index];
