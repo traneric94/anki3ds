@@ -442,10 +442,14 @@ Algorithm:
 11. For `--split-large-decks`, remove obsolete converter-generated sibling
     chunk folders after the current single-folder or split-folder output has
     been written.
+12. When a converter-generated single-folder deck becomes split output, copy
+    matching `state.tsv` rows and daily-limit settings into new chunk folders
+    before deleting the obsolete single folder.
 
-The converter deliberately does not open or rewrite existing `state.tsv`,
-`review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,
-and deck-specific daily limits survive re-imports into the same deck folder.
+During same-folder re-import, the converter deliberately does not open or
+rewrite existing `state.tsv`, `review-log.tsv`, or `settings.tsv`, so review
+progress, diagnostic history, and deck-specific daily limits survive updates in
+that deck folder.
 The old `media/` subdirectory and obsolete split chunks are different: once the
 current import can no longer use them, those stale outputs are removed so they
 do not remain part of the 3DS text-card workflow. To keep progress attached to

@@ -236,6 +236,9 @@ On re-import with `--split-large-decks`, the converter removes stale
 converter-generated split siblings for that deck after the current output is
 written, so old chunks do not remain visible on the 3DS after a deck shrinks or
 changes between single-folder and split-folder output.
+When a converter-generated single-folder deck grows into split chunks, matching
+saved state rows and daily-limit settings are copied into the new chunk folders
+before the obsolete single folder is removed.
 
 ## Current Status
 

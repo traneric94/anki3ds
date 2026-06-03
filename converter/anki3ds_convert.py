@@ -23,6 +23,10 @@ DECK_MAX_LINE_LENGTH = 1024
 DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
 TEXT_ONLY_OBSOLETE_DIRECTORIES = ("media",)
+STATE_FILE_HEADER = "#anki3ds-state-v1"
+STATE_FILE_FOOTER = "#anki3ds-state-complete"
+REVIEW_STATE_FILES = ("state.tsv", "state.tsv.tmp", "state.tsv.bak")
+SETTINGS_FILES = ("settings.tsv", "settings.tsv.tmp", "settings.tsv.bak")
 
 BLOCK_TAGS = {
     "address",
@@ -495,6 +499,130 @@ def converter_deck_dir_is_removable(deck_dir: Path) -> bool:
     )
 
 
+def state_row_card_id(row: str) -> str:
+    return row.split("\t", 1)[0]
+
+
+def state_metadata_row_count(line: str, marker: str) -> int | None:
+    fields = line.split("\t")
+
+    if len(fields) != 2 or fields[0] != marker or not fields[1].isdigit():
+        return None
+
+    row_count = int(fields[1])
+    if row_count > DECK_MAX_CARDS:
+        return None
+
+    return row_count
+
+
+def filter_state_rows_for_cards(
+    state_text: str,
+    target_card_ids: set[str],
+) -> str | None:
+    lines = state_text.splitlines()
+    framed = (
+        len(lines) >= 2
+        and lines[0].startswith(f"{STATE_FILE_HEADER}\t")
+        and lines[-1].startswith(f"{STATE_FILE_FOOTER}\t")
+    )
+
+    if framed:
+        rows = lines[1:-1]
+        header_row_count = state_metadata_row_count(lines[0], STATE_FILE_HEADER)
+        footer_row_count = state_metadata_row_count(lines[-1], STATE_FILE_FOOTER)
+        if (
+            header_row_count is None
+            or footer_row_count is None
+            or header_row_count != len(rows)
+            or footer_row_count != len(rows)
+        ):
+            return None
+    else:
+        rows = [line for line in lines if line and not line.startswith("#")]
+
+    matching_rows = [
+        row for row in rows if state_row_card_id(row) in target_card_ids
+    ]
+    if not matching_rows:
+        return None
+
+    if framed:
+        row_count = len(matching_rows)
+        return (
+            "\n".join(
+                [
+                    f"{STATE_FILE_HEADER}\t{row_count}",
+                    *matching_rows,
+                    f"{STATE_FILE_FOOTER}\t{row_count}",
+                ]
+            )
+            + "\n"
+        )
+
+    return "\n".join(matching_rows) + "\n"
+
+
+def migrate_review_state_file(
+    source_path: Path,
+    target_path: Path,
+    target_card_ids: set[str],
+) -> None:
+    if target_path.exists() or not source_path.is_file():
+        return
+
+    try:
+        migrated_state = filter_state_rows_for_cards(
+            source_path.read_text(encoding="utf-8"),
+            target_card_ids,
+        )
+    except (OSError, UnicodeDecodeError):
+        return
+
+    if migrated_state is not None:
+        target_path.write_text(migrated_state, encoding="utf-8")
+
+
+def copy_settings_file(
+    source_path: Path,
+    target_path: Path,
+    replace_existing: bool,
+) -> None:
+    if not source_path.is_file():
+        return
+    if target_path.exists() and not replace_existing:
+        return
+
+    shutil.copy2(source_path, target_path)
+
+
+def migrate_single_deck_progress_to_split_outputs(
+    source_dir: Path,
+    chunk_cards: dict[Path, list[ConvertedCard]],
+    existing_outputs: set[Path],
+) -> None:
+    if not converter_deck_dir_is_removable(source_dir):
+        return
+
+    for chunk_output, cards in chunk_cards.items():
+        target_card_ids = {card.card_id for card in cards}
+        replace_default_settings = chunk_output not in existing_outputs
+
+        for state_filename in REVIEW_STATE_FILES:
+            migrate_review_state_file(
+                source_dir / state_filename,
+                chunk_output / state_filename,
+                target_card_ids,
+            )
+
+        for settings_filename in SETTINGS_FILES:
+            copy_settings_file(
+                source_dir / settings_filename,
+                chunk_output / settings_filename,
+                replace_default_settings,
+            )
+
+
 def remove_obsolete_split_outputs(
     output_dir: Path,
     deck_id: str,
@@ -544,6 +672,8 @@ def write_split_decks(
             f"split output would create more than {DECK_INDEX_MAX_DECKS} deck folders"
         )
 
+    chunk_cards_by_path: dict[Path, list[ConvertedCard]] = {}
+    existing_outputs: set[Path] = set()
     written_paths: list[Path] = []
 
     for chunk_index in range(chunk_count):
@@ -555,6 +685,8 @@ def write_split_decks(
             (chunk_index + 1) * DECK_MAX_CARDS
         ]
 
+        if chunk_output.exists():
+            existing_outputs.add(chunk_output)
         write_deck(
             chunk_output,
             chunk_id,
@@ -562,8 +694,14 @@ def write_split_decks(
             chunk_cards,
             media_root,
         )
+        chunk_cards_by_path[chunk_output] = chunk_cards
         written_paths.append(chunk_output)
 
+    migrate_single_deck_progress_to_split_outputs(
+        output_dir,
+        chunk_cards_by_path,
+        existing_outputs,
+    )
     remove_obsolete_split_outputs(output_dir, deck_id, set(written_paths))
 
     return written_paths
