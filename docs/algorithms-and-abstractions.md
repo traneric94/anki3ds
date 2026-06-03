@@ -195,9 +195,9 @@ minutes. Periodic checks first ask PTMU whether the shell is open; battery level
 and charging state are read only when the shell reports open. The app does not
 call the battery service on every button press. If the system clock is briefly
 unavailable, the periodic poll timer arms itself when a valid clock reading
-appears. When the system reports level `1/5` or lower and it is not charging,
-the bottom screen shows a low-battery warning. Battery status changes redraw
-the screen only when the visible warning state changes.
+appears. The bottom screen shows the last valid open-shell battery sample as a
+compact `level/5` line, including charging and low-battery states. Battery
+status changes redraw the screen only when that visible status changes.
 
 Review algorithm:
 

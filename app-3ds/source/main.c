@@ -91,6 +91,7 @@ struct app_state
 	bool battery_service_available;
 	bool battery_status_available;
 	bool battery_low;
+	bool battery_charging;
 	u8 battery_level;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
@@ -611,33 +612,40 @@ static bool app_sample_battery(struct app_state *app)
 	bool charging;
 	bool low;
 	bool changed;
-	bool old_visible;
-	bool new_visible;
+	bool old_status_available;
+	bool old_low;
+	bool old_charging;
+	u8 old_level;
 
 	if (!app->battery_service_available)
 		return false;
 
 	if (R_FAILED(PTMU_GetShellState(&shell_state)) || shell_state == 0)
-	{
-		old_visible = app->battery_status_available && app->battery_low;
-		app->battery_status_available = false;
-		app->battery_low = false;
-		return old_visible;
-	}
+		return false;
 
+	old_status_available = app->battery_status_available;
+	old_low = app->battery_low;
+	old_charging = app->battery_charging;
+	old_level = app->battery_level;
 	status_available =
 		R_SUCCEEDED(PTMU_GetBatteryLevel(&level)) &&
 		R_SUCCEEDED(PTMU_GetBatteryChargeState(&charge_state));
 	charging = status_available && charge_state != 0;
 	low = status_available && !charging && level <= BATTERY_LOW_LEVEL;
-	old_visible = app->battery_status_available && app->battery_low;
-	new_visible = status_available && low;
 	changed =
-		old_visible != new_visible ||
-		(new_visible && app->battery_level != level);
+		old_status_available != status_available ||
+		(
+			status_available &&
+			(
+				old_level != level ||
+				old_charging != charging ||
+				old_low != low
+			)
+		);
 
 	app->battery_status_available = status_available;
 	app->battery_low = low;
+	app->battery_charging = charging;
 	if (status_available)
 		app->battery_level = level;
 
@@ -1113,15 +1121,32 @@ static void draw_controls_screen(const struct app_state *app)
 	printf("\x1b[24;1HB, Y, or SELECT returns.");
 }
 
-static void draw_battery_warning(const struct app_state *app)
+static void draw_battery_status(const struct app_state *app)
 {
-	if (!app->battery_status_available || !app->battery_low)
+	if (!app->battery_status_available)
 		return;
 
-	printf(
-		"\x1b[29;1HBattery low: %u/5. Charge soon.",
-		(unsigned int)app->battery_level
-	);
+	if (app->battery_charging)
+	{
+		printf(
+			"\x1b[29;1HBattery: %u/5 charging",
+			(unsigned int)app->battery_level
+		);
+	}
+	else if (app->battery_low)
+	{
+		printf(
+			"\x1b[29;1HBattery: %u/5 low. Charge soon.",
+			(unsigned int)app->battery_level
+		);
+	}
+	else
+	{
+		printf(
+			"\x1b[29;1HBattery: %u/5",
+			(unsigned int)app->battery_level
+		);
+	}
 }
 
 static void draw_due_legend(int row, bool include_suspended)
@@ -1190,7 +1215,7 @@ static void draw_scanning_progress_screen(
 	{
 		printf("\x1b[3;1HReading SD card");
 	}
-	draw_battery_warning(app);
+	draw_battery_status(app);
 	select_top_screen();
 }
 
@@ -1383,7 +1408,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	}
 
 	draw_status_message(app);
-	draw_battery_warning(app);
+	draw_battery_status(app);
 }
 
 static void draw_app(const struct app_state *app)
