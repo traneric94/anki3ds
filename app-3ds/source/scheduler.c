@@ -141,6 +141,7 @@ static bool scheduler_card_is_unstarted_review(
 	card = &session->cards[index];
 	return (
 		card->review_count > 0 &&
+		card->interval_days > 0 &&
 		!scheduler_card_started_new_today(session, card) &&
 		!scheduler_card_started_review_today(session, card)
 	);
@@ -382,6 +383,8 @@ bool scheduler_card_is_due(const struct scheduler_session *session, size_t index
 	if (scheduler_card_started_new_today(session, &session->cards[index]))
 		return true;
 	if (scheduler_card_started_review_today(session, &session->cards[index]))
+		return true;
+	if (session->cards[index].interval_days == 0)
 		return true;
 
 	remaining = scheduler_remaining_limit(

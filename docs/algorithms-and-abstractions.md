@@ -296,9 +296,10 @@ overwrite the review-state status line.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards.
-Review limits apply to unstarted review cards. A card already started today is
-allowed to remain due, which lets same-day Again loops finish instead of hiding
-half-reviewed cards behind a limit.
+Review limits apply to unstarted normal review cards. Zero-day
+learning/relearning cards remain due even when the review limit is full, and a
+card already started today is allowed to remain due. This lets same-day Again
+loops finish instead of hiding half-reviewed cards behind a limit.
 
 Changing daily limits clears the one-step undo slot. The undo snapshot contains
 queue counters from the previous limit configuration, so keeping it after a
@@ -332,10 +333,12 @@ clamped between `1300` and `3500`, and intervals are clamped to 100 years.
 
 Due selection prefers cards that are already in progress before introducing new
 cards. The priority order is learning/relearning cards, then review cards by
-oldest due day, then new cards. During an active session, advancement starts
-after the current card so a failed card is not immediately reselected while
-other due cards remain; among those candidates, rotation is the tie-breaker when
-priority and due day are equal.
+oldest due day, then new cards. Learning/relearning cards bypass the unstarted
+review limit while they are due, but once reviewed they count toward today's
+review limit like other review cards. During an active session, advancement
+starts after the current card so a failed card is not immediately reselected
+while other due cards remain; among those candidates, rotation is the
+tie-breaker when priority and due day are equal.
 
 ## Converter Flow
 

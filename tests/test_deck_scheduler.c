@@ -1099,6 +1099,56 @@ static void test_scheduler_prioritizes_learning_cards(void)
 	check(scheduler_current_index(&session) == 2, "learning card is selected first");
 }
 
+static void test_scheduler_learning_cards_bypass_review_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"limited normal review restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			1,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 1
+		),
+		"limited relearning card restores"
+	);
+	scheduler_set_daily_limits(&session, 0, 1);
+
+	check(scheduler_card_is_due(&session, 0), "review limit exposes normal review");
+	check(scheduler_card_is_due(&session, 1), "review limit keeps relearning card due");
+	check(session.due_count == 2, "review limit includes relearning card");
+	check(scheduler_current_index(&session) == 1, "relearning card wins priority");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.review_count_today == 1, "relearning card counts after review");
+	check(!scheduler_card_is_due(&session, 0), "review limit hides normal review after relearning");
+	check(session.due_count == 0, "review limit is exhausted after relearning review");
+}
+
 static void test_scheduler_prioritizes_overdue_reviews_before_new_cards(void)
 {
 	struct scheduler_session session;
@@ -2739,6 +2789,7 @@ int main(void)
 	test_scheduler_limits_review_cards();
 	test_scheduler_day_change_resets_review_limit();
 	test_scheduler_prioritizes_learning_cards();
+	test_scheduler_learning_cards_bypass_review_limit();
 	test_scheduler_prioritizes_overdue_reviews_before_new_cards();
 	test_scheduler_restored_started_new_card_stays_due_after_limit();
 	test_scheduler_restored_started_review_card_stays_due_after_limit();
