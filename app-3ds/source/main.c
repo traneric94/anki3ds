@@ -284,57 +284,6 @@ static unsigned int review_count_total(const struct scheduler_session *session)
 	return total;
 }
 
-static size_t scheduler_new_due_count(const struct scheduler_session *session)
-{
-	size_t count = 0;
-
-	for (size_t index = 0; index < session->card_count; index++)
-	{
-		if (scheduler_card_is_due(session, index) && session->cards[index].review_count == 0)
-			count++;
-	}
-
-	return count;
-}
-
-static size_t scheduler_learning_due_count(const struct scheduler_session *session)
-{
-	size_t count = 0;
-
-	for (size_t index = 0; index < session->card_count; index++)
-	{
-		if (
-			scheduler_card_is_due(session, index) &&
-			session->cards[index].review_count > 0 &&
-			session->cards[index].interval_days == 0
-		)
-		{
-			count++;
-		}
-	}
-
-	return count;
-}
-
-static size_t scheduler_review_due_count(const struct scheduler_session *session)
-{
-	size_t count = 0;
-
-	for (size_t index = 0; index < session->card_count; index++)
-	{
-		if (
-			scheduler_card_is_due(session, index) &&
-			session->cards[index].review_count > 0 &&
-			session->cards[index].interval_days > 0
-		)
-		{
-			count++;
-		}
-	}
-
-	return count;
-}
-
 static void format_daily_limit(char *destination, size_t destination_size, unsigned int limit)
 {
 	if (limit == 0)

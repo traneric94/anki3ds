@@ -441,6 +441,62 @@ bool scheduler_card_is_due(const struct scheduler_session *session, size_t index
 	) < remaining;
 }
 
+size_t scheduler_new_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_due(session, index) &&
+			session->cards[index].review_count == 0
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+size_t scheduler_learning_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_due(session, index) &&
+			session->cards[index].review_count > 0 &&
+			session->cards[index].interval_days == 0
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+size_t scheduler_review_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_due(session, index) &&
+			session->cards[index].review_count > 0 &&
+			session->cards[index].interval_days > 0
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
 bool scheduler_restore_card(
 	struct scheduler_session *session,
 	size_t index,

@@ -2011,6 +2011,68 @@ static void test_scheduler_learning_cards_bypass_review_limit(void)
 	check(session.due_count == 0, "review limit is exhausted after relearning review");
 }
 
+static void test_scheduler_counts_due_card_types(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 5, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_AGAIN,
+			TEST_TODAY,
+			0,
+			2300,
+			1,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 1
+		),
+		"due count learning card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			2,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"due count review card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			3,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY + 5,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"due count future review card restores"
+	);
+	scheduler_set_daily_limits(&session, 1, 0);
+
+	check(session.due_count == 3, "due category total honors limits");
+	check(scheduler_new_due_count(&session) == 1, "due category counts limited new card");
+	check(scheduler_learning_due_count(&session) == 1, "due category counts learning card");
+	check(scheduler_review_due_count(&session) == 1, "due category counts review card");
+	check(!scheduler_card_is_due(&session, 4), "second unstarted new card is hidden");
+}
+
 static void test_scheduler_prioritizes_overdue_reviews_before_new_cards(void)
 {
 	struct scheduler_session session;
@@ -4559,6 +4621,7 @@ int main(void)
 	test_scheduler_day_change_resets_review_limit();
 	test_scheduler_prioritizes_learning_cards();
 	test_scheduler_learning_cards_bypass_review_limit();
+	test_scheduler_counts_due_card_types();
 	test_scheduler_prioritizes_overdue_reviews_before_new_cards();
 	test_scheduler_restored_started_new_card_stays_due_after_limit();
 	test_scheduler_restored_started_review_card_stays_due_after_limit();

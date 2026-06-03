@@ -79,6 +79,9 @@ bool scheduler_is_complete(const struct scheduler_session *session);
 size_t scheduler_current_index(const struct scheduler_session *session);
 size_t scheduler_suspended_count(const struct scheduler_session *session);
 size_t scheduler_reviewed_today_count(const struct scheduler_session *session);
+size_t scheduler_new_due_count(const struct scheduler_session *session);
+size_t scheduler_learning_due_count(const struct scheduler_session *session);
+size_t scheduler_review_due_count(const struct scheduler_session *session);
 bool scheduler_card_is_due(const struct scheduler_session *session, size_t index);
 bool scheduler_restore_card(
 	struct scheduler_session *session,

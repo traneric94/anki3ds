@@ -67,14 +67,14 @@ reject invalid ids, scan a temporary root, and verify only folders containing
 After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, total due count, new/learning/review due
-counts, and suspended-card count for the selector. This keeps the deck list
-useful for daily study while preserving the fixed `DECK_INDEX_MAX_DECKS` and
-`DECK_MAX_CARDS` limits. The summary loader allocates its temporary deck and
-scheduler on the heap so larger supported decks do not consume a large 3DS stack
-frame during deck scanning. If the deck loads but every available state file is
-malformed, the selector keeps the card count but suppresses due and suspended
-counts and shows a state error instead of presenting bad progress as a fresh
-review queue.
+counts from scheduler policy, and suspended-card count for the selector. This
+keeps the deck list useful for daily study while preserving the fixed
+`DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits. The summary loader allocates
+its temporary deck and scheduler on the heap so larger supported decks do not
+consume a large 3DS stack frame during deck scanning. If the deck loads but
+every available state file is malformed, the selector keeps the card count but
+suppresses due and suspended counts and shows a state error instead of
+presenting bad progress as a fresh review queue.
 
 ## Deck Loading
 
@@ -460,7 +460,7 @@ Keep the portable logic separate from the libctru shell:
 | --- | --- | --- |
 | `deck_index` | deck folder scan, deck id validation, deck-local path construction | card parsing, review state parsing, rendering |
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
-| `scheduler` | per-card session state, rating transitions, current-card selection | file paths, card text parsing, rendering |
+| `scheduler` | per-card session state, rating transitions, due counts, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
 | `review_log` | append-only study transition rows | scheduler decisions, rollback policy, rendering |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
