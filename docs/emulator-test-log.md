@@ -64,3 +64,19 @@ Notes:
 - The fixed build launches in Azahar, but button-level acceptance still needs a
   manual emulator or hardware pass because this session cannot automate Azahar
   keypresses.
+
+## 2026-06-03 - Current Build Launch Check
+
+Build: `3731716`
+Command: `make run-emulator`
+Steps:
+- Built or reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Button-level review, actions, reset, and controls acceptance was not run in
+  this checkpoint.
