@@ -16,7 +16,7 @@ letters do not match the 3DS button label.
 | D-pad or Circle Pad Down | `G` | Move selection down, scroll review text down |
 | D-pad or Circle Pad Left | `F` | Page deck list up, decrease daily-limit preset |
 | D-pad or Circle Pad Right | `H` | Page deck list down, increase daily-limit preset |
-| `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
+| `SELECT` | `N` | Rescan decks, open actions, cancel actions, return from settings |
 | `START` | `M` | Open exit confirmation |
 
 Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding

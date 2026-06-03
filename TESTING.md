@@ -294,7 +294,9 @@ Save files should be tested with:
 
 ## M7 Daily-Use Acceptance Checklist
 
-Run this checklist after the relevant automated gate passes:
+During the current code-complete pass, run this checklist as the manual feedback
+step after fresh sample prep. Before a tagged checkpoint or release artifact,
+also run the relevant automated gate:
 
 - CI or toolchain-limited machine: `make verify-ci`
 - local checkpoint machine: `make verify-local`
