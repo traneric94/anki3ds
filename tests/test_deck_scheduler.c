@@ -1355,6 +1355,54 @@ static void test_app_controls_navigation_repeat(void)
 	}
 }
 
+static void test_app_controls_navigation_repeat_modes(void)
+{
+	check(
+		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_DECK_SELECT),
+		"deck select supports navigation repeat"
+	);
+	check(
+		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_REVIEW),
+		"review supports navigation repeat"
+	);
+	check(
+		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_ACTIONS),
+		"actions supports navigation repeat"
+	);
+	check(
+		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_SETTINGS),
+		"settings supports navigation repeat"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_LOAD_ERROR),
+		"load error does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_SUMMARY),
+		"summary does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_CONTROLS),
+		"controls screen does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_CONFIRM_RESTORE),
+		"restore confirmation does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_CONFIRM_SUSPEND),
+		"suspend confirmation does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_CONFIRM_RESET),
+		"reset confirmation does not repeat navigation"
+	);
+	check(
+		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_CONFIRM_EXIT),
+		"exit confirmation does not repeat navigation"
+	);
+}
+
 static void test_app_controls_input_activity(void)
 {
 	check(
@@ -4465,6 +4513,7 @@ int main(void)
 	test_app_controls_modal_controls();
 	test_app_controls_classifies_app_actions();
 	test_app_controls_navigation_repeat();
+	test_app_controls_navigation_repeat_modes();
 	test_app_controls_input_activity();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();

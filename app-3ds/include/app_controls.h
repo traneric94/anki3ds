@@ -83,6 +83,7 @@ bool app_controls_input_is_active(
 	unsigned int buttons_held,
 	unsigned int repeat_buttons
 );
+bool app_controls_mode_uses_navigation_repeat(enum app_control_mode mode);
 bool app_controls_repeatable_navigation_held(unsigned int buttons_held);
 bool app_controls_can_open(
 	enum app_control_mode mode,

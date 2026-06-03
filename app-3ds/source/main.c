@@ -171,16 +171,6 @@ static enum app_control_mode app_control_mode_for_app_mode(enum app_mode mode)
 	return APP_CONTROL_MODE_DECK_SELECT;
 }
 
-static bool app_mode_uses_navigation_repeat(enum app_mode mode)
-{
-	return (
-		mode == APP_MODE_DECK_SELECT ||
-		mode == APP_MODE_REVIEW ||
-		mode == APP_MODE_ACTIONS ||
-		mode == APP_MODE_SETTINGS
-	);
-}
-
 static bool app_mode_is_review_surface(enum app_mode mode)
 {
 	return (
@@ -616,8 +606,14 @@ static bool app_mode_uses_held_navigation_wait(
 	unsigned int buttons_held
 )
 {
-	if (!app_mode_uses_navigation_repeat(mode))
+	if (
+		!app_controls_mode_uses_navigation_repeat(
+			app_control_mode_for_app_mode(mode)
+		)
+	)
+	{
 		return false;
+	}
 
 	return app_controls_repeatable_navigation_held(buttons_held);
 }
@@ -2767,7 +2763,11 @@ int main(int argc, char *argv[])
 		unsigned int buttons_held = app_controls_buttons_from_3ds_keys(keys_held);
 		unsigned int buttons_active;
 		unsigned int repeat_buttons = 0;
-		if (app_mode_uses_navigation_repeat(app.mode))
+		if (
+			app_controls_mode_uses_navigation_repeat(
+				app_control_mode_for_app_mode(app.mode)
+			)
+		)
 		{
 			repeat_buttons = app_controls_repeat_buttons(
 				&navigation_repeat,

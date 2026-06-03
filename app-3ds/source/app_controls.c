@@ -116,6 +116,16 @@ bool app_controls_input_is_active(
 	) != 0;
 }
 
+bool app_controls_mode_uses_navigation_repeat(enum app_control_mode mode)
+{
+	return (
+		mode == APP_CONTROL_MODE_DECK_SELECT ||
+		mode == APP_CONTROL_MODE_REVIEW ||
+		mode == APP_CONTROL_MODE_ACTIONS ||
+		mode == APP_CONTROL_MODE_SETTINGS
+	);
+}
+
 bool app_controls_repeatable_navigation_held(unsigned int buttons_held)
 {
 	unsigned int held_input = buttons_held & APP_CONTROL_BUTTON_INPUT_MASK;
