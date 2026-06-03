@@ -144,3 +144,19 @@ Result: pass for launch command only
 Notes:
 - D-pad repeat now starts after about 300 ms and repeats about every 80 ms.
 - Quick-tap selector behavior still needs a manual emulator or hardware pass.
+
+## 2026-06-03 - Reviewed-Today Summary Launch Check
+
+Build: `5539fd0`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Summary labels and reviewed-today counts are covered by host-side scheduler
+  tests, but rendered spacing still needs a visual emulator or hardware pass.
