@@ -1269,7 +1269,7 @@ static void draw_controls_screen(const struct app_state *app)
 		if (app->deck_index.count > 0)
 		{
 			printf("\x1b[5;1HA: open selected deck");
-			printf("\x1b[7;1HD-pad/Circle: move/page");
+			printf("\x1b[7;1HD-pad U/D move, L/R page");
 			printf("\x1b[9;1HHold direction to repeat");
 			printf("\x1b[11;1HSELECT: rescan decks");
 			printf("\x1b[13;1HY: controls");
@@ -1599,7 +1599,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				&app->deck_summaries[app->selected_deck_index];
 
 			printf("\x1b[3;1HA: open selected deck");
-			printf("\x1b[5;1HD-pad/Circle: move/page");
+			printf("\x1b[5;1HD-pad U/D move, L/R page");
 			printf("\x1b[7;1HHold direction to repeat");
 			printf("\x1b[9;1HSELECT: rescan decks");
 			printf("\x1b[11;1HSTART: confirm exit");
@@ -2551,7 +2551,8 @@ static bool app_handle_settings_input(
 		)
 	)
 	{
-		app->mode = app->action_return_mode;
+		app->mode = APP_MODE_ACTIONS;
+		app_set_status(app, "Limits canceled");
 		return true;
 	}
 

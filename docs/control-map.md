@@ -14,17 +14,18 @@ letters do not match the 3DS button label.
 | `R` | `W` | Open suspend confirmation |
 | D-pad or Circle Pad Up | `T` | Move selection up, scroll review text up |
 | D-pad or Circle Pad Down | `G` | Move selection down, scroll review text down |
-| D-pad or Circle Pad Left | `F` | Decrease daily-limit preset |
-| D-pad or Circle Pad Right | `H` | Increase daily-limit preset |
+| D-pad or Circle Pad Left | `F` | Page deck list up, decrease daily-limit preset |
+| D-pad or Circle Pad Right | `H` | Page deck list down, increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
 | `START` | `M` | Open exit confirmation |
 
-Tapping a D-pad or Circle Pad direction moves or scrolls once. Holding a single
-direction for roughly 300 ms starts repeat movement, review-text scrolling, or
-daily-limit value changes, then repeats roughly every 80 ms. The app keeps the
-input loop responsive while a button is held so deck selection, action
-selection, and review text scrolling do not fall into the idle backoff cadence.
-Pressing multiple directions together does not move or change values.
+Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding
+a single direction for roughly 300 ms starts repeat movement, paging,
+review-text scrolling, or daily-limit value changes, then repeats roughly every
+80 ms. The app keeps the input loop responsive while a button is held so deck
+selection, action selection, and review text scrolling do not fall into the
+idle backoff cadence. Pressing multiple directions together does not move or
+change values.
 Directions pressed or held together with command buttons are ignored.
 Face-button actions such as reveal, rating, save, reset, and exit remain
 single-press actions. After reveal, pressing more than one rating button at the
@@ -92,7 +93,7 @@ In the daily-limits screen:
 - D-pad Up/Down chooses `new_limit` or `review_limit`.
 - D-pad Left/Right cycles preset values.
 - `A` saves.
-- `B` or `SELECT` cancels.
+- `B` or `SELECT` returns to actions without saving.
 
 `0` means all available cards.
 Saving limits updates `settings.tsv` and leaves review progress status separate.
