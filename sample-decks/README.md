@@ -19,9 +19,9 @@ Run:
 make verify-sample-decks
 ```
 
-This checks required files, `deck.json` metadata, `settings.tsv`, duplicate
-card IDs, and accidentally committed progress files for the default text-only
-sample set.
+This checks required files, `deck.json` metadata, `settings.tsv`, five-field
+text-card rows, duplicate card IDs, and accidentally committed progress files
+for the default text-only sample set.
 GitHub Actions runs the same check through `make verify-ci`.
 
 ## Install And Fresh Passes

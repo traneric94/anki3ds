@@ -57,9 +57,9 @@ Verification gates:
 - `make verify-ci` is the portable CI gate. It runs `make test` and
   `make verify-sample-decks`.
 - `make verify-sample-decks` checks the tracked sample decks for required
-  files, matching `deck.json` metadata, valid `settings.tsv`, duplicate card
-  IDs, and accidentally committed progress files. The default tracked sample
-  set is text-only.
+  files, matching `deck.json` metadata, valid `settings.tsv`, five-field
+  text-card rows, duplicate card IDs, and accidentally committed progress
+  files. The default tracked sample set is text-only.
 - `make verify-local` is the local pre-checkpoint gate. It runs tests and
   sample-deck verification, then builds the 3DS app and stages the local SD
   mirror with sample decks. It requires the local 3DS toolchain.

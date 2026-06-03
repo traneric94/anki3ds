@@ -60,13 +60,8 @@ verify-sample-decks:
 		test -f "$$deck_dir/cards.tsv" || { echo "$$deck_dir/cards.tsv missing"; exit 1; }; \
 		test -f "$$deck_dir/settings.tsv" || { echo "$$deck_dir/settings.tsv missing"; exit 1; }; \
 		python3 -c 'import json, pathlib, sys; deck = sys.argv[1]; root = pathlib.Path("sample-decks") / deck; data = json.loads((root / "deck.json").read_text(encoding="utf-8")); rows = (root / "cards.tsv").read_text(encoding="utf-8").splitlines(); errors = []; errors += [] if data.get("format_version") == 1 else [f"{root}/deck.json: format_version must be 1"]; errors += [] if data.get("deck_id") == deck else [f"{root}/deck.json: deck_id must match folder name"]; errors += [] if isinstance(data.get("name"), str) and data.get("name") else [f"{root}/deck.json: name is required"]; errors += [] if data.get("card_count") == len(rows) else [f"{root}/deck.json: card_count must match cards.tsv row count"]; sys.exit("\n".join(errors)) if errors else None' "$$deck"; \
-		awk -F '\t' 'NF != 5 && NF != 7 { printf "%s:%d: expected 5 or 7 tab-separated fields, got %d\n", FILENAME, NR, NF; bad = 1 } $$1 == "" { printf "%s:%d: card_id is required\n", FILENAME, NR; bad = 1 } seen[$$1]++ { printf "%s:%d: duplicate card_id %s\n", FILENAME, NR, $$1; bad = 1 } END { exit bad }' "$$deck_dir/cards.tsv"; \
+		awk -F '\t' 'NF != 5 { printf "%s:%d: expected 5 text-card fields, got %d\n", FILENAME, NR, NF; bad = 1 } $$1 == "" { printf "%s:%d: card_id is required\n", FILENAME, NR; bad = 1 } seen[$$1]++ { printf "%s:%d: duplicate card_id %s\n", FILENAME, NR, $$1; bad = 1 } END { exit bad }' "$$deck_dir/cards.tsv"; \
 		awk -F '\t' '$$1 == "new_limit" && $$2 ~ /^[0-9]+$$/ { new += 1; next } $$1 == "review_limit" && $$2 ~ /^[0-9]+$$/ { review += 1; next } { printf "%s:%d: expected new_limit or review_limit with a non-negative integer value\n", FILENAME, NR; bad = 1 } END { if (new != 1 || review != 1 || NR != 2) { printf "%s: expected exactly one new_limit row and one review_limit row\n", FILENAME; bad = 1 } exit bad }' "$$deck_dir/settings.tsv"; \
-		awk -F '\t' 'NF == 7 { if ($$6 != "") print $$6; if ($$7 != "") print $$7 }' "$$deck_dir/cards.tsv" | while IFS= read -r media; do \
-			media_path="$$deck_dir/media/$$media"; \
-			test -f "$$media_path" || { echo "$$deck_dir/cards.tsv references missing media $$media"; exit 1; }; \
-			python3 -c 'import pathlib, sys; from converter.anki3ds_convert import validate_a3i_content; path = pathlib.Path(sys.argv[1]); sys.exit(f"{path}: referenced sample media must be .a3i") if path.suffix.lower() != ".a3i" else None; validate_a3i_content(path, path.read_bytes())' "$$media_path"; \
-		done; \
 		for progress_file in state.tsv state.tsv.tmp state.tsv.bak review-log.tsv review-log.tsv.tmp review-log.tsv.bak settings.tsv.tmp settings.tsv.bak; do \
 			test ! -e "$$deck_dir/$$progress_file" || { echo "$$deck_dir/$$progress_file must not be committed with tracked samples"; exit 1; }; \
 		done; \
