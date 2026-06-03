@@ -1763,8 +1763,14 @@ static bool save_daily_limits(struct app_state *app)
 	return true;
 }
 
-static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
+static bool app_handle_deck_select_input(
+	struct app_state *app,
+	u32 keys_down,
+	unsigned int buttons_down
+)
 {
+	bool move_down;
+
 	if (keys_down & KEY_SELECT)
 	{
 		show_scan_then_scan_decks(app);
@@ -1774,19 +1780,22 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 	if (app->deck_index.count == 0)
 		return false;
 
-	if (keys_down & KEY_DUP)
+	if (app_controls_up_down_direction(buttons_down, &move_down))
 	{
-		if (app->selected_deck_index == 0)
+		if (move_down)
+		{
+			app->selected_deck_index =
+				(app->selected_deck_index + 1) % app->deck_index.count;
+		}
+		else if (app->selected_deck_index == 0)
+		{
 			app->selected_deck_index = app->deck_index.count - 1;
+		}
 		else
+		{
 			app->selected_deck_index--;
-		return true;
-	}
+		}
 
-	if (keys_down & KEY_DDOWN)
-	{
-		app->selected_deck_index =
-			(app->selected_deck_index + 1) % app->deck_index.count;
 		return true;
 	}
 
@@ -1799,21 +1808,29 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 	return false;
 }
 
-static bool app_handle_actions_input(struct app_state *app, u32 keys_down)
+static bool app_handle_actions_input(
+	struct app_state *app,
+	u32 keys_down,
+	unsigned int buttons_down
+)
 {
-	if (keys_down & KEY_DUP)
-	{
-		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
-			app->selected_action = ACTION_ITEM_COUNT - 1;
-		else
-			app->selected_action--;
-		return true;
-	}
+	bool move_down;
 
-	if (keys_down & KEY_DDOWN)
+	if (app_controls_up_down_direction(buttons_down, &move_down))
 	{
-		app->selected_action =
-			(enum action_item)((app->selected_action + 1) % ACTION_ITEM_COUNT);
+		if (move_down)
+		{
+			app->selected_action =
+				(enum action_item)((app->selected_action + 1) % ACTION_ITEM_COUNT);
+		}
+		else if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
+		{
+			app->selected_action = ACTION_ITEM_COUNT - 1;
+		}
+		else
+		{
+			app->selected_action--;
+		}
 		return true;
 	}
 
@@ -1875,9 +1892,16 @@ static bool app_handle_exit_confirmation_input(struct app_state *app, u32 keys_d
 	return false;
 }
 
-static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
+static bool app_handle_settings_input(
+	struct app_state *app,
+	u32 keys_down,
+	unsigned int buttons_down
+)
 {
-	if (keys_down & (KEY_DUP | KEY_DDOWN))
+	bool down;
+	bool right;
+
+	if (app_controls_up_down_direction(buttons_down, &down))
 	{
 		if (app->selected_setting == SETTING_ITEM_NEW_LIMIT)
 			app->selected_setting = SETTING_ITEM_REVIEW_LIMIT;
@@ -1886,11 +1910,11 @@ static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
 		return true;
 	}
 
-	if (keys_down & (KEY_DLEFT | KEY_DRIGHT))
+	if (app_controls_left_right_direction(buttons_down, &right))
 	{
 		unsigned int *limit = selected_daily_limit(app);
 
-		*limit = adjusted_daily_limit(*limit, (keys_down & KEY_DRIGHT) != 0);
+		*limit = adjusted_daily_limit(*limit, right);
 		return true;
 	}
 
@@ -1945,11 +1969,11 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	}
 
 	if (app->mode == APP_MODE_DECK_SELECT)
-		return app_handle_deck_select_input(app, keys_down);
+		return app_handle_deck_select_input(app, keys_down, buttons);
 	if (app->mode == APP_MODE_ACTIONS)
-		return app_handle_actions_input(app, keys_down);
+		return app_handle_actions_input(app, keys_down, buttons);
 	if (app->mode == APP_MODE_SETTINGS)
-		return app_handle_settings_input(app, keys_down);
+		return app_handle_settings_input(app, keys_down, buttons);
 	if (app->mode == APP_MODE_CONFIRM_RESET)
 		return app_handle_reset_confirmation_input(app, keys_down);
 

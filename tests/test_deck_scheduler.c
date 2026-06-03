@@ -431,6 +431,58 @@ static void test_app_controls_rejects_ambiguous_ratings(void)
 	);
 }
 
+static void test_app_controls_rejects_ambiguous_dpad_axes(void)
+{
+	bool down = true;
+	bool right = true;
+
+	check(
+		app_controls_up_down_direction(APP_CONTROL_BUTTON_UP, &down),
+		"up/down axis accepts up"
+	);
+	check(!down, "up/down axis maps up to false");
+	check(
+		app_controls_up_down_direction(APP_CONTROL_BUTTON_DOWN, &down),
+		"up/down axis accepts down"
+	);
+	check(down, "up/down axis maps down to true");
+	check(
+		!app_controls_up_down_direction(
+			APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN,
+			&down
+		),
+		"up/down axis rejects opposite directions"
+	);
+	check(down, "ambiguous up/down leaves output unchanged");
+	check(
+		!app_controls_up_down_direction(APP_CONTROL_BUTTON_UP, NULL),
+		"up/down axis output is required"
+	);
+
+	check(
+		app_controls_left_right_direction(APP_CONTROL_BUTTON_LEFT, &right),
+		"left/right axis accepts left"
+	);
+	check(!right, "left/right axis maps left to false");
+	check(
+		app_controls_left_right_direction(APP_CONTROL_BUTTON_RIGHT, &right),
+		"left/right axis accepts right"
+	);
+	check(right, "left/right axis maps right to true");
+	check(
+		!app_controls_left_right_direction(
+			APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right axis rejects opposite directions"
+	);
+	check(right, "ambiguous left/right leaves output unchanged");
+	check(
+		!app_controls_left_right_direction(APP_CONTROL_BUTTON_LEFT, NULL),
+		"left/right axis output is required"
+	);
+}
+
 static void test_app_controls_modal_controls(void)
 {
 	check(
@@ -2439,6 +2491,7 @@ int main(void)
 	test_app_controls_review_front_actions();
 	test_app_controls_review_rating_keys();
 	test_app_controls_rejects_ambiguous_ratings();
+	test_app_controls_rejects_ambiguous_dpad_axes();
 	test_app_controls_modal_controls();
 	test_app_controls_navigation_repeat();
 	test_scheduler_rejects_invalid_rating();

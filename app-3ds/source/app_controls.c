@@ -113,6 +113,34 @@ bool app_controls_can_open(
 	return true;
 }
 
+bool app_controls_up_down_direction(unsigned int buttons, bool *down)
+{
+	bool up_pressed = (buttons & APP_CONTROL_BUTTON_UP) != 0;
+	bool down_pressed = (buttons & APP_CONTROL_BUTTON_DOWN) != 0;
+
+	if (down == NULL)
+		return false;
+	if (up_pressed == down_pressed)
+		return false;
+
+	*down = down_pressed;
+	return true;
+}
+
+bool app_controls_left_right_direction(unsigned int buttons, bool *right)
+{
+	bool left_pressed = (buttons & APP_CONTROL_BUTTON_LEFT) != 0;
+	bool right_pressed = (buttons & APP_CONTROL_BUTTON_RIGHT) != 0;
+
+	if (right == NULL)
+		return false;
+	if (left_pressed == right_pressed)
+		return false;
+
+	*right = right_pressed;
+	return true;
+}
+
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
 {
 	return !review_answer_revealed && (buttons & APP_CONTROL_BUTTON_A) != 0;
