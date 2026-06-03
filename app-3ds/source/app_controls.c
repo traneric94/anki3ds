@@ -119,8 +119,11 @@ bool app_controls_up_down_direction(unsigned int buttons, bool *down)
 	bool down_pressed = (buttons & APP_CONTROL_BUTTON_DOWN) != 0;
 	unsigned int left_right_buttons =
 		buttons & (APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT);
+	unsigned int command_buttons = buttons & APP_CONTROL_COMMAND_BUTTON_MASK;
 
 	if (down == NULL)
+		return false;
+	if (command_buttons != 0)
 		return false;
 	if (left_right_buttons != 0)
 		return false;
@@ -137,8 +140,11 @@ bool app_controls_left_right_direction(unsigned int buttons, bool *right)
 	bool right_pressed = (buttons & APP_CONTROL_BUTTON_RIGHT) != 0;
 	unsigned int up_down_buttons =
 		buttons & (APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN);
+	unsigned int command_buttons = buttons & APP_CONTROL_COMMAND_BUTTON_MASK;
 
 	if (right == NULL)
+		return false;
+	if (command_buttons != 0)
 		return false;
 	if (up_down_buttons != 0)
 		return false;
@@ -170,7 +176,7 @@ bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_re
 		app_controls_single_command(
 			buttons,
 			APP_CONTROL_BUTTON_A,
-			APP_CONTROL_COMMAND_BUTTON_MASK
+			APP_CONTROL_BUTTON_INPUT_MASK
 		)
 	);
 }
@@ -190,7 +196,7 @@ bool app_controls_rating_for_buttons(
 		return false;
 	if (rating_buttons == 0 || (rating_buttons & (rating_buttons - 1)) != 0)
 		return false;
-	if ((buttons & APP_CONTROL_COMMAND_BUTTON_MASK) != rating_buttons)
+	if ((buttons & APP_CONTROL_BUTTON_INPUT_MASK) != rating_buttons)
 		return false;
 
 	if (rating_buttons & APP_CONTROL_BUTTON_Y)

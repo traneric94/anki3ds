@@ -393,6 +393,13 @@ static void test_app_controls_review_front_actions(void)
 		"A with START does not show answer"
 	);
 	check(
+		!app_controls_should_show_answer(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			false
+		),
+		"A with D-pad does not show answer"
+	);
+	check(
 		!app_controls_should_show_answer(APP_CONTROL_BUTTON_A, true),
 		"A does not show answer after reveal"
 	);
@@ -461,6 +468,14 @@ static void test_app_controls_rejects_ambiguous_ratings(void)
 		),
 		"rating with START is ignored"
 	);
+	check(
+		!app_controls_rating_for_buttons(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			true,
+			&rating
+		),
+		"rating with D-pad is ignored"
+	);
 }
 
 static void test_app_controls_rejects_ambiguous_dpad_axes(void)
@@ -495,6 +510,14 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 	);
 	check(down, "diagonal up/down leaves output unchanged");
 	check(
+		!app_controls_up_down_direction(
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_A,
+			&down
+		),
+		"up/down axis rejects command chords"
+	);
+	check(down, "command chord up/down leaves output unchanged");
+	check(
 		!app_controls_up_down_direction(APP_CONTROL_BUTTON_UP, NULL),
 		"up/down axis output is required"
 	);
@@ -525,6 +548,14 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 		"left/right axis rejects diagonal directions"
 	);
 	check(right, "diagonal left/right leaves output unchanged");
+	check(
+		!app_controls_left_right_direction(
+			APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right axis rejects command chords"
+	);
+	check(right, "command chord left/right leaves output unchanged");
 	check(
 		!app_controls_left_right_direction(APP_CONTROL_BUTTON_LEFT, NULL),
 		"left/right axis output is required"
@@ -567,6 +598,14 @@ static void test_app_controls_requires_single_command(void)
 			confirm_cancel_mask
 		),
 		"single command rejects shoulder command"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_INPUT_MASK
+		),
+		"single command rejects navigation chord"
 	);
 	check(
 		app_controls_single_command(
