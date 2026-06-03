@@ -2305,8 +2305,7 @@ int main(int argc, char *argv[])
 		{
 			app_power_schedule_next_battery_poll_after_sample(
 				&next_battery_poll_time,
-				now,
-				battery_sample_result
+				now
 			);
 		}
 		if (day_check_due)

@@ -10,11 +10,9 @@ void app_power_schedule_next_battery_poll(time_t *next_poll_time, time_t now)
 
 void app_power_schedule_next_battery_poll_after_sample(
 	time_t *next_poll_time,
-	time_t now,
-	enum app_power_battery_sample_result result
+	time_t now
 )
 {
-	(void)result;
 	app_power_schedule_next_battery_poll(next_poll_time, now);
 }
 

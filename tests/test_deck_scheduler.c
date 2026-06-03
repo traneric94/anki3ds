@@ -291,12 +291,11 @@ static void test_app_power_battery_sample_policy(void)
 
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600,
-		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
+		1600
 	);
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
-		"closed shell schedules next battery poll"
+		"sample completion schedules next battery poll"
 	);
 	check(
 		!app_power_battery_sample_changes_display(
@@ -325,8 +324,7 @@ static void test_app_power_battery_sample_policy(void)
 
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600,
-		APP_POWER_BATTERY_SAMPLE_READ_FAILED
+		1600
 	);
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
@@ -336,8 +334,7 @@ static void test_app_power_battery_sample_policy(void)
 	next_poll_time = 1600;
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600,
-		APP_POWER_BATTERY_SAMPLE_CHANGED
+		1600
 	);
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,

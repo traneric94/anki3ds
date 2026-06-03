@@ -19,8 +19,7 @@ enum app_power_battery_sample_result
 void app_power_schedule_next_battery_poll(time_t *next_poll_time, time_t now);
 void app_power_schedule_next_battery_poll_after_sample(
 	time_t *next_poll_time,
-	time_t now,
-	enum app_power_battery_sample_result result
+	time_t now
 );
 bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now);
 bool app_power_battery_sample_changes_display(enum app_power_battery_sample_result result);
