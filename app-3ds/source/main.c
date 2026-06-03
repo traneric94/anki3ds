@@ -426,6 +426,27 @@ static void wait_for_idle_input(unsigned int idle_wait_count)
 	hidWaitForAnyEvent(true, 0, idle_input_wait_ns(idle_wait_count));
 }
 
+static void schedule_next_battery_poll(time_t *next_poll_time, time_t now)
+{
+	if (next_poll_time == NULL || now == (time_t)-1)
+		return;
+
+	*next_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
+}
+
+static bool battery_poll_is_due(time_t *next_poll_time, time_t now)
+{
+	if (next_poll_time == NULL || now == (time_t)-1)
+		return false;
+	if (*next_poll_time == 0)
+	{
+		schedule_next_battery_poll(next_poll_time, now);
+		return false;
+	}
+
+	return now >= *next_poll_time;
+}
+
 static unsigned char rgb565_red(uint16_t pixel)
 {
 	return (unsigned char)((((pixel >> 11) & 0x1f) * 255u) / 31u);
@@ -1836,8 +1857,7 @@ int main(int argc, char *argv[])
 	app_controls_repeat_init(&navigation_repeat);
 	app_init(&app);
 	now = time(NULL);
-	if (now != (time_t)-1)
-		next_battery_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
+	schedule_next_battery_poll(&next_battery_poll_time, now);
 	show_scan_then_scan_decks(&app);
 	draw_app(&app);
 
@@ -1881,13 +1901,10 @@ int main(int argc, char *argv[])
 		}
 
 		now = time(NULL);
-		bool battery_poll_due =
-			next_battery_poll_time != 0 &&
-			now != (time_t)-1 &&
-			now >= next_battery_poll_time;
+		bool battery_poll_due = battery_poll_is_due(&next_battery_poll_time, now);
 		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
 		if (battery_poll_due)
-			next_battery_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
+			schedule_next_battery_poll(&next_battery_poll_time, now);
 
 		if (app_handle_input(&app, keys_down))
 		{
