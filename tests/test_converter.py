@@ -532,6 +532,61 @@ class ConverterTests(unittest.TestCase):
             )
             self.assertFalse((output / ".anki3ds-media.tmp").exists())
 
+    def test_write_deck_media_commit_failure_rolls_back_existing_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tone.ppm\ttwo.ppm"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_dir = output / "media"
+            old_one = b"A3I1\x01\x00\x01\x00\x00\xf8"
+            old_two = b"A3I1\x01\x00\x01\x00\xe0\x07"
+            original_replace = Path.replace
+
+            media_root.mkdir()
+            media_dir.mkdir(parents=True)
+            (media_root / "one.ppm").write_bytes(
+                b"P6\n1 1\n255\n" + bytes([0, 0, 255])
+            )
+            (media_root / "two.ppm").write_bytes(
+                b"P6\n1 1\n255\n" + bytes([255, 0, 0])
+            )
+            (media_dir / "one.a3i").write_bytes(old_one)
+            (media_dir / "two.a3i").write_bytes(old_two)
+            (output / "cards.tsv").write_text("old cards\n", encoding="utf-8")
+
+            def fail_second_temp_replace(source: Path, target: Path) -> Path:
+                if source.name == "two.a3i" and source.parent.name == ".anki3ds-media.tmp":
+                    raise OSError("simulated media replace failure")
+                return original_replace(source, target)
+
+            with self.assertRaisesRegex(OSError, "simulated media replace failure"):
+                with mock.patch.object(Path, "replace", fail_second_temp_replace):
+                    write_deck(
+                        output,
+                        "sample",
+                        "Sample",
+                        cards,
+                        media_root=media_root,
+                    )
+
+            self.assertEqual((media_dir / "one.a3i").read_bytes(), old_one)
+            self.assertEqual((media_dir / "two.a3i").read_bytes(), old_two)
+            self.assertEqual(
+                (output / "cards.tsv").read_text(encoding="utf-8"),
+                "old cards\n",
+            )
+            self.assertFalse((output / ".anki3ds-media.tmp").exists())
+            self.assertFalse((output / ".anki3ds-media.bak").exists())
+
     def test_write_deck_copies_existing_a3i_media(self):
         cards = convert_lines(
             ["front\tback\ttag\tfront.a3i\t"],

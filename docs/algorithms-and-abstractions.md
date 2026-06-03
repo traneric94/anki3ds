@@ -433,7 +433,9 @@ Algorithm:
    card count.
 8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
 9. If media fields and `--media-root` are provided, convert referenced binary
-   PPM `P6` files into bounded raw `.a3i` files under `media/`.
+   PPM `P6` files into bounded raw `.a3i` files under a temporary media
+   directory, then replace final media files with rollback if a commit step
+   fails.
 10. Reject inline `<img>` tags unless the same side has a non-empty mapped
     media field, so image-bearing exports do not silently become text-only
     cards.

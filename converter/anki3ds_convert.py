@@ -560,6 +560,50 @@ def convert_media_file(media_root: Path, source_name: str, output_media_dir: Pat
     return output_name
 
 
+def remove_path_if_present(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
+
+
+def commit_converted_media_files(
+    temp_media_dir: Path,
+    output_media_dir: Path,
+    output_names: list[str],
+) -> None:
+    backup_media_dir = output_media_dir.parent / ".anki3ds-media.bak"
+    committed_names: list[str] = []
+    backed_up_names: list[str] = []
+
+    remove_path_if_present(backup_media_dir)
+    backup_media_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        output_media_dir.mkdir(parents=True, exist_ok=True)
+        for output_name in output_names:
+            source_path = temp_media_dir / output_name
+            output_path = output_media_dir / output_name
+            backup_path = backup_media_dir / output_name
+
+            if output_path.exists():
+                output_path.replace(backup_path)
+                backed_up_names.append(output_name)
+
+            source_path.replace(output_path)
+            committed_names.append(output_name)
+    except OSError:
+        for output_name in reversed(committed_names):
+            remove_path_if_present(output_media_dir / output_name)
+        for output_name in reversed(backed_up_names):
+            backup_path = backup_media_dir / output_name
+            if backup_path.exists():
+                backup_path.replace(output_media_dir / output_name)
+        raise
+    finally:
+        remove_path_if_present(backup_media_dir)
+
+
 def convert_media_files(
     media_root: Path,
     media_outputs: dict[str, str],
@@ -582,12 +626,13 @@ def convert_media_files(
                 temp_media_dir,
             )
 
-        output_media_dir.mkdir(parents=True, exist_ok=True)
-        for output_name in media_names.values():
-            (temp_media_dir / output_name).replace(output_media_dir / output_name)
+        commit_converted_media_files(
+            temp_media_dir,
+            output_media_dir,
+            list(media_names.values()),
+        )
     finally:
-        if temp_media_dir.exists():
-            shutil.rmtree(temp_media_dir)
+        remove_path_if_present(temp_media_dir)
 
     return media_names
 
