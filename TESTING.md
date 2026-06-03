@@ -188,6 +188,8 @@ checks per-deck review-log rows for rating, undo, suspend, and restore actions.
 It also checks that malformed review state blocks normal saves and suppresses
 selector due counts until deck progress is reset. Opening a deck with malformed
 state should land on a reset-needed summary instead of the normal review queue.
+Tracked sample fixture coverage is limited to the default text decks,
+`sample` and `limits-demo`.
 
 GitHub Actions runs `make verify-ci` on pushes and pull requests. That covers
 the portable C host suite, converter tests, and tracked sample-deck

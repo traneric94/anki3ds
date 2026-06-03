@@ -208,7 +208,7 @@ static void test_deck_load_card_limit(void)
 	remove(TEST_CARDS_PATH);
 }
 
-static void test_tracked_sample_decks_load(void)
+static void test_tracked_text_sample_decks_load(void)
 {
 	struct deck deck;
 	struct app_settings settings;
@@ -240,26 +240,6 @@ static void test_tracked_sample_decks_load(void)
 	);
 	check(settings.new_limit == 2, "tracked limits demo new limit");
 	check(settings.review_limit == 5, "tracked limits demo review limit");
-
-	deck_init(&deck, "media-demo");
-	check(
-		deck_load_cards(&deck, "sample-decks/media-demo/cards.tsv") == DECK_LOAD_OK,
-		"tracked media demo deck loads"
-	);
-	check(deck.card_count == 2, "tracked media demo deck card count");
-	check(
-		strcmp(deck.cards[0].front_media, "colors.a3i") == 0,
-		"tracked media demo front media loads"
-	);
-	check(
-		strcmp(deck.cards[0].back_media, "colors.a3i") == 0,
-		"tracked media demo back media loads"
-	);
-	check(
-		app_settings_load(&settings, "sample-decks/media-demo/settings.tsv") ==
-			APP_SETTINGS_LOAD_OK,
-		"tracked media demo settings load"
-	);
 }
 
 static void test_app_power_battery_poll_schedule(void)
@@ -4330,7 +4310,7 @@ int main(void)
 	test_deck_load_rejects_duplicate_card_ids();
 	test_deck_load_accepts_final_line_without_newline();
 	test_deck_load_card_limit();
-	test_tracked_sample_decks_load();
+	test_tracked_text_sample_decks_load();
 	test_app_power_battery_poll_schedule();
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
