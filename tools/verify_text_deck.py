@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
-import sys
 from pathlib import Path
+from typing import NamedTuple
 
 
 DECK_MAX_CARDS = 256
@@ -30,6 +31,14 @@ PROGRESS_FILES = (
 )
 
 TEXT_DECK_FILES = frozenset(("deck.json", "cards.tsv", "settings.tsv"))
+
+
+class DeckSummary(NamedTuple):
+    deck_dir: Path
+    deck_name: str
+    card_count: int
+    new_limit: int
+    review_limit: int
 
 
 def utf8_length(value: str) -> int:
@@ -406,18 +415,73 @@ def verify_text_deck(deck_dir: Path) -> list[str]:
     return errors
 
 
+def verified_deck_summary(deck_dir: Path) -> DeckSummary:
+    deck_json = json.loads((deck_dir / "deck.json").read_text(encoding="utf-8"))
+    settings: dict[str, int] = {}
+
+    for row in (deck_dir / "settings.tsv").read_text(encoding="utf-8").splitlines():
+        if row == "" or row.startswith("#"):
+            continue
+        key, value = row.split("\t")
+        settings[key] = int(value)
+
+    return DeckSummary(
+        deck_dir=deck_dir,
+        deck_name=str(deck_json["name"]),
+        card_count=len(
+            (deck_dir / "cards.tsv").read_text(encoding="utf-8").splitlines()
+        ),
+        new_limit=settings["new_limit"],
+        review_limit=settings["review_limit"],
+    )
+
+
+def format_limit(limit: int) -> str:
+    if limit == 0:
+        return "unlimited"
+    return f"{limit}/day"
+
+
+def format_summary(summary: DeckSummary) -> str:
+    return (
+        f"{summary.deck_dir}: ok - {summary.deck_name} "
+        f"({summary.card_count} cards, "
+        f"new {format_limit(summary.new_limit)}, "
+        f"review {format_limit(summary.review_limit)})"
+    )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Verify an anki3ds text-only deck fixture or staged deck payload."
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="only print validation errors",
+    )
+    parser.add_argument("deck_dirs", nargs="+", type=Path, metavar="DECK_DIR")
+    return parser.parse_args()
+
+
 def main() -> int:
-    if len(sys.argv) < 2:
-        print("usage: verify_text_deck.py DECK_DIR...", file=sys.stderr)
-        return 2
+    args = parse_args()
 
     errors: list[str] = []
-    for raw_deck_dir in sys.argv[1:]:
-        errors.extend(verify_text_deck(Path(raw_deck_dir)))
+    summaries: list[DeckSummary] = []
+    for deck_dir in args.deck_dirs:
+        deck_errors = verify_text_deck(deck_dir)
+        errors.extend(deck_errors)
+        if not deck_errors:
+            summaries.append(verified_deck_summary(deck_dir))
 
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
+
+    if not args.quiet:
+        for summary in summaries:
+            print(format_summary(summary))
 
     return 0
 

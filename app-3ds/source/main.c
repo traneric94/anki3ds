@@ -294,6 +294,38 @@ static void format_daily_limit(char *destination, size_t destination_size, unsig
 		snprintf(destination, destination_size, "%u", limit);
 }
 
+static const char *action_item_name(enum action_item action)
+{
+	switch (action)
+	{
+	case ACTION_ITEM_UNSUSPEND_ALL:
+		return "Restore suspended";
+	case ACTION_ITEM_DAILY_LIMITS:
+		return "Daily limits";
+	case ACTION_ITEM_RESET_PROGRESS:
+		return "Reset progress";
+	case ACTION_ITEM_COUNT:
+		break;
+	}
+
+	return "Action";
+}
+
+static const char *setting_item_name(enum setting_item setting)
+{
+	switch (setting)
+	{
+	case SETTING_ITEM_NEW_LIMIT:
+		return "New limit";
+	case SETTING_ITEM_REVIEW_LIMIT:
+		return "Review limit";
+	case SETTING_ITEM_COUNT:
+		break;
+	}
+
+	return "Limit";
+}
+
 static size_t daily_limit_preset_count(void)
 {
 	return sizeof(daily_limit_presets) / sizeof(daily_limit_presets[0]);
@@ -369,9 +401,32 @@ static bool app_state_allows_study(const struct app_state *app)
 	return review_state_load_result_allows_save(app->state_load_result);
 }
 
+static size_t app_new_limit_blocked_count(const struct app_state *app)
+{
+	return scheduler_new_limit_blocked_count(&app->session);
+}
+
+static size_t app_review_limit_blocked_count(const struct app_state *app)
+{
+	return scheduler_review_limit_blocked_count(&app->session);
+}
+
+static bool app_daily_limit_blocks_cards(const struct app_state *app)
+{
+	return (
+		app_new_limit_blocked_count(app) > 0 ||
+		app_review_limit_blocked_count(app) > 0
+	);
+}
+
 static bool settings_load_result_needs_warning(enum app_settings_load_result result)
 {
 	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
+}
+
+static bool state_load_result_needs_warning(enum review_state_load_result result)
+{
+	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
@@ -519,7 +574,9 @@ static const char *status_message_color(const char *message)
 		strstr(message, "same card due") != NULL ||
 		strstr(message, "same due") != NULL ||
 		strstr(message, "kept") != NULL ||
-		strstr(message, "reset state") != NULL
+		strstr(message, "reset state") != NULL ||
+		strstr(message, "limit reached") != NULL ||
+		strstr(message, "unmatched") != NULL
 	)
 	{
 		return APP_COLOR_YELLOW;
@@ -766,13 +823,21 @@ static void app_load_selected_deck(struct app_state *app)
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
 		app->mode = app_review_mode_for_session(app);
-		if (app->mode == APP_MODE_REVIEW)
+		if (app->state_load_result == REVIEW_STATE_LOAD_UNMATCHED)
+		{
+			app_set_status(app, "State unmatched; started fresh");
+		}
+		else if (app->mode == APP_MODE_REVIEW)
 		{
 			app_set_status(app, "Loaded deck");
 		}
 		else if (!app_state_allows_study(app))
 		{
 			app_set_status(app, "Reset bad state first");
+		}
+		else if (app_daily_limit_blocks_cards(app))
+		{
+			app_set_status(app, "Loaded; daily limit reached");
 		}
 		else
 		{
@@ -947,6 +1012,13 @@ static void draw_deck_select_screen(const struct app_state *app)
 						" settings ignored" APP_COLOR_RESET
 					);
 				}
+				else if (state_load_result_needs_warning(summary->state_load_result))
+				{
+					printf(
+						APP_COLOR_RESET APP_COLOR_YELLOW
+						" state unmatched" APP_COLOR_RESET
+					);
+				}
 				else
 				{
 					printf(
@@ -1054,6 +1126,9 @@ static void draw_review_screen(const struct app_state *app)
 static void draw_summary_screen(const struct app_state *app)
 {
 	const struct scheduler_session *session = &app->session;
+	size_t new_blocked_count = app_new_limit_blocked_count(app);
+	size_t review_blocked_count = app_review_limit_blocked_count(app);
+	bool daily_limit_reached = new_blocked_count > 0 || review_blocked_count > 0;
 
 	app_console_clear();
 	draw_app_title("Review");
@@ -1067,7 +1142,11 @@ static void draw_summary_screen(const struct app_state *app)
 		return;
 	}
 
-	printf("\x1b[3;1H" APP_COLOR_GREEN "No cards due now" APP_COLOR_RESET);
+	printf(
+		"\x1b[3;1H%s%s" APP_COLOR_RESET,
+		daily_limit_reached ? APP_COLOR_YELLOW : APP_COLOR_GREEN,
+		daily_limit_reached ? "Daily limit reached" : "No cards due now"
+	);
 	printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
 	printf("\x1b[6;1HRated session: %u", session->reviewed_count);
 	printf(
@@ -1079,21 +1158,29 @@ static void draw_summary_screen(const struct app_state *app)
 		"\x1b[9;1HSuspended:     %lu",
 		(unsigned long)scheduler_suspended_count(session)
 	);
-	printf("\x1b[10;1HState:         %s", app->state_message);
+	if (daily_limit_reached)
+	{
+		printf(
+			"\x1b[10;1HPast limit:    N %lu  R %lu",
+			(unsigned long)new_blocked_count,
+			(unsigned long)review_blocked_count
+		);
+	}
+	printf("\x1b[11;1HState:         %s", app->state_message);
 	printf(
-		"\x1b[12;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET ": %u",
+		"\x1b[13;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET ": %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[13;1H" APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET ":  %u",
+		"\x1b[14;1H" APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[14;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET ":  %u",
+		"\x1b[15;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[15;1H" APP_COLOR_BLUE "A Easy" APP_COLOR_RESET ":  %u",
+		"\x1b[16;1H" APP_COLOR_BLUE "A Easy" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 }
@@ -1574,6 +1661,8 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 	app->mode = target_mode;
 	if (!app_state_allows_study(app))
 		app_set_status(app, "Reset bad state first");
+	else if (target_mode == APP_MODE_SUMMARY && app_daily_limit_blocks_cards(app))
+		app_set_status(app, "New day; daily limit reached");
 	else if (target_mode == APP_MODE_SUMMARY)
 		app_set_status(app, "New day; no cards due");
 	else
@@ -1766,6 +1855,9 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	{
 		char new_limit[16];
 		char review_limit[16];
+		size_t new_blocked_count;
+		size_t review_blocked_count;
+		bool daily_limit_reached;
 
 		if (!app_state_allows_study(app))
 		{
@@ -1783,7 +1875,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 
 		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
 		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
-		printf("\x1b[1;1H" APP_COLOR_GREEN "No cards due now" APP_COLOR_RESET);
+		new_blocked_count = app_new_limit_blocked_count(app);
+		review_blocked_count = app_review_limit_blocked_count(app);
+		daily_limit_reached = new_blocked_count > 0 || review_blocked_count > 0;
+		printf(
+			"\x1b[1;1H%s%s" APP_COLOR_RESET,
+			daily_limit_reached ? APP_COLOR_YELLOW : APP_COLOR_GREEN,
+			daily_limit_reached ? "Daily limit reached" : "No cards due now"
+		);
 		printf("\x1b[3;1HB: deck list");
 		printf("\x1b[5;1HL: undo last action");
 		printf("\x1b[7;1HSELECT: actions");
@@ -1796,6 +1895,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			app->session.review_count_today,
 			review_limit
 		);
+		if (daily_limit_reached)
+		{
+			printf(
+				"\x1b[12;1HPast limit: N %lu  R %lu",
+				(unsigned long)new_blocked_count,
+				(unsigned long)review_blocked_count
+			);
+		}
 		draw_due_legend(15, false);
 		printf(
 			"\x1b[13;1HSettings: %s",
@@ -2026,6 +2133,15 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		scheduler_current_index(&app->session),
 		app->session.card_count
 	);
+	if (queue_complete && app_daily_limit_blocks_cards(app))
+	{
+		app_set_status(
+			app,
+			log_saved ?
+				"Rating saved; daily limit reached" :
+				"Rating saved; limit reached; log skipped"
+		);
+	}
 	app->mode = queue_complete ? APP_MODE_SUMMARY : APP_MODE_REVIEW;
 
 	return true;
@@ -2042,20 +2158,30 @@ static bool move_deck_selection_by_page(struct app_state *app, bool move_right)
 	if (move_right)
 	{
 		if (app->selected_deck_index + page_size >= app->deck_index.count)
-			app->selected_deck_index = app->deck_index.count - 1;
+			app->selected_deck_index = 0;
 		else
 			app->selected_deck_index += page_size;
 	}
 	else if (app->selected_deck_index < page_size)
 	{
-		app->selected_deck_index = 0;
+		app->selected_deck_index = app->deck_index.count - 1;
 	}
 	else
 	{
 		app->selected_deck_index -= page_size;
 	}
 
-	return app->selected_deck_index != old_index;
+	if (app->selected_deck_index == old_index)
+		return false;
+
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Deck %lu/%lu",
+		(unsigned long)(app->selected_deck_index + 1),
+		(unsigned long)app->deck_index.count
+	);
+	return true;
 }
 
 static bool undo_last_action(struct app_state *app)
@@ -2162,7 +2288,11 @@ static bool suspend_current_card(struct app_state *app)
 	{
 		app_set_status(
 			app,
-			log_saved ? "Suspend saved; no cards due" : "Suspend saved; log skipped"
+			app_daily_limit_blocks_cards(app) ?
+				(log_saved ?
+					"Suspend saved; daily limit reached" :
+					"Suspend saved; limit reached; log skipped") :
+				(log_saved ? "Suspend saved; no cards due" : "Suspend saved; log skipped")
 		);
 		app->mode = APP_MODE_SUMMARY;
 	}
@@ -2263,9 +2393,24 @@ static bool unsuspend_all_cards(struct app_state *app)
 	reset_review_scroll(app);
 
 	if (scheduler_is_complete(&app->session))
+	{
+		if (app_daily_limit_blocks_cards(app))
+		{
+			snprintf(
+				app->status_message,
+				sizeof(app->status_message),
+				logs_saved ?
+					"Restored %u; daily limit reached" :
+					"Restored %u; limit reached; log skipped",
+				unsuspended_count
+			);
+		}
 		app->mode = APP_MODE_SUMMARY;
+	}
 	else
+	{
 		app->mode = APP_MODE_REVIEW;
+	}
 
 	return true;
 }
@@ -2301,7 +2446,12 @@ static bool save_daily_limits(struct app_state *app)
 	}
 	else if (app->mode == APP_MODE_SUMMARY)
 	{
-		app_set_status(app, "Limits saved; no cards due");
+		app_set_status(
+			app,
+			app_daily_limit_blocks_cards(app) ?
+				"Limits saved; daily limit reached" :
+				"Limits saved; no cards due"
+		);
 	}
 	else
 	{
@@ -2351,6 +2501,13 @@ static bool app_handle_deck_select_input(
 			app->selected_deck_index--;
 		}
 
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Deck %lu/%lu",
+			(unsigned long)(app->selected_deck_index + 1),
+			(unsigned long)app->deck_index.count
+		);
 		return true;
 	}
 
@@ -2395,6 +2552,12 @@ static bool app_handle_actions_input(
 		{
 			app->selected_action--;
 		}
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Action: %s",
+			action_item_name(app->selected_action)
+		);
 		return true;
 	}
 
@@ -2489,6 +2652,7 @@ static bool app_handle_reset_confirmation_input(
 	)
 	{
 		app->mode = APP_MODE_ACTIONS;
+		app_set_status(app, "Reset canceled");
 		return true;
 	}
 
@@ -2536,14 +2700,29 @@ static bool app_handle_settings_input(
 			app->selected_setting = SETTING_ITEM_REVIEW_LIMIT;
 		else
 			app->selected_setting = SETTING_ITEM_NEW_LIMIT;
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Editing %s",
+			setting_item_name(app->selected_setting)
+		);
 		return true;
 	}
 
 	if (app_controls_left_right_triggered(buttons_down, buttons_active, &right))
 	{
 		unsigned int *limit = selected_daily_limit(app);
+		char limit_text[16];
 
 		*limit = adjusted_daily_limit(*limit, right);
+		format_daily_limit(limit_text, sizeof(limit_text), *limit);
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"%s: %s",
+			setting_item_name(app->selected_setting),
+			limit_text
+		);
 		return true;
 	}
 
@@ -2619,6 +2798,7 @@ static bool app_handle_input(
 	case APP_CONTROL_ACTION_SHOW_ANSWER:
 		app->revealed = true;
 		reset_review_scroll(app);
+		app_set_status(app, "Answer shown; choose rating");
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);

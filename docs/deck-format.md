@@ -185,6 +185,8 @@ Rules:
 - if first/last review days are known, `first_review_day` must be less than or
   equal to `last_review_day`
 - unknown card IDs are ignored when loading state
+- if a valid state file has rows but none match current card IDs, the app starts
+  a fresh queue and shows an unmatched-state warning
 - duplicate rows for the same current deck `card_id` are malformed
 - footerless ten-column state rows still load as migration data
 - previous eight-column state rows still load with first/last review day as `0`
@@ -210,9 +212,11 @@ reject state saved by this version.
 
 The app appends study transitions to `review-log.tsv` beside `state.tsv` after
 a rating, suspend, undo, or restore-suspended action has been accepted and
-`state.tsv` has saved. The log is diagnostic and append-only; a failed append
-does not roll back the review state or block the study action. The app reports
-`log skipped` in the status line when a saved action could not be logged.
+`state.tsv` has saved. The log is diagnostic and normally appended; repairing
+an interrupted final row may rewrite the complete prefix before appending. A
+failed append does not roll back the review state or block the study action.
+The app reports `log skipped` in the status line when a saved action could not
+be logged.
 
 ```text
 timestamp<TAB>day<TAB>event<TAB>card_id<TAB>rating<TAB>old_review_count<TAB>old_due_day<TAB>old_interval_days<TAB>old_ease_permille<TAB>old_lapses<TAB>old_suspended<TAB>new_review_count<TAB>new_due_day<TAB>new_interval_days<TAB>new_ease_permille<TAB>new_lapses<TAB>new_suspended

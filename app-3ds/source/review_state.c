@@ -437,7 +437,9 @@ static enum review_state_load_result review_state_load_file(
 	if (matched_row_count == 0 && deck->card_count > 0)
 	{
 		fclose(file);
-		return REVIEW_STATE_LOAD_BAD_FORMAT;
+		return parsed_row_count == 0 ?
+			REVIEW_STATE_LOAD_BAD_FORMAT :
+			REVIEW_STATE_LOAD_UNMATCHED;
 	}
 
 	fclose(file);
@@ -458,6 +460,7 @@ enum review_state_load_result review_state_load(
 	bool has_temp_path;
 	bool has_backup_path;
 	bool primary_missing;
+	bool found_unmatched = false;
 	enum review_state_load_result result;
 
 	if (deck == NULL || session == NULL || path == NULL)
@@ -466,6 +469,8 @@ enum review_state_load_result review_state_load(
 	result = review_state_load_file(deck, session, path, &loaded_file);
 	if (result == REVIEW_STATE_LOAD_OK)
 		return REVIEW_STATE_LOAD_OK;
+	if (result == REVIEW_STATE_LOAD_UNMATCHED)
+		found_unmatched = true;
 	primary_missing = result == REVIEW_STATE_LOAD_NOT_FOUND;
 	has_temp_path = storage_build_suffixed_path(
 		temp_path,
@@ -490,6 +495,8 @@ enum review_state_load_result review_state_load(
 
 			return REVIEW_STATE_LOAD_OK;
 		}
+		if (result == REVIEW_STATE_LOAD_UNMATCHED)
+			found_unmatched = true;
 	}
 
 	if (has_backup_path)
@@ -507,6 +514,8 @@ enum review_state_load_result review_state_load(
 
 			return REVIEW_STATE_LOAD_OK;
 		}
+		if (result == REVIEW_STATE_LOAD_UNMATCHED)
+			found_unmatched = true;
 	}
 
 	if (!primary_missing && has_temp_path)
@@ -514,7 +523,11 @@ enum review_state_load_result review_state_load(
 		result = review_state_load_file(deck, session, temp_path, &loaded_file);
 		if (result == REVIEW_STATE_LOAD_OK)
 			return REVIEW_STATE_LOAD_OK;
+		if (result == REVIEW_STATE_LOAD_UNMATCHED)
+			found_unmatched = true;
 	}
+	if (found_unmatched)
+		return REVIEW_STATE_LOAD_UNMATCHED;
 	if (!loaded_file)
 		return REVIEW_STATE_LOAD_NOT_FOUND;
 
@@ -613,6 +626,8 @@ const char *review_state_load_result_name(enum review_state_load_result result)
 		return "loaded";
 	case REVIEW_STATE_LOAD_NOT_FOUND:
 		return "new";
+	case REVIEW_STATE_LOAD_UNMATCHED:
+		return "unmatched";
 	case REVIEW_STATE_LOAD_BAD_FORMAT:
 		return "ignored";
 	}
@@ -637,6 +652,7 @@ bool review_state_load_result_allows_save(enum review_state_load_result result)
 {
 	return (
 		result == REVIEW_STATE_LOAD_OK ||
-		result == REVIEW_STATE_LOAD_NOT_FOUND
+		result == REVIEW_STATE_LOAD_NOT_FOUND ||
+		result == REVIEW_STATE_LOAD_UNMATCHED
 	);
 }

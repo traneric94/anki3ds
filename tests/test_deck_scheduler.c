@@ -2734,7 +2734,7 @@ static void test_review_state_empty_file_is_bad_format(void)
 	remove(TEST_STATE_PATH);
 }
 
-static void test_review_state_unknown_only_file_is_bad_format(void)
+static void test_review_state_unknown_only_file_is_unmatched(void)
 {
 	struct deck deck;
 	struct scheduler_session session;
@@ -2749,8 +2749,8 @@ static void test_review_state_unknown_only_file_is_bad_format(void)
 
 	check(
 		review_state_load(&deck, &session, TEST_STATE_PATH) ==
-			REVIEW_STATE_LOAD_BAD_FORMAT,
-		"unknown-only state file is bad format"
+			REVIEW_STATE_LOAD_UNMATCHED,
+		"unknown-only state file is unmatched"
 	);
 	check(session.due_count == deck.card_count, "unknown-only state leaves session unchanged");
 
@@ -3291,6 +3291,10 @@ static void test_review_state_save_policy_rejects_bad_load(void)
 		"state save policy accepts missing state"
 	);
 	check(
+		review_state_load_result_allows_save(REVIEW_STATE_LOAD_UNMATCHED),
+		"state save policy accepts unmatched state"
+	);
+	check(
 		!review_state_load_result_allows_save(REVIEW_STATE_LOAD_BAD_FORMAT),
 		"state save policy rejects bad state"
 	);
@@ -3308,6 +3312,10 @@ static void test_app_review_queue_requires_safe_state(void)
 	check(
 		app_review_should_show_queue(REVIEW_STATE_LOAD_NOT_FOUND, &session),
 		"review queue shows for first-save state"
+	);
+	check(
+		app_review_should_show_queue(REVIEW_STATE_LOAD_UNMATCHED, &session),
+		"review queue shows for unmatched state"
 	);
 	check(
 		!app_review_should_show_queue(REVIEW_STATE_LOAD_BAD_FORMAT, &session),
@@ -4887,7 +4895,7 @@ int main(void)
 	test_review_state_bad_temp_falls_back_to_backup();
 	test_review_state_bad_primary_prefers_backup_before_temp();
 	test_review_state_empty_file_is_bad_format();
-	test_review_state_unknown_only_file_is_bad_format();
+	test_review_state_unknown_only_file_is_unmatched();
 	test_review_state_duplicate_card_row_is_bad_format();
 	test_review_state_marked_file_requires_complete_footer();
 	test_review_state_rejects_inconsistent_current_rows();

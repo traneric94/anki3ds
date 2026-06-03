@@ -156,6 +156,8 @@ Both `verify-sample-decks` and `verify-package-sd` use
 `tools/verify_text_deck.py` for the text-deck checks. See
 [sample-decks/README.md](sample-decks/README.md) for the sample-deck workflow
 and what each tracked deck is meant to cover.
+Successful verifier runs print a one-line summary for each deck with its name,
+card count, and daily limits; pass `--quiet` to print only validation errors.
 
 To launch the current `.3dsx` in Azahar from a normal macOS session:
 
@@ -267,7 +269,9 @@ unavailable state before the first valid sample plus charging and low-battery
 states once sampled. Successful ratings, suspend actions, undo actions, and
 restore-suspended actions append best-effort `review-log.tsv` rows for
 debugging. The no-due summary separates current-session rating counts from the
-persisted count of cards reviewed today. An in-app controls screen is available
+persisted count of cards reviewed today and distinguishes daily-limit exhaustion
+from a fully clear deck. Valid saved state with no matching current card ids
+starts fresh with a visible unmatched-state warning. An in-app controls screen is available
 with `Y` from non-rating screens and unrevealed review cards.
 
 See:

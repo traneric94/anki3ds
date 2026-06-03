@@ -497,6 +497,48 @@ size_t scheduler_review_due_count(const struct scheduler_session *session)
 	return count;
 }
 
+size_t scheduler_new_limit_blocked_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	if (session->new_limit == 0)
+		return 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_unstarted_new(session, index) &&
+			!scheduler_card_is_due(session, index)
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+size_t scheduler_review_limit_blocked_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	if (session->review_limit == 0)
+		return 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_unstarted_review(session, index) &&
+			!scheduler_card_is_due(session, index)
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
 bool scheduler_restore_card(
 	struct scheduler_session *session,
 	size_t index,

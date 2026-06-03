@@ -14,8 +14,8 @@ letters do not match the 3DS button label.
 | `R` | `W` | Open suspend confirmation |
 | D-pad or Circle Pad Up | `T` | Move selection up, scroll review text up |
 | D-pad or Circle Pad Down | `G` | Move selection down, scroll review text down |
-| D-pad or Circle Pad Left | `F` | Page deck list up, decrease daily-limit preset |
-| D-pad or Circle Pad Right | `H` | Page deck list down, increase daily-limit preset |
+| D-pad or Circle Pad Left | `F` | Page deck list up with wrap, decrease daily-limit preset |
+| D-pad or Circle Pad Right | `H` | Page deck list down with wrap, increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel actions, return from settings |
 | `START` | `M` | Open exit confirmation |
 
@@ -34,8 +34,10 @@ reset, action-confirm, exit-open, and exit-confirm buttons are also ignored
 when another button is active or held.
 
 The deck selector shows the current position as `selected/total` on both
-screens. Basic terminal-style colors are used for status: blue headings, green
-selected/saved/safe items, red errors/reset actions, and yellow cautions.
+screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
+list size and wraps between the first and last decks. Basic terminal-style
+colors are used for status: blue headings, green selected/saved/safe items,
+red errors/reset actions, and yellow cautions.
 
 ## Review Flow
 
@@ -48,7 +50,11 @@ selected/saved/safe items, red errors/reset actions, and yellow cautions.
 
 After a rating, the bottom status line shows whether the rating saved and which
 card is next. If saving fails, the app keeps the old scheduler state and shows
-that the card did not advance.
+that the card did not advance. Navigation, action selection, daily-limit value
+changes, and answer reveal also update the bottom status line so manual input
+has immediate feedback. If daily limits hide more calendar-due cards after the
+visible queue empties, the summary says `Daily limit reached` and shows new and
+review cards past the limit.
 
 ## Controls Screen
 

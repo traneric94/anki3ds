@@ -74,7 +74,9 @@ its temporary deck and scheduler on the heap so larger supported decks do not
 consume a large 3DS stack frame during deck scanning. If the deck loads but
 every available state file is malformed, the selector keeps the card count but
 suppresses due and suspended counts and shows a state error instead of
-presenting bad progress as a fresh review queue.
+presenting bad progress as a fresh review queue. If a valid state file has no
+rows matching the current deck's card ids, the selector marks it as unmatched
+and the app starts a fresh queue.
 
 ## Deck Loading
 
@@ -133,7 +135,9 @@ Load algorithm:
    the saved state.
 8. Reject duplicate rows for the same current deck card.
 9. Restore matching per-card scheduler state into a staged scheduler.
-10. Reposition the scheduler to the first due card.
+10. If parsed rows are valid but none match the current deck, return an
+    unmatched-state warning and leave the initialized scheduler fresh.
+11. Reposition the scheduler to the first due card.
 
 Old rows migrate `done=0` to due today and `done=1` to tomorrow with a one-day
 interval. Bad rows are rejected before the staged scheduler is committed, so a
@@ -159,13 +163,15 @@ If the main state file is missing on load, the app tries `state.tsv.tmp`, then
 `state.tsv.bak`. The temp fallback covers interrupted first saves where the
 temp file was fully written but not yet renamed into place. If the main state
 file is malformed, the app tries the backup before temp so a stale temp file
-does not outrank a known previous save. Empty state files and files with no rows
-matching the current deck are treated as malformed, so a truncated save cannot
-silently reset all progress and then be overwritten as fresh state. If every
-available state copy is malformed, review-state saves are blocked until the
-user resets deck progress. Opening that deck enters a reset-needed summary
-screen instead of a review queue, and normal study controls such as undo remain
-disabled until reset succeeds. Reset removes `state.tsv.tmp` and
+does not outrank a known previous save. Empty state files are treated as
+malformed, so a truncated save cannot silently reset all progress and then be
+overwritten as fresh state. Valid files with rows but no card ids matching the
+current deck are treated as unmatched, which allows re-imports with changed ids
+to start fresh while showing a warning. If every available state copy is
+malformed, review-state saves are blocked until the user resets deck progress.
+Opening that deck enters a reset-needed summary screen instead of a review
+queue, and normal study controls such as undo remain disabled until reset
+succeeds. Reset removes `state.tsv.tmp` and
 `state.tsv.bak` before the primary `state.tsv` for the active deck. The shared
 `storage` module owns the remove/rename order for both review state and
 settings. This remains simple to inspect on the SD card while avoiding the
@@ -310,9 +316,9 @@ stale confirmation prompt open.
 After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
 the app appends diagnostic rows to `review-log.tsv` with the before/after
 scheduler fields for the affected cards. Review logging is best-effort and
-append-only until the next row would exceed the configured size cap. If the
-existing file ends with a partial non-newline row, the log writer rewrites the
-complete prefix before appending the new row. A log append or repair failure
+normally appended until the next row would exceed the configured size cap. If
+the existing file ends with a partial non-newline row, the log writer rewrites
+the complete prefix before appending the new row. A log append or repair failure
 does not roll back a saved study action; the bottom status reports
 `log skipped` so the diagnostic gap is visible.
 
@@ -373,6 +379,9 @@ priority: older due days first, then deck order as the tiebreaker. Zero-day
 learning/relearning cards remain due even when the review limit is full, and a
 card already started today is allowed to remain due. This lets same-day Again
 loops finish instead of hiding half-reviewed cards behind a limit.
+When daily limits hide otherwise calendar-due cards and the visible queue is
+empty, the summary shows `Daily limit reached` plus the count of new and review
+cards past the limit instead of presenting the deck as simply done.
 
 Changing daily limits clears the one-step undo slot. The undo snapshot contains
 queue counters from the previous limit configuration, so keeping it after a
@@ -478,7 +487,7 @@ Keep the portable logic separate from the libctru shell:
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
 | `scheduler` | per-card session state, rating transitions, due counts, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
-| `review_log` | append-only study transition rows | scheduler decisions, rollback policy, rendering |
+| `review_log` | diagnostic study transition rows and partial-row repair | scheduler decisions, rollback policy, rendering |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds, poll scheduling policy, idle input wait tiers | libctru PTMU calls, rendering |
