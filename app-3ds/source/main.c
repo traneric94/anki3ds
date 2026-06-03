@@ -512,6 +512,17 @@ static void wait_for_idle_input(unsigned int idle_wait_count)
 	hidWaitForAnyEvent(true, 0, idle_input_wait_ns(idle_wait_count));
 }
 
+static bool app_mode_uses_held_navigation_wait(
+	enum app_mode mode,
+	unsigned int buttons_held
+)
+{
+	if (!app_mode_uses_navigation_repeat(mode))
+		return false;
+
+	return (buttons_held & APP_CONTROL_BUTTON_NAVIGATION_MASK) != 0;
+}
+
 static void schedule_next_day_check(time_t *next_check_time, time_t now)
 {
 	if (next_check_time == NULL || now == (time_t)-1)
@@ -2447,6 +2458,7 @@ int main(int argc, char *argv[])
 	static struct app_state app;
 	bool frame_dirty = true;
 	unsigned int idle_wait_count = 0;
+	bool held_navigation_wait = false;
 	time_t next_battery_poll_time = 0;
 	time_t next_day_check_time = 0;
 	time_t now;
@@ -2472,6 +2484,10 @@ int main(int argc, char *argv[])
 			present_current_frame();
 			frame_dirty = false;
 			idle_wait_count = 0;
+		}
+		else if (held_navigation_wait)
+		{
+			gspWaitForVBlank();
 		}
 		else
 		{
@@ -2500,6 +2516,10 @@ int main(int argc, char *argv[])
 			app_controls_repeat_reset(&navigation_repeat);
 		}
 
+		held_navigation_wait = app_mode_uses_held_navigation_wait(
+			app.mode,
+			buttons_held
+		);
 		keys_down |= keys_for_repeat_buttons(repeat_buttons);
 		if (app_controls_input_is_active(buttons_down, buttons_held, repeat_buttons))
 		{

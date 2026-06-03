@@ -208,7 +208,10 @@ rating does not save the wrong answer.
 D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
 deck select, actions, and settings modes, so ratings and destructive actions
 stay single-press. Held input keeps the idle wait counter short while a button
-is down, so selector movement does not slow down as if the app were idle.
+is down, so selector movement does not slow down as if the app were idle. While
+a repeatable D-pad key was held on the previous scan, the unchanged-screen path
+waits for one VBlank instead of entering the longer HID idle wait; after release
+it returns to the adaptive low-power idle path.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
