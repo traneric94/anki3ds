@@ -363,6 +363,10 @@ static void test_app_text_counts_utf8_columns(void)
 		"UTF-8 byte count keeps four-byte char whole"
 	);
 	check(
+		app_text_byte_count_for_columns("\xc3" "\xa9" "b", 1) == 2,
+		"UTF-8 byte count keeps narrow truncation whole"
+	);
+	check(
 		app_text_byte_count_for_columns(text, 20) == strlen(text),
 		"UTF-8 byte count can include full text"
 	);

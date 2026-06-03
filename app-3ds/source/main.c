@@ -290,8 +290,8 @@ static void print_truncated(const char *text, size_t max_columns)
 
 	if (max_columns <= 3)
 	{
-		for (size_t index = 0; index < max_columns; index++)
-			putchar(text[index]);
+		visible_bytes = app_text_byte_count_for_columns(text, max_columns);
+		printf("%.*s", (int)visible_bytes, text);
 		return;
 	}
 
