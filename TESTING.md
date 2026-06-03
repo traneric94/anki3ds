@@ -154,7 +154,9 @@ on a reset-needed summary instead of the normal review queue.
 
 GitHub Actions runs `make test` on pushes and pull requests. That covers the
 portable C host suite plus converter tests; emulator and hardware checks remain
-manual checkpoint steps.
+manual checkpoint steps. The C host compiler can be overridden with `HOST_CC`
+and `HOST_CFLAGS`; the default flags include the POSIX feature level needed by
+the timezone and filesystem tests.
 
 Run converter tests with:
 

@@ -1,6 +1,8 @@
 AZAHAR_APP ?= $(HOME)/Applications/azahar-macos-arm64-2125.1.2/Azahar.app
 AZAHAR_SDMC ?= $(HOME)/Library/Application Support/Azahar/sdmc
 LOCAL_SDMC ?= local/sdmc
+HOST_CC ?= cc
+HOST_CFLAGS ?= -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3ds/include
 
 APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo media-demo sample
@@ -19,7 +21,7 @@ clean:
 test: test-host test-converter
 
 test-host:
-	cc -std=c99 -Wall -Wextra -Werror -Iapp-3ds/include \
+	$(HOST_CC) $(HOST_CFLAGS) \
 		tests/test_deck_scheduler.c \
 		app-3ds/source/app_controls.c \
 		app-3ds/source/app_layout.c \
