@@ -8,6 +8,7 @@
 #include "app_controls.h"
 #include "app_layout.h"
 #include "app_power.h"
+#include "app_review.h"
 #include "app_text.h"
 #include "app_time.h"
 #include "deck.h"
@@ -426,6 +427,13 @@ static bool app_state_allows_study(const struct app_state *app)
 	return review_state_load_result_allows_save(app->state_load_result);
 }
 
+static enum app_mode app_review_mode_for_session(const struct app_state *app)
+{
+	return app_review_should_show_queue(app->state_load_result, &app->session) ?
+		APP_MODE_REVIEW :
+		APP_MODE_SUMMARY;
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -775,20 +783,18 @@ static void app_load_selected_deck(struct app_state *app)
 		);
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
-		if (!app_state_allows_study(app))
+		app->mode = app_review_mode_for_session(app);
+		if (app->mode == APP_MODE_REVIEW)
+		{
+			app_set_status(app, "Loaded deck");
+		}
+		else if (!app_state_allows_study(app))
 		{
 			app_set_status(app, "Reset bad state first");
-			app->mode = APP_MODE_SUMMARY;
-		}
-		else if (scheduler_is_complete(&app->session))
-		{
-			app_set_status(app, "Loaded; no cards due");
-			app->mode = APP_MODE_SUMMARY;
 		}
 		else
 		{
-			app_set_status(app, "Loaded deck");
-			app->mode = APP_MODE_REVIEW;
+			app_set_status(app, "Loaded; no cards due");
 		}
 	}
 	else
@@ -1342,14 +1348,6 @@ static void show_scan_then_scan_decks(struct app_state *app)
 	}
 }
 
-static enum app_mode app_review_mode_for_session(const struct app_state *app)
-{
-	if (scheduler_is_complete(&app->session))
-		return APP_MODE_SUMMARY;
-
-	return APP_MODE_REVIEW;
-}
-
 static void app_update_review_return_modes_for_day_change(
 	struct app_state *app,
 	enum app_mode target_mode
@@ -1391,7 +1389,9 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 		return false;
 
 	app->mode = target_mode;
-	if (target_mode == APP_MODE_SUMMARY)
+	if (!app_state_allows_study(app))
+		app_set_status(app, "Reset bad state first");
+	else if (target_mode == APP_MODE_SUMMARY)
 		app_set_status(app, "New day; no cards due");
 	else
 		app_set_status(app, "New day; cards due");

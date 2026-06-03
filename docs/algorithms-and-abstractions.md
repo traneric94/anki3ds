@@ -221,7 +221,8 @@ review session updates the scheduler's `today`, clears one-step undo,
 recomputes daily counts, and repositions to the next due card. If a review or
 summary screen is visible, the screen redraws immediately; modal return targets
 are updated so canceling a modal lands on the correct review or summary screen
-for the new day.
+for the new day. A deck with malformed saved state stays on the reset-needed
+summary across day changes instead of moving into the review queue.
 
 The app samples PTMU battery state at startup, then at most once every ten
 minutes. Periodic checks first ask PTMU whether the shell is open; battery level
@@ -418,6 +419,7 @@ Keep the portable logic separate from the libctru shell:
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
+| `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |
