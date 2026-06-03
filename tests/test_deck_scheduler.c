@@ -1358,6 +1358,24 @@ static void test_app_settings_loads_backup_when_primary_is_bad(void)
 	remove(TEST_SETTINGS_BACKUP_PATH);
 }
 
+static void test_app_settings_partial_primary_falls_back_to_backup(void)
+{
+	struct app_settings settings;
+
+	write_file(TEST_SETTINGS_PATH, "new_limit\t7\n");
+	write_file(TEST_SETTINGS_BACKUP_PATH, "new_limit\t9\nreview_limit\t10\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"backup settings load when primary is incomplete"
+	);
+	check(settings.new_limit == 9, "backup after partial primary new limit loads");
+	check(settings.review_limit == 10, "backup after partial primary review limit loads");
+
+	remove(TEST_SETTINGS_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+}
+
 static void test_app_settings_loads_temp_when_primary_and_backup_missing(void)
 {
 	struct app_settings settings;
@@ -1431,6 +1449,27 @@ static void test_app_settings_bad_file_uses_defaults(void)
 	check(
 		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
 		"bad settings review default"
+	);
+
+	remove(TEST_SETTINGS_PATH);
+}
+
+static void test_app_settings_empty_file_uses_defaults(void)
+{
+	struct app_settings settings;
+
+	remove(TEST_SETTINGS_TEMP_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+	write_file(TEST_SETTINGS_PATH, "");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_BAD_FORMAT,
+		"empty settings reports ignored"
+	);
+	check(settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT, "empty settings new default");
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"empty settings review default"
 	);
 
 	remove(TEST_SETTINGS_PATH);
@@ -2298,10 +2337,12 @@ int main(void)
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();
 	test_app_settings_loads_backup_when_primary_is_bad();
+	test_app_settings_partial_primary_falls_back_to_backup();
 	test_app_settings_loads_temp_when_primary_and_backup_missing();
 	test_app_settings_bad_temp_falls_back_to_backup();
 	test_app_settings_bad_primary_prefers_backup_before_temp();
 	test_app_settings_bad_file_uses_defaults();
+	test_app_settings_empty_file_uses_defaults();
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();

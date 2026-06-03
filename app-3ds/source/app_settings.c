@@ -99,7 +99,12 @@ static bool split_settings_line(
 	return true;
 }
 
-static bool parse_settings_line(char *line, struct app_settings *settings)
+static bool parse_settings_line(
+	char *line,
+	struct app_settings *settings,
+	bool *read_new_limit,
+	bool *read_review_limit
+)
 {
 	char *fields[SETTINGS_FIELD_COUNT];
 	size_t field_count;
@@ -119,11 +124,13 @@ static bool parse_settings_line(char *line, struct app_settings *settings)
 	if (strcmp(fields[0], "new_limit") == 0)
 	{
 		settings->new_limit = value;
+		*read_new_limit = true;
 		return true;
 	}
 	if (strcmp(fields[0], "review_limit") == 0)
 	{
 		settings->review_limit = value;
+		*read_review_limit = true;
 		return true;
 	}
 
@@ -139,6 +146,8 @@ static enum app_settings_load_result app_settings_load_file(
 	FILE *file;
 	char line[SETTINGS_MAX_LINE_LENGTH];
 	struct app_settings staged;
+	bool read_new_limit = false;
+	bool read_review_limit = false;
 
 	app_settings_default(&staged);
 
@@ -157,7 +166,7 @@ static enum app_settings_load_result app_settings_load_file(
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
 		}
 
-		if (!parse_settings_line(line, &staged))
+		if (!parse_settings_line(line, &staged, &read_new_limit, &read_review_limit))
 		{
 			fclose(file);
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
@@ -165,6 +174,11 @@ static enum app_settings_load_result app_settings_load_file(
 	}
 
 	if (ferror(file))
+	{
+		fclose(file);
+		return APP_SETTINGS_LOAD_BAD_FORMAT;
+	}
+	if (!read_new_limit || !read_review_limit)
 	{
 		fclose(file);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;

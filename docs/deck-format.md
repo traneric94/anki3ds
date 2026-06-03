@@ -111,7 +111,8 @@ Supported settings:
 - `new_limit`: new cards introduced per day, `0` means unlimited
 - `review_limit`: review cards introduced per day, `0` means unlimited
 
-If `settings.tsv` is missing or invalid, the app uses defaults:
+Both settings rows must be present. If `settings.tsv` is missing or invalid,
+the app uses defaults:
 
 ```text
 new_limit	20
