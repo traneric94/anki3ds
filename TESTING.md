@@ -34,6 +34,7 @@ make
 make test
 make test-host
 make test-converter
+make verify-local
 make install-local-sd
 make install-local-sample-deck
 make install-local-sample-decks
@@ -159,6 +160,16 @@ manual checkpoint steps. The C host compiler can be overridden with `HOST_CC`
 and `HOST_CFLAGS`; the default flags include the POSIX feature level needed by
 the timezone and filesystem tests.
 
+Run the local pre-checkpoint gate with:
+
+```sh
+make verify-local
+```
+
+That target runs `make test`, builds the 3DS app, and stages the local SD mirror
+with sample decks. It requires the local 3DS toolchain, so CI still uses the
+portable `make test` gate.
+
 Run converter tests with:
 
 ```sh
@@ -193,6 +204,7 @@ Save files should be tested with:
 
 Before any tagged checkpoint:
 
+- `make verify-local` passes
 - docs match the current artifact
 - sample decks are tiny and original
 - no personal Anki data is committed

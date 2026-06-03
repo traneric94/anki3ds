@@ -8,7 +8,7 @@ APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo media-demo sample
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 
-.PHONY: all app-3ds clean test test-host test-converter install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator run-emulator-samples
+.PHONY: all app-3ds clean test test-host test-converter verify-local install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator run-emulator-samples
 
 all: app-3ds
 
@@ -44,6 +44,8 @@ test-host:
 
 test-converter:
 	python3 -m unittest tests/test_converter.py
+
+verify-local: test install-local-sd
 
 install-local-sd: app-3ds install-local-sample-decks
 	mkdir -p "$(LOCAL_SDMC)/$(APP_SD_DIR)"

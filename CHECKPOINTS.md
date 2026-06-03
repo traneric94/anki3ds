@@ -9,6 +9,8 @@ Record hardware results in `docs/device-test-log.md`.
 - The user tests only checkpoint builds, not random intermediate states.
 - Any failing checkpoint gets a short bug note before fixes begin.
 - Working checkpoints should be tagged in git.
+- Run `make verify-local` before a tagged checkpoint on a machine with the 3DS
+  toolchain.
 
 Suggested tag format:
 
