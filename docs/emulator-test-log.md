@@ -96,3 +96,19 @@ Result: pass for launch command only
 Notes:
 - D-pad responsiveness and color rendering still need a manual emulator or
   hardware pass.
+
+## 2026-06-03 - Media Layout Launch Check
+
+Build: `c74423d`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Media status-row layout is covered by host tests, but the rendered colors and
+  spacing still need a visual emulator or hardware pass.
