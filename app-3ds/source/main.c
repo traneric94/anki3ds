@@ -188,6 +188,7 @@ static bool app_mode_is_review_surface(enum app_mode mode)
 	return (
 		mode == APP_MODE_REVIEW ||
 		mode == APP_MODE_SUMMARY ||
+		mode == APP_MODE_CONFIRM_RESTORE ||
 		mode == APP_MODE_CONFIRM_SUSPEND
 	);
 }

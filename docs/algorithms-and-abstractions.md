@@ -230,11 +230,13 @@ checks for a local-day change at most once per minute, using the loop's existing
 `time()` result so it does not run calendar conversion on every idle tick. If a
 valid day change is observed, deck-select rescans summaries, and an active
 review session updates the scheduler's `today`, clears one-step undo,
-recomputes daily counts, and repositions to the next due card. If a review or
-summary screen is visible, the screen redraws immediately; modal return targets
-are updated so canceling a modal lands on the correct review or summary screen
-for the new day. A deck with malformed saved state stays on the reset-needed
-summary across day changes instead of moving into the review queue.
+recomputes daily counts, and repositions to the next due card. If a review,
+summary, suspend-confirmation, or restore-confirmation screen is visible, the
+screen redraws immediately on the correct review or summary surface for the new
+day. Other modal return targets are updated so canceling a modal lands on the
+correct review or summary screen for the new day. A deck with malformed saved
+state stays on the reset-needed summary across day changes instead of moving
+into the review queue.
 
 The app samples PTMU battery state at startup, then at most once every ten
 minutes. Periodic checks first ask PTMU whether the shell is open; battery level
