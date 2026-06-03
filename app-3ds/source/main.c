@@ -635,7 +635,6 @@ static void app_init(struct app_state *app)
 	app->battery_service_available = R_SUCCEEDED(ptmuInit());
 	app_sample_battery(app);
 	media_cache_init(&media_cache);
-	app_scan_decks(app);
 	app->mode = APP_MODE_DECK_SELECT;
 }
 
@@ -947,6 +946,36 @@ static void draw_battery_warning(const struct app_state *app)
 		"\x1b[29;1HBattery low: %u/5. Charge soon.",
 		(unsigned int)app->battery_level
 	);
+}
+
+static void draw_scanning_screen(const struct app_state *app)
+{
+	select_top_screen();
+	consoleClear();
+	printf("\x1b[1;1Hanki3ds");
+	printf("\x1b[3;1HScanning decks...");
+	printf("\x1b[5;1H%s", DECK_INDEX_ROOT_PATH);
+
+	select_bottom_screen();
+	consoleClear();
+	printf("\x1b[1;1HDeck scan");
+	printf("\x1b[3;1HReading SD card");
+	draw_battery_warning(app);
+	select_top_screen();
+}
+
+static void present_current_frame(void)
+{
+	gfxFlushBuffers();
+	gspWaitForVBlank();
+	gfxSwapBuffers();
+}
+
+static void show_scan_then_scan_decks(struct app_state *app)
+{
+	draw_scanning_screen(app);
+	present_current_frame();
+	app_scan_decks(app);
 }
 
 static void draw_bottom_controls_screen(const struct app_state *app)
@@ -1310,7 +1339,7 @@ static bool app_handle_deck_select_input(struct app_state *app, u32 keys_down)
 {
 	if (keys_down & KEY_SELECT)
 	{
-		app_scan_decks(app);
+		show_scan_then_scan_decks(app);
 		return true;
 	}
 
@@ -1545,15 +1574,14 @@ int main(int argc, char *argv[])
 	consoleInit(GFX_BOTTOM, &bottom_screen);
 
 	app_init(&app);
+	show_scan_then_scan_decks(&app);
 	draw_app(&app);
 
 	while (aptMainLoop())
 	{
 		if (frame_dirty)
 		{
-			gfxFlushBuffers();
-			gspWaitForVBlank();
-			gfxSwapBuffers();
+			present_current_frame();
 			frame_dirty = false;
 			idle_wait_count = 0;
 		}
