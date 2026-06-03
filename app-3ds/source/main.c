@@ -38,10 +38,6 @@
 #define STATUS_MESSAGE_SIZE 64
 #define STATUS_MESSAGE_WIDTH 31
 #define DAY_CHECK_INTERVAL_SECONDS 60
-#define APP_COMMAND_MODAL_MASK \
-	(APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_X | \
-	APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_SELECT | APP_CONTROL_BUTTON_START)
-
 static const unsigned int daily_limit_presets[] = {
 	5,
 	10,
@@ -410,7 +406,11 @@ static unsigned int *selected_daily_limit(struct app_state *app)
 
 static bool app_command_pressed(unsigned int buttons, unsigned int command_button)
 {
-	return app_controls_single_command(buttons, command_button, APP_COMMAND_MODAL_MASK);
+	return app_controls_single_command(
+		buttons,
+		command_button,
+		APP_CONTROL_COMMAND_BUTTON_MASK
+	);
 }
 
 static const struct card *current_card(const struct app_state *app)
@@ -1773,13 +1773,12 @@ static bool save_daily_limits(struct app_state *app)
 
 static bool app_handle_deck_select_input(
 	struct app_state *app,
-	u32 keys_down,
 	unsigned int buttons_down
 )
 {
 	bool move_down;
 
-	if (keys_down & KEY_SELECT)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT))
 	{
 		show_scan_then_scan_decks(app);
 		return true;
@@ -1807,7 +1806,7 @@ static bool app_handle_deck_select_input(
 		return true;
 	}
 
-	if (keys_down & KEY_A)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
 	{
 		app_load_selected_deck(app);
 		return true;
@@ -1818,7 +1817,6 @@ static bool app_handle_deck_select_input(
 
 static bool app_handle_actions_input(
 	struct app_state *app,
-	u32 keys_down,
 	unsigned int buttons_down
 )
 {
@@ -1917,7 +1915,6 @@ static bool app_handle_exit_confirmation_input(
 
 static bool app_handle_settings_input(
 	struct app_state *app,
-	u32 keys_down,
 	unsigned int buttons_down
 )
 {
@@ -1956,9 +1953,13 @@ static bool app_handle_settings_input(
 	return false;
 }
 
-static bool app_handle_controls_input(struct app_state *app, u32 keys_down)
+static bool app_handle_controls_input(struct app_state *app, unsigned int buttons_down)
 {
-	if (keys_down & (KEY_B | KEY_SELECT | KEY_Y))
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_Y) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
 	{
 		app->mode = app->controls_return_mode;
 		app_set_status(app, "Returned");
@@ -1976,17 +1977,17 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (app->mode == APP_MODE_CONFIRM_EXIT)
 		return app_handle_exit_confirmation_input(app, buttons);
 
-	if (keys_down & KEY_START)
+	if (app_command_pressed(buttons, APP_CONTROL_BUTTON_START))
 	{
 		app_open_exit_confirmation(app);
 		return true;
 	}
 
 	if (app->mode == APP_MODE_CONTROLS)
-		return app_handle_controls_input(app, keys_down);
+		return app_handle_controls_input(app, buttons);
 
 	if (
-		(buttons & APP_CONTROL_BUTTON_Y) &&
+		app_command_pressed(buttons, APP_CONTROL_BUTTON_Y) &&
 		app_controls_can_open(app_control_mode_for_app_mode(app->mode), app->revealed)
 	)
 	{
@@ -1995,23 +1996,32 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	}
 
 	if (app->mode == APP_MODE_DECK_SELECT)
-		return app_handle_deck_select_input(app, keys_down, buttons);
+		return app_handle_deck_select_input(app, buttons);
 	if (app->mode == APP_MODE_ACTIONS)
-		return app_handle_actions_input(app, keys_down, buttons);
+		return app_handle_actions_input(app, buttons);
 	if (app->mode == APP_MODE_SETTINGS)
-		return app_handle_settings_input(app, keys_down, buttons);
+		return app_handle_settings_input(app, buttons);
 	if (app->mode == APP_MODE_CONFIRM_RESET)
 		return app_handle_reset_confirmation_input(app, buttons);
 
-	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
+	if (
+		app->mode == APP_MODE_LOAD_ERROR &&
+		(
+			app_command_pressed(buttons, APP_CONTROL_BUTTON_B) ||
+			app_command_pressed(buttons, APP_CONTROL_BUTTON_SELECT)
+		)
+	)
 	{
 		app_return_to_deck_select(app);
 		return true;
 	}
 
 	if (
-		(app->mode == APP_MODE_SUMMARY && (keys_down & KEY_B)) ||
-		(app->mode == APP_MODE_REVIEW && !app->revealed && (keys_down & KEY_B))
+		(
+			app->mode == APP_MODE_SUMMARY ||
+			(app->mode == APP_MODE_REVIEW && !app->revealed)
+		) &&
+		app_command_pressed(buttons, APP_CONTROL_BUTTON_B)
 	)
 	{
 		app_return_to_deck_select(app);
@@ -2020,7 +2030,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (
 		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
-		(keys_down & KEY_SELECT)
+		app_command_pressed(buttons, APP_CONTROL_BUTTON_SELECT)
 	)
 	{
 		app_open_actions(app);
@@ -2029,7 +2039,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (
 		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
-		(keys_down & KEY_L)
+		app_command_pressed(buttons, APP_CONTROL_BUTTON_L)
 	)
 	{
 		return undo_last_action(app);
@@ -2038,7 +2048,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (app->mode != APP_MODE_REVIEW)
 		return false;
 
-	if (keys_down & KEY_R)
+	if (app_command_pressed(buttons, APP_CONTROL_BUTTON_R))
 		return suspend_current_card(app);
 
 	if (!app->revealed)

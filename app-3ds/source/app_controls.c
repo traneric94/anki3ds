@@ -157,7 +157,14 @@ bool app_controls_single_command(
 
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
 {
-	return !review_answer_revealed && (buttons & APP_CONTROL_BUTTON_A) != 0;
+	return (
+		!review_answer_revealed &&
+		app_controls_single_command(
+			buttons,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_COMMAND_BUTTON_MASK
+		)
+	);
 }
 
 bool app_controls_rating_for_buttons(
@@ -167,19 +174,15 @@ bool app_controls_rating_for_buttons(
 )
 {
 	unsigned int rating_buttons =
-		buttons &
-		(
-			APP_CONTROL_BUTTON_A |
-			APP_CONTROL_BUTTON_B |
-			APP_CONTROL_BUTTON_X |
-			APP_CONTROL_BUTTON_Y
-		);
+		buttons & APP_CONTROL_FACE_BUTTON_MASK;
 
 	if (!review_answer_revealed)
 		return false;
 	if (rating == NULL)
 		return false;
 	if (rating_buttons == 0 || (rating_buttons & (rating_buttons - 1)) != 0)
+		return false;
+	if ((buttons & APP_CONTROL_COMMAND_BUTTON_MASK) != rating_buttons)
 		return false;
 
 	if (rating_buttons & APP_CONTROL_BUTTON_Y)

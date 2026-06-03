@@ -386,6 +386,13 @@ static void test_app_controls_review_front_actions(void)
 		"A shows answer before reveal"
 	);
 	check(
+		!app_controls_should_show_answer(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_START,
+			false
+		),
+		"A with START does not show answer"
+	);
+	check(
 		!app_controls_should_show_answer(APP_CONTROL_BUTTON_A, true),
 		"A does not show answer after reveal"
 	);
@@ -446,6 +453,14 @@ static void test_app_controls_rejects_ambiguous_ratings(void)
 		!app_controls_rating_for_buttons(APP_CONTROL_BUTTON_A, true, NULL),
 		"rating output is required"
 	);
+	check(
+		!app_controls_rating_for_buttons(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_START,
+			true,
+			&rating
+		),
+		"rating with START is ignored"
+	);
 }
 
 static void test_app_controls_rejects_ambiguous_dpad_axes(void)
@@ -503,7 +518,7 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 static void test_app_controls_requires_single_command(void)
 {
 	unsigned int confirm_cancel_mask =
-		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_SELECT;
+		APP_CONTROL_COMMAND_BUTTON_MASK;
 
 	check(
 		app_controls_single_command(
@@ -528,6 +543,30 @@ static void test_app_controls_requires_single_command(void)
 			confirm_cancel_mask | APP_CONTROL_BUTTON_Y
 		),
 		"single command rejects extra face button"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_L,
+			APP_CONTROL_BUTTON_A,
+			confirm_cancel_mask
+		),
+		"single command rejects shoulder command"
+	);
+	check(
+		app_controls_single_command(
+			APP_CONTROL_BUTTON_START,
+			APP_CONTROL_BUTTON_START,
+			confirm_cancel_mask
+		),
+		"single command accepts exact start"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_START | APP_CONTROL_BUTTON_B,
+			APP_CONTROL_BUTTON_START,
+			confirm_cancel_mask
+		),
+		"single command rejects start with cancel"
 	);
 	check(
 		!app_controls_single_command(
