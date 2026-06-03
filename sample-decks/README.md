@@ -20,8 +20,8 @@ make verify-sample-decks
 ```
 
 This checks required files, `deck.json` metadata, `settings.tsv`, five-field
-text-card rows, duplicate card IDs, and accidentally committed progress files
-for the default text-only sample set.
+text-card rows, duplicate card IDs, accidentally committed progress files, and
+unexpected media or extra files for the default text-only sample set.
 GitHub Actions runs the same check through `make verify-ci`.
 
 The same text-deck rules are applied to the copy-ready SD payload by:
@@ -71,6 +71,6 @@ sample root so the default pass remains text-only.
 The singular install targets remain compatibility aliases, but the plural
 targets describe the current multi-deck workflow more accurately.
 
-Tracked sample directories should contain only source deck files such as
-`deck.json`, `cards.tsv`, and `settings.tsv`. Optional media fixtures are kept
-outside the daily-use sample set.
+Tracked text sample directories should contain only `deck.json`, `cards.tsv`,
+and `settings.tsv`. Optional media fixtures are kept outside the daily-use
+sample set.

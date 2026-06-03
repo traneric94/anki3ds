@@ -86,8 +86,8 @@ make verify-package-sd
 ```
 
 That check confirms the staged payload has the app artifacts, only the default
-text sample decks, valid five-field text-card rows, valid settings, and no
-generated progress files.
+text sample decks, valid five-field text-card rows, valid settings, no generated
+progress files, and no media or extra files inside those text deck folders.
 
 For a fresh sample-deck pass, use:
 

@@ -116,6 +116,16 @@ class VerifyTextDeckTests(unittest.TestCase):
                 "must not be committed or packaged",
             )
 
+    def test_rejects_media_or_extra_files_in_text_deck(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "media").mkdir()
+            (deck_dir / "cards.tsv.tmp").write_text("partial\n", encoding="utf-8")
+            errors = self.verify(deck_dir)
+
+            self.assert_error_contains(errors, "media: unexpected entry")
+            self.assert_error_contains(errors, "cards.tsv.tmp: unexpected entry")
+
 
 if __name__ == "__main__":
     unittest.main()

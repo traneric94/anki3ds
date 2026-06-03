@@ -65,8 +65,9 @@ Verification gates:
   files. The default tracked sample set is text-only.
 - `make verify-package-sd` builds the copy-ready `dist/sdmc/` payload and
   verifies that it contains the app artifacts, the default text decks, valid
-  five-field text-card rows, valid settings, no optional media fixture, and no
-  generated progress files.
+  five-field text-card rows, valid settings, no optional media fixture, no
+  generated progress files, and no media or extra files inside those text deck
+  folders.
 - `make verify-local` is the local pre-checkpoint gate. It runs tests,
   sample-deck verification, local SD staging, and package-payload verification.
   It requires the local 3DS toolchain.
@@ -232,7 +233,8 @@ make test-tools
 ```
 
 The text-deck verifier is part of the package safety net because it rejects
-source or staged sample decks that the 3DS app would fail to load.
+source or staged sample decks that the 3DS app would fail to load, plus media
+or stray files in the default text-only deck folders.
 
 Minimum converter tests:
 

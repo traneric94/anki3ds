@@ -27,6 +27,8 @@ PROGRESS_FILES = (
     "settings.tsv.bak",
 )
 
+TEXT_DECK_FILES = frozenset(("deck.json", "cards.tsv", "settings.tsv"))
+
 
 def utf8_length(value: str) -> int:
     return len(value.encode("utf-8"))
@@ -337,6 +339,22 @@ def verify_no_progress_files(deck_dir: Path, errors: list[str]) -> None:
             append_file_error(errors, path, "must not be committed or packaged")
 
 
+def verify_text_deck_entries(deck_dir: Path, errors: list[str]) -> None:
+    try:
+        entries = sorted(deck_dir.iterdir(), key=lambda entry: entry.name)
+    except OSError as error:
+        append_file_error(errors, deck_dir, str(error))
+        return
+
+    for entry in entries:
+        if entry.name not in TEXT_DECK_FILES:
+            append_file_error(
+                errors,
+                entry,
+                "unexpected entry in text-only deck",
+            )
+
+
 def verify_text_deck(deck_dir: Path) -> list[str]:
     errors: list[str] = []
 
@@ -355,6 +373,7 @@ def verify_text_deck(deck_dir: Path) -> list[str]:
     verify_cards(deck_dir, card_rows, errors)
     verify_settings(deck_dir, settings_rows, errors)
     verify_no_progress_files(deck_dir, errors)
+    verify_text_deck_entries(deck_dir, errors)
 
     return errors
 
