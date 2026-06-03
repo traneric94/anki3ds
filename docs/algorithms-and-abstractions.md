@@ -429,16 +429,17 @@ Algorithm:
    `note_id` and `card_id` from `--note-id-field`/`--card-id-field` when
    durable source IDs are provided, otherwise `note_id` from front/back/tags
    and `card_id` from note/front/back.
-7. Write `deck.json` with format version, deck id, deck name, creator, and
-   card count.
-8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
-9. If media fields and `--media-root` are provided, convert referenced binary
+7. Reject inline `<img>` tags unless the same side has a non-empty mapped
+   media field, so image-bearing exports do not silently become text-only
+   cards.
+8. If media fields and `--media-root` are provided, convert referenced binary
    PPM `P6` files into bounded raw `.a3i` files under a temporary media
    directory, then replace final media files with rollback if a commit step
    fails.
-10. Reject inline `<img>` tags unless the same side has a non-empty mapped
-    media field, so image-bearing exports do not silently become text-only
-    cards.
+9. If media fields are used without `--media-root`, validate the existing
+   passthrough `.a3i` files before changing deck payload files.
+10. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
+    final files with rollback if either commit step fails.
 11. Write default `settings.tsv` if it does not already exist.
 
 The converter deliberately does not open or rewrite existing `state.tsv`,

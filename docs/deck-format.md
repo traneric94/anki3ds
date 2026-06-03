@@ -29,6 +29,9 @@ sdmc:/3ds/anki3ds/decks/media-demo/cards.tsv
 sdmc:/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
+See `sample-decks/README.md` for the tracked deck purposes, fresh-pass targets,
+and `make verify-sample-decks` workflow.
+
 Each sample deck also includes:
 
 ```text
@@ -214,8 +217,10 @@ Limits:
 
 The converter can convert binary PPM `P6` images into `.a3i` files when
 `--media-root` is provided. It can also validate and copy existing `.a3i` files
-from that media root. Without `--media-root`, media fields must already
-reference `.a3i` files that will be copied beside the deck manually.
+from that media root. Without `--media-root`, media fields must reference
+existing valid `.a3i` files already present in the output deck's `media/`
+directory; missing or malformed passthrough media is rejected before `cards.tsv`
+is written.
 If an exported front/back field contains an inline `<img>` tag, that side must
 also provide a non-empty media field; otherwise the converter rejects the card
 so the image is not silently dropped. Image-only cards still need non-empty text

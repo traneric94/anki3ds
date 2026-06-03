@@ -34,7 +34,10 @@ make
 make test
 make test-host
 make test-converter
+make verify-ci
+make verify-sample-decks
 make verify-local
+make package-sd
 make install-local-sd
 make install-local-sample-deck
 make install-local-sample-decks
@@ -48,6 +51,20 @@ make run-emulator
 make run-emulator-samples
 make run-emulator-fresh-samples
 ```
+
+Verification gates:
+
+- `make verify-ci` is the portable CI gate. It runs `make test` and
+  `make verify-sample-decks`.
+- `make verify-sample-decks` checks the tracked sample decks for required
+  files, matching `deck.json` metadata, valid `settings.tsv`, present valid
+  `.a3i` media references, duplicate card IDs, and accidentally committed
+  progress files.
+- `make verify-local` is the local pre-checkpoint gate. It runs tests and
+  sample-deck verification, then builds the 3DS app and stages the local SD
+  mirror with sample decks. It requires the local 3DS toolchain.
+- `make package-sd` builds a clean SD-card payload under `dist/sdmc/` with the
+  app artifact and tracked sample decks, but without generated progress files.
 
 The local SD mirror lives at:
 
@@ -84,6 +101,14 @@ Use `make reset-local-sample-progress` or `make reset-azahar-sample-progress`
 to clear only tracked sample-deck progress files before a fresh manual pass.
 The `prepare-local-samples-fresh` and `prepare-azahar-samples-fresh` targets
 install the tracked sample decks first, then perform that progress reset.
+Sample install targets replace source-owned files such as `deck.json`,
+`cards.tsv`, `settings.tsv`, and `media/` while preserving `state.tsv` and
+`review-log.tsv`; fresh targets clear those files plus `state.tsv.tmp`,
+`state.tsv.bak`, `review-log.tsv.tmp`, and `review-log.tsv.bak` so stale
+progress should not carry into a pass.
+The singular `install-local-sample-deck` and `install-azahar-sample-deck`
+targets are compatibility aliases for the plural targets; the plural names
+describe the current multi-deck sample workflow more accurately.
 
 During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
 On load, a valid temp state file can recover an interrupted first save. If all
@@ -140,10 +165,14 @@ Use this format in `docs/device-test-log.md`:
 ## YYYY-MM-DD - Checkpoint Name
 
 Build:
+Gate:
 SD path:
+Sample prep:
+Decks:
 Steps:
 Observed:
 Expected:
+Evidence:
 Result: pass/fail
 Notes:
 ```
@@ -164,11 +193,12 @@ It also checks that malformed review state blocks normal saves and suppresses
 selector due counts until deck progress is reset. Opening a deck with malformed
 state should land on a reset-needed summary instead of the normal review queue.
 
-GitHub Actions runs `make test` on pushes and pull requests. That covers the
-portable C host suite plus converter tests; emulator and hardware checks remain
-manual checkpoint steps. The C host compiler can be overridden with `HOST_CC`
-and `HOST_CFLAGS`; the default flags include the POSIX feature level needed by
-the timezone and filesystem tests.
+GitHub Actions runs `make verify-ci` on pushes and pull requests. That covers
+the portable C host suite, converter tests, and tracked sample-deck
+verification; emulator and hardware checks remain manual checkpoint steps. The
+C host compiler can be overridden with `HOST_CC` and `HOST_CFLAGS`; the default
+flags include the POSIX feature level needed by the timezone and filesystem
+tests.
 
 Run the local pre-checkpoint gate with:
 
@@ -177,8 +207,11 @@ make verify-local
 ```
 
 That target runs `make test`, builds the 3DS app, and stages the local SD mirror
-with sample decks. It requires the local 3DS toolchain, so CI still uses the
-portable `make test` gate.
+with sample decks. It requires the local 3DS toolchain, so CI uses the portable
+`make verify-ci` gate instead. `make verify-local` does not clear existing
+sample-deck progress; run `make prepare-local-samples-fresh`,
+`make prepare-azahar-samples-fresh`, or `make run-emulator-fresh-samples`
+before a fresh manual acceptance pass.
 
 Run converter tests with:
 
@@ -210,13 +243,57 @@ Save files should be tested with:
 - corrupted state file
 - deck update with existing state
 
+## M7 Daily-Use Acceptance Checklist
+
+Run this checklist after the relevant automated gate passes:
+
+- CI or toolchain-limited machine: `make verify-ci`
+- local checkpoint machine: `make verify-local`
+- emulator fresh sample pass: `make run-emulator-fresh-samples`
+- hardware fresh sample pass: copy the current `.3dsx`, `.smdh`, and tracked
+  sample decks to `sdmc:/3ds/anki3ds/`, with tracked sample progress cleared
+
+Use at least two decks. The tracked `sample` and `limits-demo` decks are enough
+for the daily-use path; `media-demo` can be included when checking image
+rendering at the same time.
+
+Acceptance steps:
+
+- open the deck selector and confirm at least two sample decks appear
+- review due cards from two different decks
+- reveal and rate with each rating path needed for the pass
+- suspend one card, then restore suspended cards from the actions screen
+- undo one rating and confirm the queue/status updates sensibly
+- change `new_limit` and `review_limit` from the actions screen
+- exit, relaunch, and confirm review state and daily limits persisted
+- check that no manual file edits were needed during the session
+
+Record evidence in `docs/emulator-test-log.md` or `docs/device-test-log.md`:
+
+- command or copy method used for sample prep
+- deck ids covered
+- before/after `new_limit` and `review_limit` values
+- whether `state.tsv`, `settings.tsv`, and `review-log.tsv` appeared beside
+  the tested decks after app actions
+- any render, input, save-feedback, or SD-card issues observed
+
 ## Release Checklist
 
 Before any tagged checkpoint:
 
+- latest CI run is green, or `make verify-ci` passes locally
 - `make verify-local` passes
+- M7 or checkpoint-specific emulator evidence is recorded, or explicitly
+  deferred with a reason
+- hardware evidence is recorded in `docs/device-test-log.md`, or explicitly
+  deferred to the user with the date
 - docs match the current artifact
 - sample decks are tiny and original
+- `make verify-sample-decks` passes
+- `make package-sd` stages the expected SD payload when preparing files for
+  manual copy or release
 - no personal Anki data is committed
 - no copyrighted media is committed
 - build instructions are current
+- release payload is `app-3ds/anki3ds.3dsx` plus `app-3ds/anki3ds.smdh`;
+  `.cia` packaging remains future work unless documented separately

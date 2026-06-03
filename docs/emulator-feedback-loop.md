@@ -14,6 +14,10 @@ Useful local loop:
 edit code -> make -> make run-emulator-samples -> fix obvious problems
 ```
 
+Use `make run-emulator-samples` when continuing from existing sample progress.
+Use `make run-emulator-fresh-samples` for acceptance passes that should start
+from clean tracked sample state.
+
 Then, at checkpoint boundaries:
 
 ```text
@@ -39,6 +43,12 @@ Install the tracked sample decks into the local mirror with:
 
 ```sh
 make install-local-sample-decks
+```
+
+Check the tracked sample deck files without building the 3DS app with:
+
+```sh
+make verify-sample-decks
 ```
 
 For a clean sample-deck pass in the local mirror:
@@ -76,6 +86,19 @@ For a clean sample-deck launch that clears tracked sample progress first:
 ```sh
 make run-emulator-fresh-samples
 ```
+
+The fresh targets clear only tracked sample progress files:
+
+```text
+state.tsv
+state.tsv.tmp
+state.tsv.bak
+review-log.tsv
+review-log.tsv.tmp
+review-log.tsv.bak
+```
+
+They leave personal decks outside the tracked sample ids alone.
 
 ## M1 Local Test
 

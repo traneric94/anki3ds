@@ -54,11 +54,29 @@ To run host-side parser, scheduler, and review-state tests:
 make test
 ```
 
+To run the portable CI gate locally:
+
+```sh
+make verify-ci
+```
+
+That runs host tests, converter tests, and tracked sample-deck verification.
+
 To copy the build and tracked sample decks into the gitignored local SD mirror:
 
 ```sh
 make install-local-sd
 ```
+
+To stage a clean SD-card payload under `dist/sdmc/` for release or manual copy:
+
+```sh
+make package-sd
+```
+
+This includes `anki3ds.3dsx`, `anki3ds.smdh`, and the tracked sample decks
+without generated progress files. `PACKAGE_SDMC` must remain under `dist/`
+because this target cleans its packaged app directory before staging.
 
 For a fresh sample-deck pass, use:
 
@@ -67,7 +85,9 @@ make prepare-local-samples-fresh
 ```
 
 That installs the build and tracked sample decks, then removes only sample-deck
-`state.tsv` recovery files and `review-log.tsv` from the local SD mirror.
+`state.tsv` files plus `review-log.tsv` recovery files from the local SD
+mirror. It does not remove progress for personal decks outside the tracked
+sample ids.
 
 This also installs the tracked sample decks to:
 
@@ -99,6 +119,15 @@ By default this uses:
 
 Override `LOCAL_SDMC` or `AZAHAR_SDMC` if your local mirror or emulator data
 directory lives somewhere else.
+
+To verify the tracked sample decks without building the 3DS app:
+
+```sh
+make verify-sample-decks
+```
+
+See [sample-decks/README.md](sample-decks/README.md) for the sample-deck
+workflow and what each tracked deck is meant to cover.
 
 To launch the current `.3dsx` in Azahar from a normal macOS session:
 
@@ -175,6 +204,11 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --front-media-field 3 \
   --media-root path/to/media
 ```
+
+Use `--media-root` for new media decks. If media fields are used without
+`--media-root`, each referenced `.a3i` file must already exist under the output
+deck's `media/` directory and pass `.a3i` validation before `cards.tsv` is
+written.
 
 If exported front/back HTML contains an inline `<img>` tag, map that side to a
 non-empty `--front-media-field` or `--back-media-field`. The converter rejects

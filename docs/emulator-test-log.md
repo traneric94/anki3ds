@@ -13,12 +13,20 @@ Emulator:
 
 Build:
 Command:
+Gate:
+Sample prep:
+Decks:
 Steps:
 Observed:
 Expected:
+Evidence:
 Result: pass/fail
 Notes:
 ```
+
+For M7 daily-use acceptance, include the deck ids tested, the exact fresh-sample
+command if one was used, the settings values changed, and whether relaunch
+persistence was confirmed.
 
 ## 2026-06-01 - M1 Toolchain Proof
 

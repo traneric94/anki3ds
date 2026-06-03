@@ -146,6 +146,15 @@ Pass condition:
 
 ## M7: Daily-Use MVP
 
+Before acceptance:
+
+- Run `make verify-local` on a machine with the 3DS toolchain, or confirm the
+  portable `make verify-ci` gate is green when only host verification is
+  available.
+- For emulator acceptance, launch with `make run-emulator-fresh-samples`.
+- For hardware acceptance, copy the current `.3dsx`, `.smdh`, and tracked
+  sample decks to `sdmc:/3ds/anki3ds/` with tracked sample progress cleared.
+
 Acceptance test:
 
 1. Copy two or more decks to the SD card with `make install-local-sd` or the
@@ -162,6 +171,9 @@ Acceptance test:
 Pass condition:
 
 - a real study session works without manual file edits
+- evidence is recorded in `docs/emulator-test-log.md` or
+  `docs/device-test-log.md`, including deck ids, sample-prep command or copy
+  method, settings changed, and relaunch persistence result
 
 ## M8: Media And Polish
 
