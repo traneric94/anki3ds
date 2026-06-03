@@ -62,10 +62,16 @@ unsigned int app_controls_repeat_buttons(
 {
 	unsigned int held_navigation = buttons_held & APP_CONTROL_BUTTON_NAVIGATION_MASK;
 	unsigned int down_navigation = buttons_down & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+	unsigned int command_buttons =
+		(buttons_down | buttons_held) & APP_CONTROL_COMMAND_BUTTON_MASK;
 
 	if (repeat == NULL)
 		return 0;
-	if (held_navigation == 0)
+	if (
+		command_buttons != 0 ||
+		held_navigation == 0 ||
+		(held_navigation & (held_navigation - 1)) != 0
+	)
 	{
 		app_controls_repeat_reset(repeat);
 		return 0;

@@ -830,6 +830,47 @@ static void test_app_controls_navigation_repeat(void)
 	check(repeated == 0, "navigation repeat resets on direction change");
 
 	app_controls_repeat_reset(&repeat);
+	repeated = app_controls_repeat_buttons(
+		&repeat,
+		APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_DOWN
+	);
+	check(repeated == 0, "navigation repeat re-arms from initial edge");
+	for (unsigned int tick = 1; tick < APP_CONTROL_REPEAT_INITIAL_TICKS; tick++)
+		app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+	repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+	check(repeated == APP_CONTROL_BUTTON_DOWN, "navigation repeat is active");
+	repeated = app_controls_repeat_buttons(
+		&repeat,
+		APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_DOWN
+	);
+	check(repeated == 0, "navigation repeat rejects held command chords");
+	repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+	check(repeated == 0, "navigation repeat resets after command chord");
+
+	app_controls_repeat_reset(&repeat);
+	repeated = app_controls_repeat_buttons(
+		&repeat,
+		APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT,
+		APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT
+	);
+	check(repeated == 0, "navigation repeat rejects initial diagonal hold");
+	for (
+		unsigned int tick = 0;
+		tick < APP_CONTROL_REPEAT_INITIAL_TICKS + APP_CONTROL_REPEAT_INTERVAL_TICKS;
+		tick++
+	)
+	{
+		repeated = app_controls_repeat_buttons(
+			&repeat,
+			0,
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT
+		);
+		check(repeated == 0, "navigation repeat rejects held diagonal hold");
+	}
+
+	app_controls_repeat_reset(&repeat);
 	repeated = app_controls_repeat_buttons(&repeat, 0, 0);
 	check(repeated == 0, "navigation repeat release stays quiet");
 }
