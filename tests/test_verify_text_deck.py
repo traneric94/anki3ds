@@ -126,6 +126,19 @@ class VerifyTextDeckTests(unittest.TestCase):
             self.assert_error_contains(errors, "media: unexpected entry")
             self.assert_error_contains(errors, "cards.tsv.tmp: unexpected entry")
 
+    def test_rejects_settings_beyond_app_limit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "settings.tsv").write_text(
+                "new_limit\t1000001\nreview_limit\t200\n",
+                encoding="utf-8",
+            )
+
+            self.assert_error_contains(
+                self.verify(deck_dir),
+                "limit must be at most 1000000",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -128,7 +128,7 @@ review_limit	200
 ```
 
 Each setting key must appear exactly once. Duplicate settings rows are
-malformed.
+malformed. Values must be non-negative integers no larger than `1000000`.
 
 The app may briefly create `settings.tsv.tmp` and `settings.tsv.bak` while
 saving daily limits from the actions screen. If `settings.tsv` is missing or

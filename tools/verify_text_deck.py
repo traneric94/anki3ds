@@ -15,6 +15,7 @@ DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128
 DECK_MAX_NAME_LENGTH = 64
 DECK_MAX_LINE_LENGTH = 1024
+APP_SETTINGS_MAX_DAILY_LIMIT = 1000000
 
 PROGRESS_FILES = (
     "state.tsv",
@@ -314,6 +315,17 @@ def verify_settings(
                 (
                     f"line {line_number}: expected new_limit or review_limit "
                     "with a non-negative integer value"
+                ),
+            )
+            continue
+
+        if int(value) > APP_SETTINGS_MAX_DAILY_LIMIT:
+            append_file_error(
+                errors,
+                settings_path,
+                (
+                    f"line {line_number}: limit must be at most "
+                    f"{APP_SETTINGS_MAX_DAILY_LIMIT}"
                 ),
             )
             continue
