@@ -81,6 +81,9 @@ Deck settings live beside the selected deck:
 sdmc:/3ds/anki3ds/decks/<deck-id>/settings.tsv
 ```
 
+During settings saves, the app may also use `settings.tsv.tmp` and
+`settings.tsv.bak`.
+
 Default Azahar keyboard controls are documented in
 `docs/control-map.md`. The app displays Nintendo 3DS button names on screen;
 for example, the default Azahar key for 3DS `START` is `M`.

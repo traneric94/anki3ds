@@ -253,7 +253,9 @@ per-card `review_count`, but not to the current session's rating-count totals.
 Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use
 defaults of `new_limit=20` and `review_limit=200`. A value of `0` means
 unlimited. The app can write `settings.tsv` from the daily limits screen using
-the same temp/backup save pattern as review state.
+the same temp/backup save pattern as review state. On load, settings first try
+`settings.tsv`, then `settings.tsv.bak` if the primary file is missing or
+malformed. If both are unavailable or malformed, the app uses defaults.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards.

@@ -117,8 +117,8 @@ review_limit	200
 ```
 
 The app may briefly create `settings.tsv.tmp` and `settings.tsv.bak` while
-saving daily limits from the actions screen. If `settings.tsv` is missing after
-an interrupted save, the app can load `settings.tsv.bak`.
+saving daily limits from the actions screen. If `settings.tsv` is missing or
+malformed after an interrupted save, the app can load `settings.tsv.bak`.
 
 ## state.tsv
 
@@ -149,8 +149,8 @@ Rules:
 updating card content.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
-If `state.tsv` is missing after an interrupted save, the app can load
-`state.tsv.bak`.
+If `state.tsv` is missing or malformed after an interrupted save, the app can
+load `state.tsv.bak`.
 
 This is an early day-level spaced repetition format. Minute-level learning
 steps, single-card unsuspend UI, burying, filtered decks, and review logs are

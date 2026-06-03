@@ -130,44 +130,23 @@ static bool parse_settings_line(char *line, struct app_settings *settings)
 	return false;
 }
 
-enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
+static enum app_settings_load_result app_settings_load_file(
+	struct app_settings *settings,
+	const char *path,
+	bool *loaded_file
+)
 {
 	FILE *file;
-	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	char line[SETTINGS_MAX_LINE_LENGTH];
 	struct app_settings staged;
 
 	app_settings_default(&staged);
 
-	if (path == NULL)
-	{
-		*settings = staged;
-		return APP_SETTINGS_LOAD_BAD_FORMAT;
-	}
-
 	file = fopen(path, "r");
 	if (file == NULL)
-	{
-		if (
-			!storage_build_suffixed_path(
-				backup_path,
-				sizeof(backup_path),
-				path,
-				STORAGE_BACKUP_SUFFIX
-			)
-		)
-		{
-			*settings = staged;
-			return APP_SETTINGS_LOAD_NOT_FOUND;
-		}
+		return APP_SETTINGS_LOAD_NOT_FOUND;
 
-		file = fopen(backup_path, "r");
-		if (file == NULL)
-		{
-			*settings = staged;
-			return APP_SETTINGS_LOAD_NOT_FOUND;
-		}
-	}
+	*loaded_file = true;
 
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
@@ -175,14 +154,12 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 		{
 			consume_line_remainder(file);
 			fclose(file);
-			*settings = staged;
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
 		}
 
 		if (!parse_settings_line(line, &staged))
 		{
 			fclose(file);
-			app_settings_default(settings);
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
 		}
 	}
@@ -190,13 +167,49 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 	if (ferror(file))
 	{
 		fclose(file);
-		app_settings_default(settings);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;
 	}
 
 	fclose(file);
 	*settings = staged;
 	return APP_SETTINGS_LOAD_OK;
+}
+
+enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
+{
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
+	bool loaded_file = false;
+	enum app_settings_load_result result;
+
+	if (path == NULL)
+	{
+		app_settings_default(settings);
+		return APP_SETTINGS_LOAD_BAD_FORMAT;
+	}
+
+	result = app_settings_load_file(settings, path, &loaded_file);
+	if (result == APP_SETTINGS_LOAD_OK)
+		return APP_SETTINGS_LOAD_OK;
+	if (!storage_build_suffixed_path(
+		backup_path,
+		sizeof(backup_path),
+		path,
+		STORAGE_BACKUP_SUFFIX
+	))
+	{
+		app_settings_default(settings);
+		return loaded_file ? APP_SETTINGS_LOAD_BAD_FORMAT : APP_SETTINGS_LOAD_NOT_FOUND;
+	}
+
+	result = app_settings_load_file(settings, backup_path, &loaded_file);
+	if (result == APP_SETTINGS_LOAD_OK)
+		return APP_SETTINGS_LOAD_OK;
+
+	app_settings_default(settings);
+	if (!loaded_file)
+		return APP_SETTINGS_LOAD_NOT_FOUND;
+
+	return APP_SETTINGS_LOAD_BAD_FORMAT;
 }
 
 enum app_settings_save_result app_settings_save(

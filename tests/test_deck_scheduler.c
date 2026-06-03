@@ -1145,10 +1145,29 @@ static void test_app_settings_loads_backup_when_primary_missing(void)
 	remove(TEST_SETTINGS_BACKUP_PATH);
 }
 
+static void test_app_settings_loads_backup_when_primary_is_bad(void)
+{
+	struct app_settings settings;
+
+	write_file(TEST_SETTINGS_PATH, "new_limit\tbad\n");
+	write_file(TEST_SETTINGS_BACKUP_PATH, "new_limit\t9\nreview_limit\t10\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,
+		"backup settings load when primary is bad"
+	);
+	check(settings.new_limit == 9, "backup after bad primary new limit loads");
+	check(settings.review_limit == 10, "backup after bad primary review limit loads");
+
+	remove(TEST_SETTINGS_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+}
+
 static void test_app_settings_bad_file_uses_defaults(void)
 {
 	struct app_settings settings;
 
+	remove(TEST_SETTINGS_BACKUP_PATH);
 	write_file(TEST_SETTINGS_PATH, "new_limit\tbad\n");
 
 	check(
@@ -2020,6 +2039,7 @@ int main(void)
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();
+	test_app_settings_loads_backup_when_primary_is_bad();
 	test_app_settings_bad_file_uses_defaults();
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
