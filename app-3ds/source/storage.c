@@ -44,6 +44,27 @@ static bool file_exists(const char *path)
 	return true;
 }
 
+bool storage_promote_recovery_file(const char *path, const char *suffix)
+{
+	char recovery_path[STORAGE_MAX_PATH_LENGTH];
+
+	if (!storage_build_suffixed_path(
+		recovery_path,
+		sizeof(recovery_path),
+		path,
+		suffix
+	))
+	{
+		return false;
+	}
+	if (file_exists(path))
+		return true;
+	if (!file_exists(recovery_path))
+		return false;
+
+	return rename(recovery_path, path) == 0;
+}
+
 bool storage_replace_file(const char *path)
 {
 	char temp_path[STORAGE_MAX_PATH_LENGTH];
@@ -70,14 +91,13 @@ bool storage_replace_file(const char *path)
 		return false;
 	}
 
-	if (!remove_if_present(backup_path))
-	{
-		remove(temp_path);
-		return false;
-	}
-
 	if (file_exists(path))
 	{
+		if (!remove_if_present(backup_path))
+		{
+			remove(temp_path);
+			return false;
+		}
 		if (rename(path, backup_path) != 0)
 		{
 			remove(temp_path);

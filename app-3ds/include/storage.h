@@ -14,6 +14,7 @@ bool storage_build_suffixed_path(
 	const char *path,
 	const char *suffix
 );
+bool storage_promote_recovery_file(const char *path, const char *suffix);
 bool storage_replace_file(const char *path);
 bool storage_delete_save_files(const char *path);
 

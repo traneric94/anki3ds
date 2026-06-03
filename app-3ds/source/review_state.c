@@ -484,14 +484,29 @@ enum review_state_load_result review_state_load(
 	{
 		result = review_state_load_file(deck, session, temp_path, &loaded_file);
 		if (result == REVIEW_STATE_LOAD_OK)
+		{
+			if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))
+				return REVIEW_STATE_LOAD_BAD_FORMAT;
+
 			return REVIEW_STATE_LOAD_OK;
+		}
 	}
 
 	if (has_backup_path)
 	{
 		result = review_state_load_file(deck, session, backup_path, &loaded_file);
 		if (result == REVIEW_STATE_LOAD_OK)
+		{
+			if (
+				primary_missing &&
+				!storage_promote_recovery_file(path, STORAGE_BACKUP_SUFFIX)
+			)
+			{
+				return REVIEW_STATE_LOAD_BAD_FORMAT;
+			}
+
 			return REVIEW_STATE_LOAD_OK;
+		}
 	}
 
 	if (!primary_missing && has_temp_path)

@@ -1,5 +1,7 @@
 #include "review_log.h"
 
+#include "storage.h"
+
 #include <stddef.h>
 #include <stdio.h>
 
@@ -145,12 +147,215 @@ static bool review_log_final_row_is_complete(FILE *file, long file_size)
 	return final_byte == '\n';
 }
 
+static bool review_log_complete_prefix_size(
+	FILE *file,
+	long file_size,
+	long *complete_size
+)
+{
+	long complete = 0;
+
+	if (fseek(file, 0, SEEK_SET) != 0)
+		return false;
+
+	for (long position = 0; position < file_size; position++)
+	{
+		int value = fgetc(file);
+
+		if (value == EOF)
+			return false;
+		if (value == '\n')
+			complete = position + 1;
+	}
+
+	if (ferror(file))
+		return false;
+
+	*complete_size = complete;
+	return true;
+}
+
+static bool review_log_remove_if_present(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+
+	if (file == NULL)
+		return true;
+
+	fclose(file);
+	return remove(path) == 0;
+}
+
+static bool review_log_file_exists(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+
+	if (file == NULL)
+		return false;
+
+	fclose(file);
+	return true;
+}
+
+static bool review_log_copy_prefix(
+	const char *source_path,
+	const char *temp_path,
+	long byte_count
+)
+{
+	FILE *source;
+	FILE *destination;
+	char buffer[512];
+	long remaining = byte_count;
+	bool ok = true;
+
+	source = fopen(source_path, "rb");
+	if (source == NULL)
+		return false;
+
+	destination = fopen(temp_path, "wb");
+	if (destination == NULL)
+	{
+		fclose(source);
+		return false;
+	}
+
+	while (remaining > 0)
+	{
+		size_t chunk_size = remaining > (long)sizeof(buffer) ?
+			sizeof(buffer) :
+			(size_t)remaining;
+		size_t bytes_read = fread(buffer, 1, chunk_size, source);
+
+		if (bytes_read != chunk_size)
+		{
+			ok = false;
+			break;
+		}
+		if (fwrite(buffer, 1, bytes_read, destination) != bytes_read)
+		{
+			ok = false;
+			break;
+		}
+
+		remaining -= (long)bytes_read;
+	}
+
+	if (ferror(source))
+		ok = false;
+	if (fclose(source) != 0)
+		ok = false;
+	if (fclose(destination) != 0)
+		ok = false;
+	if (!ok)
+		remove(temp_path);
+
+	return ok;
+}
+
+static bool review_log_repair_partial_final_row(
+	const char *path,
+	long complete_size
+)
+{
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
+	bool moved_original = false;
+
+	if (!storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	))
+	{
+		return false;
+	}
+	if (!storage_build_suffixed_path(
+		backup_path,
+		sizeof(backup_path),
+		path,
+		STORAGE_BACKUP_SUFFIX
+	))
+	{
+		return false;
+	}
+	if (!review_log_remove_if_present(temp_path))
+		return false;
+	if (!review_log_remove_if_present(backup_path))
+		return false;
+	if (!review_log_copy_prefix(path, temp_path, complete_size))
+		return false;
+
+	if (rename(path, backup_path) == 0)
+	{
+		moved_original = true;
+	}
+	else
+	{
+		remove(temp_path);
+		return false;
+	}
+
+	if (rename(temp_path, path) != 0)
+	{
+		if (moved_original)
+			rename(backup_path, path);
+		remove(temp_path);
+		return false;
+	}
+
+	if (!review_log_remove_if_present(backup_path))
+		return false;
+
+	return true;
+}
+
+static bool review_log_recover_pending_repair(const char *path)
+{
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
+
+	if (!storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	))
+	{
+		return false;
+	}
+	if (!storage_build_suffixed_path(
+		backup_path,
+		sizeof(backup_path),
+		path,
+		STORAGE_BACKUP_SUFFIX
+	))
+	{
+		return false;
+	}
+	if (review_log_file_exists(path))
+		return true;
+	if (review_log_file_exists(temp_path))
+	{
+		if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))
+			return false;
+
+		return review_log_remove_if_present(backup_path);
+	}
+	if (review_log_file_exists(backup_path))
+		return storage_promote_recovery_file(path, STORAGE_BACKUP_SUFFIX);
+
+	return true;
+}
+
 bool review_log_append(const char *path, const struct review_log_entry *entry)
 {
 	FILE *file;
 	const char *event_name;
 	const char *rating;
 	long file_size;
+	long complete_size;
 	int row_size;
 
 	if (path == NULL || entry == NULL)
@@ -174,6 +379,8 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 	row_size = review_log_format_length(entry, event_name, rating);
 	if (row_size < 0 || row_size > REVIEW_LOG_MAX_BYTES)
 		return false;
+	if (!review_log_recover_pending_repair(path))
+		return false;
 
 	file = fopen(path, "a+");
 	if (file == NULL)
@@ -186,15 +393,38 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 	}
 
 	file_size = ftell(file);
-	if (
-		file_size < 0 ||
-		file_size > REVIEW_LOG_MAX_BYTES - (long)row_size
-	)
+	if (file_size < 0)
 	{
 		fclose(file);
 		return false;
 	}
 	if (!review_log_final_row_is_complete(file, file_size))
+	{
+		if (!review_log_complete_prefix_size(file, file_size, &complete_size))
+		{
+			fclose(file);
+			return false;
+		}
+		fclose(file);
+		if (!review_log_repair_partial_final_row(path, complete_size))
+			return false;
+
+		file = fopen(path, "a+");
+		if (file == NULL)
+			return false;
+		if (fseek(file, 0, SEEK_END) != 0)
+		{
+			fclose(file);
+			return false;
+		}
+		file_size = ftell(file);
+		if (file_size < 0)
+		{
+			fclose(file);
+			return false;
+		}
+	}
+	if (file_size > REVIEW_LOG_MAX_BYTES - (long)row_size)
 	{
 		fclose(file);
 		return false;
@@ -219,15 +449,34 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 
 bool review_log_delete(const char *path)
 {
-	FILE *file;
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
 
 	if (path == NULL)
 		return false;
+	if (!storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	))
+	{
+		return false;
+	}
+	if (!storage_build_suffixed_path(
+		backup_path,
+		sizeof(backup_path),
+		path,
+		STORAGE_BACKUP_SUFFIX
+	))
+	{
+		return false;
+	}
 
-	file = fopen(path, "rb");
-	if (file == NULL)
-		return true;
+	if (!review_log_remove_if_present(temp_path))
+		return false;
+	if (!review_log_remove_if_present(backup_path))
+		return false;
 
-	fclose(file);
-	return remove(path) == 0;
+	return review_log_remove_if_present(path);
 }

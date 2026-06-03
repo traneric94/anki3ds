@@ -234,14 +234,33 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 	{
 		result = app_settings_load_file(settings, temp_path, &loaded_file);
 		if (result == APP_SETTINGS_LOAD_OK)
+		{
+			if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))
+			{
+				app_settings_default(settings);
+				return APP_SETTINGS_LOAD_BAD_FORMAT;
+			}
+
 			return APP_SETTINGS_LOAD_OK;
+		}
 	}
 
 	if (has_backup_path)
 	{
 		result = app_settings_load_file(settings, backup_path, &loaded_file);
 		if (result == APP_SETTINGS_LOAD_OK)
+		{
+			if (
+				primary_missing &&
+				!storage_promote_recovery_file(path, STORAGE_BACKUP_SUFFIX)
+			)
+			{
+				app_settings_default(settings);
+				return APP_SETTINGS_LOAD_BAD_FORMAT;
+			}
+
 			return APP_SETTINGS_LOAD_OK;
+		}
 	}
 
 	if (!primary_missing && has_temp_path)

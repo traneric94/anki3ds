@@ -35,6 +35,8 @@
 #define TEST_CARDS_PATH "/tmp/anki3ds-cards-test.tsv"
 #define TEST_MEDIA_PATH "/tmp/anki3ds-media-test.a3i"
 #define TEST_REVIEW_LOG_PATH "/tmp/anki3ds-review-log-test.tsv"
+#define TEST_REVIEW_LOG_TEMP_PATH TEST_REVIEW_LOG_PATH ".tmp"
+#define TEST_REVIEW_LOG_BACKUP_PATH TEST_REVIEW_LOG_PATH ".bak"
 #define TEST_DECK_ROOT "/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 #define TEST_SECONDS_PER_DAY 86400
@@ -44,7 +46,6 @@ static int failures;
 static void write_file(const char *path, const char *content);
 static void write_numbered_cards_file(const char *path, size_t card_count);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
-static void write_repeated_byte_file(const char *path, size_t size);
 static void write_newline_terminated_filler_file(const char *path, size_t size);
 static bool file_equals(const char *path, const char *content);
 static long file_size(const char *path);
@@ -1078,6 +1079,24 @@ static void test_app_controls_navigation_repeat(void)
 	app_controls_repeat_reset(&repeat);
 	repeated = app_controls_repeat_buttons(&repeat, 0, 0);
 	check(repeated == 0, "navigation repeat release stays quiet");
+
+	app_controls_repeat_reset(&repeat);
+	for (unsigned int tap = 0; tap < 3; tap++)
+	{
+		repeated = app_controls_repeat_buttons(
+			&repeat,
+			APP_CONTROL_BUTTON_DOWN,
+			APP_CONTROL_BUTTON_DOWN
+		);
+		check(repeated == 0, "quick navigation tap does not repeat on press");
+		repeated = app_controls_repeat_buttons(&repeat, 0, 0);
+		check(repeated == 0, "quick navigation tap release clears repeat");
+	}
+	for (unsigned int tick = 0; tick < APP_CONTROL_REPEAT_INITIAL_TICKS; tick++)
+	{
+		repeated = app_controls_repeat_buttons(&repeat, 0, 0);
+		check(repeated == 0, "released navigation cannot accumulate repeat ticks");
+	}
 }
 
 static void test_app_controls_input_activity(void)
@@ -2087,7 +2106,13 @@ static void test_review_state_loads_backup_when_primary_missing(void)
 	);
 	check(session.cards[0].review_count == 1, "backup state card loads");
 	check(!scheduler_card_is_due(&session, 0), "backup state due day loads");
+	check(access(TEST_STATE_BACKUP_PATH, F_OK) != 0, "backup state promotes backup");
+	check(file_equals(
+		TEST_STATE_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	), "backup state promotes primary");
 
+	remove(TEST_STATE_PATH);
 	remove(TEST_STATE_BACKUP_PATH);
 }
 
@@ -2135,7 +2160,13 @@ static void test_review_state_loads_temp_when_primary_and_backup_missing(void)
 	);
 	check(session.cards[0].review_count == 1, "temp state card loads");
 	check(!scheduler_card_is_due(&session, 0), "temp state due day loads");
+	check(access(TEST_STATE_TEMP_PATH, F_OK) != 0, "temp state promotes temp");
+	check(file_equals(
+		TEST_STATE_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	), "temp state promotes primary");
 
+	remove(TEST_STATE_PATH);
 	remove(TEST_STATE_TEMP_PATH);
 }
 
@@ -2456,6 +2487,27 @@ static void test_storage_replace_file_commits_first_save(void)
 	remove(TEST_STORAGE_PATH);
 }
 
+static void test_storage_replace_file_preserves_backup_without_primary(void)
+{
+	remove(TEST_STORAGE_PATH);
+	write_file(TEST_STORAGE_TEMP_PATH, "new\n");
+	write_file(TEST_STORAGE_BACKUP_PATH, "backup\n");
+
+	check(
+		storage_replace_file(TEST_STORAGE_PATH),
+		"storage missing primary replace succeeds"
+	);
+	check(file_equals(TEST_STORAGE_PATH, "new\n"), "storage missing primary commits temp");
+	check(
+		file_equals(TEST_STORAGE_BACKUP_PATH, "backup\n"),
+		"storage missing primary preserves backup"
+	);
+	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage missing primary removes temp");
+
+	remove(TEST_STORAGE_PATH);
+	remove(TEST_STORAGE_BACKUP_PATH);
+}
+
 static void test_storage_delete_save_files_removes_related_files(void)
 {
 	write_file(TEST_STORAGE_PATH, "primary\n");
@@ -2564,9 +2616,13 @@ static void test_review_log_appends_study_events(void)
 static void test_review_log_delete_removes_log_file(void)
 {
 	write_file(TEST_REVIEW_LOG_PATH, "study history\n");
+	write_file(TEST_REVIEW_LOG_TEMP_PATH, "temp\n");
+	write_file(TEST_REVIEW_LOG_BACKUP_PATH, "backup\n");
 
 	check(review_log_delete(TEST_REVIEW_LOG_PATH), "review log delete succeeds");
 	check(access(TEST_REVIEW_LOG_PATH, F_OK) != 0, "review log delete removes file");
+	check(access(TEST_REVIEW_LOG_TEMP_PATH, F_OK) != 0, "review log delete removes temp");
+	check(access(TEST_REVIEW_LOG_BACKUP_PATH, F_OK) != 0, "review log delete removes backup");
 	check(review_log_delete(TEST_REVIEW_LOG_PATH), "review log delete accepts missing file");
 	check(!review_log_delete(NULL), "review log delete rejects null path");
 }
@@ -2578,7 +2634,10 @@ static void test_review_log_rejects_full_log(void)
 	remove(TEST_REVIEW_LOG_PATH);
 	build_review_log_entry(&entry);
 
-	write_repeated_byte_file(TEST_REVIEW_LOG_PATH, (size_t)REVIEW_LOG_MAX_BYTES);
+	write_newline_terminated_filler_file(
+		TEST_REVIEW_LOG_PATH,
+		(size_t)REVIEW_LOG_MAX_BYTES
+	);
 
 	check(!review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log rejects full file");
 	check(
@@ -2589,21 +2648,78 @@ static void test_review_log_rejects_full_log(void)
 	remove(TEST_REVIEW_LOG_PATH);
 }
 
-static void test_review_log_rejects_partial_final_row(void)
+static void test_review_log_repairs_partial_final_row(void)
 {
 	struct review_log_entry entry;
 
 	remove(TEST_REVIEW_LOG_PATH);
+	remove(TEST_REVIEW_LOG_TEMP_PATH);
+	remove(TEST_REVIEW_LOG_BACKUP_PATH);
 	build_review_log_entry(&entry);
-	write_file(TEST_REVIEW_LOG_PATH, "partial row without newline");
+	write_file(TEST_REVIEW_LOG_PATH, "complete row\npartial row without newline");
 
 	check(
-		!review_log_append(TEST_REVIEW_LOG_PATH, &entry),
-		"review log rejects partial final row"
+		review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log repairs partial final row"
 	);
 	check(
-		file_equals(TEST_REVIEW_LOG_PATH, "partial row without newline"),
-		"review log leaves partial final row unchanged"
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"complete row\n"
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+		),
+		"review log preserves complete rows before repaired append"
+	);
+	check(access(TEST_REVIEW_LOG_TEMP_PATH, F_OK) != 0, "review log repair removes temp");
+	check(access(TEST_REVIEW_LOG_BACKUP_PATH, F_OK) != 0, "review log repair removes backup");
+
+	remove(TEST_REVIEW_LOG_PATH);
+	write_file(TEST_REVIEW_LOG_PATH, "partial row without newline");
+	check(
+		review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log repairs fully partial file"
+	);
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+		),
+		"review log replaces fully partial file with appended row"
+	);
+
+	remove(TEST_REVIEW_LOG_PATH);
+}
+
+static void test_review_log_recovers_pending_repair_before_append(void)
+{
+	struct review_log_entry entry;
+
+	remove(TEST_REVIEW_LOG_PATH);
+	remove(TEST_REVIEW_LOG_TEMP_PATH);
+	remove(TEST_REVIEW_LOG_BACKUP_PATH);
+	build_review_log_entry(&entry);
+	write_file(TEST_REVIEW_LOG_TEMP_PATH, "complete row\n");
+	write_file(TEST_REVIEW_LOG_BACKUP_PATH, "complete row\npartial row");
+
+	check(
+		review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log recovers pending repair before append"
+	);
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"complete row\n"
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+		),
+		"review log keeps recovered complete prefix"
+	);
+	check(access(TEST_REVIEW_LOG_TEMP_PATH, F_OK) != 0, "pending log repair removes temp");
+	check(
+		access(TEST_REVIEW_LOG_BACKUP_PATH, F_OK) != 0,
+		"pending log repair removes backup"
 	);
 
 	remove(TEST_REVIEW_LOG_PATH);
@@ -2719,6 +2835,82 @@ static void test_app_review_queue_requires_safe_state(void)
 	);
 }
 
+static void test_app_review_formats_rating_status(void)
+{
+	char message[64];
+	char tiny[8];
+
+	app_review_format_rating_status(
+		message,
+		sizeof(message),
+		"Good",
+		true,
+		false,
+		false,
+		1,
+		3
+	);
+	check(strcmp(message, "Good saved; card 2/3") == 0, "rating status shows next card");
+
+	app_review_format_rating_status(
+		message,
+		sizeof(message),
+		"Again",
+		true,
+		false,
+		true,
+		0,
+		1
+	);
+	check(
+		strcmp(message, "Again saved; same card due") == 0,
+		"rating status shows same due card"
+	);
+
+	app_review_format_rating_status(
+		message,
+		sizeof(message),
+		"Easy",
+		true,
+		true,
+		false,
+		2,
+		3
+	);
+	check(
+		strcmp(message, "Easy saved; no cards due") == 0,
+		"rating status shows complete queue"
+	);
+
+	app_review_format_rating_status(
+		message,
+		sizeof(message),
+		"Hard",
+		false,
+		false,
+		false,
+		2,
+		4
+	);
+	check(
+		strcmp(message, "Hard saved; card 3/4; log skipped") == 0,
+		"rating status preserves next card when log skips"
+	);
+
+	app_review_format_rating_status(
+		tiny,
+		sizeof(tiny),
+		"Good",
+		true,
+		false,
+		false,
+		0,
+		1
+	);
+	check(tiny[sizeof(tiny) - 1] == '\0', "rating status truncates safely");
+	app_review_format_rating_status(NULL, 0, "Good", true, false, false, 0, 1);
+}
+
 static void test_app_settings_missing_file_uses_defaults(void)
 {
 	struct app_settings settings;
@@ -2765,7 +2957,13 @@ static void test_app_settings_loads_backup_when_primary_missing(void)
 	);
 	check(settings.new_limit == 9, "backup settings new limit loads");
 	check(settings.review_limit == 10, "backup settings review limit loads");
+	check(access(TEST_SETTINGS_BACKUP_PATH, F_OK) != 0, "backup settings promotes backup");
+	check(
+		file_equals(TEST_SETTINGS_PATH, "new_limit\t9\nreview_limit\t10\n"),
+		"backup settings promotes primary"
+	);
 
+	remove(TEST_SETTINGS_PATH);
 	remove(TEST_SETTINGS_BACKUP_PATH);
 }
 
@@ -2819,7 +3017,13 @@ static void test_app_settings_loads_temp_when_primary_and_backup_missing(void)
 	);
 	check(settings.new_limit == 11, "temp settings new limit loads");
 	check(settings.review_limit == 12, "temp settings review limit loads");
+	check(access(TEST_SETTINGS_TEMP_PATH, F_OK) != 0, "temp settings promotes temp");
+	check(
+		file_equals(TEST_SETTINGS_PATH, "new_limit\t11\nreview_limit\t12\n"),
+		"temp settings promotes primary"
+	);
 
+	remove(TEST_SETTINGS_PATH);
 	remove(TEST_SETTINGS_TEMP_PATH);
 }
 
@@ -3046,28 +3250,6 @@ static void write_binary_file(const char *path, const unsigned char *content, si
 		return;
 
 	fwrite(content, 1, size, file);
-	fclose(file);
-}
-
-static void write_repeated_byte_file(const char *path, size_t size)
-{
-	FILE *file = fopen(path, "wb");
-	bool failed = false;
-
-	check(file != NULL, "test repeated byte file opens");
-	if (file == NULL)
-		return;
-
-	for (size_t index = 0; index < size; index++)
-	{
-		if (fputc('x', file) == EOF)
-		{
-			failed = true;
-			break;
-		}
-	}
-
-	check(!failed, "test repeated byte file writes");
 	fclose(file);
 }
 
@@ -4206,15 +4388,18 @@ int main(void)
 	test_review_state_bad_load_does_not_mutate_session();
 	test_review_state_save_policy_rejects_bad_load();
 	test_app_review_queue_requires_safe_state();
+	test_app_review_formats_rating_status();
 	test_review_state_delete_removes_save_artifacts();
 	test_storage_replace_file_commits_temp_file();
 	test_storage_replace_file_commits_first_save();
+	test_storage_replace_file_preserves_backup_without_primary();
 	test_storage_delete_save_files_removes_related_files();
 	test_storage_delete_save_files_removes_orphaned_artifacts();
 	test_review_log_appends_study_events();
 	test_review_log_delete_removes_log_file();
 	test_review_log_rejects_full_log();
-	test_review_log_rejects_partial_final_row();
+	test_review_log_repairs_partial_final_row();
+	test_review_log_recovers_pending_repair_before_append();
 	test_review_log_appends_at_capacity_boundary();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();

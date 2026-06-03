@@ -21,13 +21,13 @@ unsigned int app_controls_buttons_from_3ds_keys(unsigned int keys)
 		buttons |= APP_CONTROL_BUTTON_L;
 	if (keys & KEY_R)
 		buttons |= APP_CONTROL_BUTTON_R;
-	if (keys & KEY_DUP)
+	if (keys & KEY_UP)
 		buttons |= APP_CONTROL_BUTTON_UP;
-	if (keys & KEY_DDOWN)
+	if (keys & KEY_DOWN)
 		buttons |= APP_CONTROL_BUTTON_DOWN;
-	if (keys & KEY_DLEFT)
+	if (keys & KEY_LEFT)
 		buttons |= APP_CONTROL_BUTTON_LEFT;
-	if (keys & KEY_DRIGHT)
+	if (keys & KEY_RIGHT)
 		buttons |= APP_CONTROL_BUTTON_RIGHT;
 	if (keys & KEY_SELECT)
 		buttons |= APP_CONTROL_BUTTON_SELECT;

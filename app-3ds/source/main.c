@@ -505,6 +505,8 @@ static const char *status_message_color(const char *message)
 		strstr(message, "requires") != NULL ||
 		strstr(message, "Nothing") != NULL ||
 		strstr(message, "skipped") != NULL ||
+		strstr(message, "same card due") != NULL ||
+		strstr(message, "same due") != NULL ||
 		strstr(message, "kept") != NULL ||
 		strstr(message, "reset state") != NULL
 	)
@@ -1404,9 +1406,10 @@ static void draw_controls_screen(const struct app_state *app)
 		if (app->deck_index.count > 0)
 		{
 			printf("\x1b[5;1HA: open selected deck");
-			printf("\x1b[7;1HD-pad Up/Down: choose");
-			printf("\x1b[9;1HSELECT: rescan decks");
-			printf("\x1b[11;1HY: controls");
+			printf("\x1b[7;1HD-pad/Circle: move/page");
+			printf("\x1b[9;1HHold direction to repeat");
+			printf("\x1b[11;1HSELECT: rescan decks");
+			printf("\x1b[13;1HY: controls");
 		}
 		else
 		{
@@ -1446,14 +1449,14 @@ static void draw_controls_screen(const struct app_state *app)
 	case APP_MODE_ACTIONS:
 		printf("\x1b[3;1H" APP_COLOR_BLUE "Actions controls" APP_COLOR_RESET);
 		printf("\x1b[5;1HA: choose selected");
-		printf("\x1b[7;1HD-pad Up/Down: choose");
+		printf("\x1b[7;1HD-pad/Circle U/D: move/hold");
 		printf("\x1b[9;1HB or SELECT: cancel");
 		printf("\x1b[11;1HY: controls");
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[3;1H" APP_COLOR_BLUE "Daily-limit controls" APP_COLOR_RESET);
-		printf("\x1b[5;1HD-pad Up/Down: field");
-		printf("\x1b[7;1HD-pad Left/Right: value");
+		printf("\x1b[5;1HD-pad/Circle U/D: field/hold");
+		printf("\x1b[7;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[9;1HA: save limits");
 		printf("\x1b[11;1HB or SELECT: cancel");
 		printf("\x1b[13;1HY: controls");
@@ -1477,7 +1480,10 @@ static void draw_controls_screen(const struct app_state *app)
 			printf("\x1b[9;1HL: undo last action");
 			printf("\x1b[11;1HR: confirm suspend");
 			printf("\x1b[13;1HSELECT: actions");
-			printf("\x1b[15;1HY: controls");
+			printf(
+				"\x1b[15;1H" APP_COLOR_YELLOW
+				"Use one rating button only." APP_COLOR_RESET
+			);
 		}
 		else
 		{
@@ -1716,24 +1722,25 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				&app->deck_summaries[app->selected_deck_index];
 
 			printf("\x1b[3;1HA: open selected deck");
-			printf("\x1b[5;1HD-pad Up/Down: choose");
-			printf("\x1b[7;1HSELECT: rescan decks");
-			printf("\x1b[9;1HSTART: confirm exit");
-			printf("\x1b[11;1HY: controls");
+			printf("\x1b[5;1HD-pad/Circle: move/page");
+			printf("\x1b[7;1HHold direction to repeat");
+			printf("\x1b[9;1HSELECT: rescan decks");
+			printf("\x1b[11;1HSTART: confirm exit");
+			printf("\x1b[13;1HY: controls");
 			if (
 				summary->deck_load_result == DECK_LOAD_OK &&
 				deck_summary_state_allows_study(summary)
 			)
 			{
-				int details_row = 12;
+				int details_row = 14;
 
 				if (settings_load_result_needs_warning(summary->settings_load_result))
 				{
 					printf(
-						"\x1b[12;1H" APP_COLOR_YELLOW
+						"\x1b[14;1H" APP_COLOR_YELLOW
 						"Settings ignored; defaults" APP_COLOR_RESET
 					);
-					details_row = 14;
+					details_row = 16;
 				}
 				printf(
 					"\x1b[%d;1HDue: N %lu  L %lu  R %lu",
@@ -1758,22 +1765,22 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
-					"\x1b[12;1HState: " APP_COLOR_RED "%s" APP_COLOR_RESET,
+					"\x1b[14;1HState: " APP_COLOR_RED "%s" APP_COLOR_RESET,
 					review_state_load_result_name(summary->state_load_result)
 				);
 				printf(
-					"\x1b[14;1H" APP_COLOR_YELLOW
+					"\x1b[16;1H" APP_COLOR_YELLOW
 					"Open deck, then reset progress." APP_COLOR_RESET
 				);
 				printf(
-					"\x1b[16;1HCards: %lu",
+					"\x1b[18;1HCards: %lu",
 					(unsigned long)summary->card_count
 				);
 			}
 			else
 			{
 				printf(
-					"\x1b[12;1H" APP_COLOR_RED
+					"\x1b[14;1H" APP_COLOR_RED
 					"Selected deck load error" APP_COLOR_RESET
 				);
 			}
@@ -1840,6 +1847,10 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[12;1HR: confirm suspend");
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
+			printf(
+				"\x1b[20;1H" APP_COLOR_YELLOW
+				"Use one rating button only." APP_COLOR_RESET
+			);
 		}
 		else
 		{
@@ -1902,15 +1913,15 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	case APP_MODE_ACTIONS:
 		printf("\x1b[1;1H" APP_COLOR_BLUE "Actions" APP_COLOR_RESET);
 		printf("\x1b[3;1HA: choose selected");
-		printf("\x1b[5;1HD-pad Up/Down: choose");
+		printf("\x1b[5;1HD-pad/Circle U/D: move/hold");
 		printf("\x1b[7;1HB or SELECT: cancel");
 		printf("\x1b[9;1HSTART: confirm exit");
 		printf("\x1b[11;1HY: controls");
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[1;1H" APP_COLOR_BLUE "Daily limits" APP_COLOR_RESET);
-		printf("\x1b[3;1HD-pad Up/Down: field");
-		printf("\x1b[5;1HD-pad Left/Right: value");
+		printf("\x1b[3;1HD-pad/Circle U/D: field/hold");
+		printf("\x1b[5;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[7;1HA: save limits");
 		printf("\x1b[9;1HB or SELECT: cancel");
 		printf("\x1b[11;1HSTART: confirm exit");
@@ -2078,6 +2089,8 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	size_t card_index;
 	struct scheduler_card before;
 	bool log_saved;
+	bool queue_complete;
+	bool same_card_due;
 
 	if (!app->revealed)
 		return false;
@@ -2104,30 +2117,50 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		&before
 	);
 	app->revealed = false;
+	queue_complete = scheduler_is_complete(&app->session);
+	same_card_due =
+		!queue_complete && scheduler_current_index(&app->session) == card_index;
 
-	if (scheduler_is_complete(&app->session))
+	app_review_format_rating_status(
+		app->status_message,
+		sizeof(app->status_message),
+		rating_name,
+		log_saved,
+		queue_complete,
+		same_card_due,
+		scheduler_current_index(&app->session),
+		app->session.card_count
+	);
+	app->mode = queue_complete ? APP_MODE_SUMMARY : APP_MODE_REVIEW;
+
+	return true;
+}
+
+static bool move_deck_selection_by_page(struct app_state *app, bool move_right)
+{
+	size_t old_index = app->selected_deck_index;
+	size_t page_size = APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS;
+
+	if (app->deck_index.count <= 1)
+		return false;
+
+	if (move_right)
 	{
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			log_saved ? "%s saved; no cards due" : "%s saved; log skipped",
-			rating_name
-		);
-		app->mode = APP_MODE_SUMMARY;
+		if (app->selected_deck_index + page_size >= app->deck_index.count)
+			app->selected_deck_index = app->deck_index.count - 1;
+		else
+			app->selected_deck_index += page_size;
+	}
+	else if (app->selected_deck_index < page_size)
+	{
+		app->selected_deck_index = 0;
 	}
 	else
 	{
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			log_saved ? "%s saved; card %lu/%lu" : "%s saved; log skipped",
-			rating_name,
-			(unsigned long)(scheduler_current_index(&app->session) + 1),
-			(unsigned long)app->session.card_count
-		);
+		app->selected_deck_index -= page_size;
 	}
 
-	return true;
+	return app->selected_deck_index != old_index;
 }
 
 static bool undo_last_action(struct app_state *app)
@@ -2386,6 +2419,7 @@ static bool app_handle_deck_select_input(
 )
 {
 	bool move_down;
+	bool move_right;
 
 	if (
 		app_command_pressed(
@@ -2420,6 +2454,9 @@ static bool app_handle_deck_select_input(
 
 		return true;
 	}
+
+	if (app_controls_left_right_triggered(buttons_down, buttons_active, &move_right))
+		return move_deck_selection_by_page(app, move_right);
 
 	if (
 		app_command_pressed(
