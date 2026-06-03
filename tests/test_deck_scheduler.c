@@ -640,6 +640,28 @@ static void test_scheduler_limit_change_clears_undo(void)
 	check(session.due_count == 0, "cleared undo leaves limited due count");
 }
 
+static void test_scheduler_day_change_resets_new_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 1, 0);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+
+	check(session.new_count_today == 1, "day change setup starts one new card");
+	check(session.due_count == 0, "day change setup exhausts new limit");
+
+	scheduler_set_today(&session, TEST_TODAY + 1);
+
+	check(session.today == TEST_TODAY + 1, "day change updates scheduler date");
+	check(session.new_count_today == 0, "day change resets new daily count");
+	check(session.review_count_today == 0, "day change resets review daily count");
+	check(session.due_count == 2, "day change exposes tomorrow review and one new card");
+	check(scheduler_current_index(&session) == 0, "day change prioritizes due review");
+	check(!scheduler_undo_last(&session), "day change clears stale undo");
+	check(session.cards[0].review_count == 1, "cleared day-change undo leaves rating intact");
+}
+
 static void test_scheduler_allows_started_new_card_after_limit(void)
 {
 	struct scheduler_session session;
@@ -705,6 +727,56 @@ static void test_scheduler_limits_review_cards(void)
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
 	check(session.due_count == 0, "review limit hides remaining review cards");
+}
+
+static void test_scheduler_day_change_resets_review_limit(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 30,
+			TEST_TODAY - 10
+		),
+		"day change first review card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 30,
+			TEST_TODAY - 10
+		),
+		"day change second review card restores"
+	);
+	scheduler_set_daily_limits(&session, 0, 1);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+
+	check(session.review_count_today == 1, "day change setup starts one review");
+	check(session.due_count == 0, "day change setup exhausts review limit");
+
+	scheduler_set_today(&session, TEST_TODAY + 1);
+
+	check(session.review_count_today == 0, "day change resets review limit count");
+	check(session.due_count == 1, "day change exposes next limited review");
+	check(scheduler_current_index(&session) == 1, "day change selects next review");
 }
 
 static void test_scheduler_prioritizes_learning_cards(void)
@@ -2309,8 +2381,10 @@ int main(void)
 	test_scheduler_unsuspend_all();
 	test_scheduler_limits_new_cards();
 	test_scheduler_limit_change_clears_undo();
+	test_scheduler_day_change_resets_new_limit();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
+	test_scheduler_day_change_resets_review_limit();
 	test_scheduler_prioritizes_learning_cards();
 	test_scheduler_prioritizes_overdue_reviews_before_new_cards();
 	test_scheduler_restored_started_new_card_stays_due_after_limit();

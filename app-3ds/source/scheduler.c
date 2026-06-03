@@ -457,6 +457,18 @@ void scheduler_set_daily_limits(
 	scheduler_reposition(session);
 }
 
+void scheduler_set_today(struct scheduler_session *session, unsigned int today)
+{
+	if (session->today == today)
+		return;
+
+	session->today = today;
+	session->undo.available = false;
+	session->undo.kind = SCHEDULER_UNDO_NONE;
+	scheduler_recount(session);
+	scheduler_reposition(session);
+}
+
 void scheduler_reposition(struct scheduler_session *session)
 {
 	size_t next_index;

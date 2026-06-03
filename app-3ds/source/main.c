@@ -93,6 +93,7 @@ struct app_state
 	bool battery_low;
 	bool battery_charging;
 	u8 battery_level;
+	unsigned int current_day;
 	enum deck_load_result load_result;
 	enum app_settings_load_result settings_load_result;
 	enum app_settings_save_result settings_save_result;
@@ -172,6 +173,11 @@ static bool app_mode_uses_navigation_repeat(enum app_mode mode)
 		mode == APP_MODE_ACTIONS ||
 		mode == APP_MODE_SETTINGS
 	);
+}
+
+static bool app_mode_is_review_surface(enum app_mode mode)
+{
+	return mode == APP_MODE_REVIEW || mode == APP_MODE_SUMMARY;
 }
 
 static u32 keys_for_repeat_buttons(unsigned int buttons)
@@ -568,6 +574,7 @@ static void app_scan_decks(struct app_state *app)
 	char selected_deck_id[DECK_MAX_NAME_LENGTH];
 	const struct deck_entry *selected_deck;
 
+	app->current_day = today;
 	selected_deck_id[0] = '\0';
 	selected_deck = deck_index_get(&app->deck_index, app->selected_deck_index);
 	if (selected_deck != NULL)
@@ -676,6 +683,9 @@ static void app_return_to_deck_select(struct app_state *app)
 static void app_load_selected_deck(struct app_state *app)
 {
 	const struct deck_entry *entry;
+	unsigned int today = app_time_current_day();
+
+	app->current_day = today;
 
 	if (app->deck_index.count == 0)
 	{
@@ -723,7 +733,7 @@ static void app_load_selected_deck(struct app_state *app)
 			&app->settings,
 			app->active_settings_path
 		);
-		scheduler_init(&app->session, app->deck.card_count, app_time_current_day());
+		scheduler_init(&app->session, app->deck.card_count, today);
 		scheduler_set_daily_limits(
 			&app->session,
 			app->settings.new_limit,
@@ -751,7 +761,7 @@ static void app_load_selected_deck(struct app_state *app)
 	{
 		app_set_status(app, "Deck load failed");
 		app->mode = APP_MODE_LOAD_ERROR;
-		scheduler_init(&app->session, 0, app_time_current_day());
+		scheduler_init(&app->session, 0, today);
 	}
 
 	app_refresh_selected_deck_summary(app);
@@ -797,6 +807,7 @@ static void app_open_controls(struct app_state *app)
 static void app_init(struct app_state *app)
 {
 	memset(app, 0, sizeof(*app));
+	app->current_day = app_time_current_day();
 	app->battery_service_available = R_SUCCEEDED(ptmuInit());
 	app_sample_battery(app);
 	media_cache_init(&media_cache);
@@ -1238,6 +1249,64 @@ static void show_scan_then_scan_decks(struct app_state *app)
 		"Scan done; %lu decks",
 		(unsigned long)app->deck_index.count
 	);
+}
+
+static enum app_mode app_review_mode_for_session(const struct app_state *app)
+{
+	if (scheduler_is_complete(&app->session))
+		return APP_MODE_SUMMARY;
+
+	return APP_MODE_REVIEW;
+}
+
+static void app_update_review_return_modes_for_day_change(
+	struct app_state *app,
+	enum app_mode target_mode
+)
+{
+	if (app_mode_is_review_surface(app->action_return_mode))
+		app->action_return_mode = target_mode;
+	if (app_mode_is_review_surface(app->controls_return_mode))
+		app->controls_return_mode = target_mode;
+	if (app_mode_is_review_surface(app->exit_return_mode))
+		app->exit_return_mode = target_mode;
+}
+
+static bool app_refresh_day_if_changed(struct app_state *app)
+{
+	unsigned int today = app_time_current_day();
+	enum app_mode target_mode;
+
+	if (today == 0 || today == app->current_day)
+		return false;
+
+	app->current_day = today;
+
+	if (app->mode == APP_MODE_DECK_SELECT)
+	{
+		show_scan_then_scan_decks(app);
+		return true;
+	}
+
+	if (app->load_result != DECK_LOAD_OK)
+		return false;
+
+	scheduler_set_today(&app->session, today);
+	app->revealed = false;
+	app_refresh_selected_deck_summary(app);
+	target_mode = app_review_mode_for_session(app);
+	app_update_review_return_modes_for_day_change(app, target_mode);
+
+	if (!app_mode_is_review_surface(app->mode))
+		return false;
+
+	app->mode = target_mode;
+	if (target_mode == APP_MODE_SUMMARY)
+		app_set_status(app, "New day; no cards due");
+	else
+		app_set_status(app, "New day; cards due");
+
+	return true;
 }
 
 static void draw_bottom_controls_screen(const struct app_state *app)
@@ -1980,6 +2049,14 @@ int main(int argc, char *argv[])
 		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
 		if (battery_poll_due)
 			schedule_next_battery_poll(&next_battery_poll_time, now);
+
+		if (app_refresh_day_if_changed(&app))
+		{
+			draw_app(&app);
+			frame_dirty = true;
+			idle_wait_count = 0;
+			continue;
+		}
 
 		if (app_handle_input(&app, keys_down))
 		{
