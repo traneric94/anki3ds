@@ -398,6 +398,7 @@ Keep the portable logic separate from the libctru shell:
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
+| `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
@@ -407,6 +408,11 @@ Battery sampling is intentionally coarse. The main loop samples PTMU at startup
 and then at most every ten minutes while the shell is open. A closed-shell skip
 does not move the next real sample time forward, and transient PTMU read
 failures keep the last valid battery display instead of clearing it.
+
+The console renderer still uses a simple one-column-per-character model, but
+`app_text` keeps valid UTF-8 byte sequences together during wrapping and
+ellipsis truncation so language-deck text is not split in the middle of a
+character.
 
 Likely next boundaries:
 

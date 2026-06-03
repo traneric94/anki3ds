@@ -7,6 +7,7 @@
 #include "app_settings.h"
 #include "app_controls.h"
 #include "app_power.h"
+#include "app_text.h"
 #include "app_time.h"
 #include "deck.h"
 #include "deck_index.h"
@@ -213,18 +214,24 @@ static void draw_wrapped_text_columns(
 
 	console_move(current_row, TEXT_LEFT);
 
-	for (size_t index = 0; text[index] != '\0'; index++)
+	for (size_t index = 0; text[index] != '\0'; )
 	{
 		char value = text[index];
+		size_t char_length = app_text_utf8_char_length(&text[index]);
 
 		if (current_row >= row + max_rows)
 		{
 			truncated = true;
 			break;
 		}
+		if (char_length == 0)
+			break;
 
 		if (value == '\r')
+		{
+			index += char_length;
 			continue;
+		}
 
 		if (value == '\n')
 		{
@@ -232,11 +239,15 @@ static void draw_wrapped_text_columns(
 			column = TEXT_LEFT;
 			if (current_row < row + max_rows)
 				console_move(current_row, TEXT_LEFT);
+			index += char_length;
 			continue;
 		}
 
 		if (value == '\t')
+		{
 			value = ' ';
+			char_length = 1;
+		}
 
 		if (column >= TEXT_LEFT + max_columns)
 		{
@@ -250,11 +261,16 @@ static void draw_wrapped_text_columns(
 			console_move(current_row, TEXT_LEFT);
 		}
 
-		putchar(value);
+		if (value == ' ' && text[index] == '\t')
+			putchar(value);
+		else
+			fwrite(&text[index], 1, char_length, stdout);
+
+		index += char_length;
 		column++;
 	}
 
-	if (truncated && max_rows > 0)
+	if (truncated && max_rows > 0 && max_columns >= 3)
 	{
 		console_move(row + max_rows - 1, TEXT_LEFT + max_columns - 3);
 		printf("...");
@@ -263,9 +279,10 @@ static void draw_wrapped_text_columns(
 
 static void print_truncated(const char *text, size_t max_columns)
 {
-	size_t length = strlen(text);
+	size_t columns = app_text_column_count(text);
+	size_t visible_bytes;
 
-	if (length <= max_columns)
+	if (columns <= max_columns)
 	{
 		printf("%s", text);
 		return;
@@ -278,8 +295,8 @@ static void print_truncated(const char *text, size_t max_columns)
 		return;
 	}
 
-	for (size_t index = 0; index < max_columns - 3; index++)
-		putchar(text[index]);
+	visible_bytes = app_text_byte_count_for_columns(text, max_columns - 3);
+	printf("%.*s", (int)visible_bytes, text);
 	printf("...");
 }
 

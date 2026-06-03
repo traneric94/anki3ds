@@ -10,6 +10,7 @@
 #include "app_controls.h"
 #include "app_power.h"
 #include "app_time.h"
+#include "app_text.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
@@ -329,6 +330,36 @@ static void test_app_power_battery_sample_policy(void)
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
 		"battery sample schedules next open-shell poll"
+	);
+}
+
+static void test_app_text_counts_utf8_columns(void)
+{
+	const char *text = "a" "\xc3" "\xa9" "\xf0" "\x9f" "\x99" "\x82" "b";
+	const char invalid[] = { (char)0x80, 'a', '\0' };
+
+	check(app_text_utf8_char_length("a") == 1, "ASCII char length is one byte");
+	check(
+		app_text_utf8_char_length("\xc3" "\xa9") == 2,
+		"two-byte UTF-8 char length"
+	);
+	check(
+		app_text_utf8_char_length("\xf0" "\x9f" "\x99" "\x82") == 4,
+		"four-byte UTF-8 char length"
+	);
+	check(app_text_utf8_char_length(invalid) == 1, "invalid UTF-8 advances one byte");
+	check(app_text_column_count(text) == 4, "UTF-8 text counts by characters");
+	check(
+		app_text_byte_count_for_columns(text, 2) == 3,
+		"UTF-8 byte count keeps two-byte char whole"
+	);
+	check(
+		app_text_byte_count_for_columns(text, 3) == 7,
+		"UTF-8 byte count keeps four-byte char whole"
+	);
+	check(
+		app_text_byte_count_for_columns(text, 20) == strlen(text),
+		"UTF-8 byte count can include full text"
 	);
 }
 
@@ -3034,6 +3065,7 @@ int main(void)
 	test_app_power_battery_poll_schedule();
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
+	test_app_text_counts_utf8_columns();
 	test_app_time_local_calendar_day();
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();
