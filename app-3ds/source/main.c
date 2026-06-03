@@ -1439,17 +1439,28 @@ static void draw_controls_screen(const struct app_state *app)
 
 static void draw_battery_status(const struct app_state *app)
 {
-	if (!app->battery_status_available)
-		return;
+	enum app_power_battery_display_state display_state =
+		app_power_battery_display_state(
+			app->battery_status_available,
+			app->battery_charging,
+			app->battery_level
+		);
 
-	if (app->battery_charging)
+	if (display_state == APP_POWER_BATTERY_DISPLAY_UNAVAILABLE)
+	{
+		printf(
+			"\x1b[29;1H" APP_COLOR_YELLOW
+			"Battery: unavailable" APP_COLOR_RESET
+		);
+	}
+	else if (display_state == APP_POWER_BATTERY_DISPLAY_CHARGING)
 	{
 		printf(
 			"\x1b[29;1H" APP_COLOR_GREEN "Battery: %u/5 charging" APP_COLOR_RESET,
 			(unsigned int)app->battery_level
 		);
 	}
-	else if (app->battery_low)
+	else if (display_state == APP_POWER_BATTERY_DISPLAY_LOW)
 	{
 		printf(
 			"\x1b[29;1H" APP_COLOR_RED "Battery: %u/5 low. Charge soon." APP_COLOR_RESET,

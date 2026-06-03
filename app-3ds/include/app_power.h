@@ -17,6 +17,14 @@ enum app_power_battery_sample_result
 	APP_POWER_BATTERY_SAMPLE_CHANGED,
 };
 
+enum app_power_battery_display_state
+{
+	APP_POWER_BATTERY_DISPLAY_UNAVAILABLE,
+	APP_POWER_BATTERY_DISPLAY_NORMAL,
+	APP_POWER_BATTERY_DISPLAY_LOW,
+	APP_POWER_BATTERY_DISPLAY_CHARGING,
+};
+
 void app_power_schedule_next_battery_poll(time_t *next_poll_time, time_t now);
 void app_power_schedule_next_battery_poll_after_sample(
 	time_t *next_poll_time,
@@ -25,5 +33,10 @@ void app_power_schedule_next_battery_poll_after_sample(
 );
 bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now);
 bool app_power_battery_sample_changes_display(enum app_power_battery_sample_result result);
+enum app_power_battery_display_state app_power_battery_display_state(
+	bool status_available,
+	bool charging,
+	unsigned int level
+);
 
 #endif

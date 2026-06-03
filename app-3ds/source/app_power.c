@@ -43,3 +43,19 @@ bool app_power_battery_sample_changes_display(enum app_power_battery_sample_resu
 {
 	return result == APP_POWER_BATTERY_SAMPLE_CHANGED;
 }
+
+enum app_power_battery_display_state app_power_battery_display_state(
+	bool status_available,
+	bool charging,
+	unsigned int level
+)
+{
+	if (!status_available)
+		return APP_POWER_BATTERY_DISPLAY_UNAVAILABLE;
+	if (charging)
+		return APP_POWER_BATTERY_DISPLAY_CHARGING;
+	if (level <= APP_POWER_BATTERY_LOW_LEVEL)
+		return APP_POWER_BATTERY_DISPLAY_LOW;
+
+	return APP_POWER_BATTERY_DISPLAY_NORMAL;
+}

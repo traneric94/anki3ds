@@ -334,6 +334,33 @@ static void test_app_power_battery_sample_policy(void)
 	);
 }
 
+static void test_app_power_battery_display_state(void)
+{
+	check(
+		app_power_battery_display_state(false, false, 0) ==
+			APP_POWER_BATTERY_DISPLAY_UNAVAILABLE,
+		"missing battery sample displays unavailable"
+	);
+	check(
+		app_power_battery_display_state(true, true, 1) ==
+			APP_POWER_BATTERY_DISPLAY_CHARGING,
+		"charging battery display wins over low level"
+	);
+	check(
+		app_power_battery_display_state(true, false, APP_POWER_BATTERY_LOW_LEVEL) ==
+			APP_POWER_BATTERY_DISPLAY_LOW,
+		"low battery level displays warning"
+	);
+	check(
+		app_power_battery_display_state(
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL + 1
+		) == APP_POWER_BATTERY_DISPLAY_NORMAL,
+		"healthy battery level displays normal"
+	);
+}
+
 static void test_app_text_counts_utf8_columns(void)
 {
 	const char *text = "a" "\xc3" "\xa9" "\xf0" "\x9f" "\x99" "\x82" "b";
@@ -4359,6 +4386,7 @@ int main(void)
 	test_app_power_battery_poll_schedule();
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
+	test_app_power_battery_display_state();
 	test_app_text_counts_utf8_columns();
 	test_app_text_counts_wrapped_rows();
 	test_app_time_local_calendar_day();
