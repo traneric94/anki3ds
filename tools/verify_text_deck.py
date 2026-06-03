@@ -9,6 +9,13 @@ import sys
 from pathlib import Path
 
 
+DECK_MAX_CARDS = 256
+DECK_MAX_ID_LENGTH = 32
+DECK_MAX_TEXT_LENGTH = 384
+DECK_MAX_TAGS_LENGTH = 128
+DECK_MAX_NAME_LENGTH = 64
+DECK_MAX_LINE_LENGTH = 1024
+
 PROGRESS_FILES = (
     "state.tsv",
     "state.tsv.tmp",
@@ -21,8 +28,64 @@ PROGRESS_FILES = (
 )
 
 
+def utf8_length(value: str) -> int:
+    return len(value.encode("utf-8"))
+
+
 def append_file_error(errors: list[str], path: Path, message: str) -> None:
     errors.append(f"{path}: {message}")
+
+
+def deck_id_is_valid(deck_id: str) -> bool:
+    if deck_id == "" or deck_id.startswith("."):
+        return False
+    if len(deck_id) >= DECK_MAX_NAME_LENGTH:
+        return False
+
+    return all(
+        ("a" <= character <= "z")
+        or ("A" <= character <= "Z")
+        or ("0" <= character <= "9")
+        or character in "-_"
+        for character in deck_id
+    )
+
+
+def card_id_is_valid(card_id: str) -> bool:
+    if card_id.startswith("#"):
+        return False
+
+    return all(ord(character) >= 32 and ord(character) != 127 for character in card_id)
+
+
+def unescape_card_field(value: str) -> str | None:
+    output: list[str] = []
+    index = 0
+
+    while index < len(value):
+        character = value[index]
+        if character != "\\":
+            output.append(character)
+            index += 1
+            continue
+
+        index += 1
+        if index >= len(value):
+            return None
+
+        escaped = value[index]
+        if escaped == "n":
+            output.append("\n")
+        elif escaped == "t":
+            output.append("\t")
+        elif escaped == "\\":
+            output.append("\\")
+        else:
+            return None
+
+        index += 1
+
+    return "".join(output)
 
 
 def load_deck_json(deck_dir: Path, errors: list[str]) -> dict[str, object] | None:
@@ -65,6 +128,7 @@ def verify_deck_json(
 ) -> None:
     deck_json_path = deck_dir / "deck.json"
     deck_id = deck_dir.name
+    card_count = deck_json.get("card_count")
 
     if deck_json.get("format_version") != 1:
         append_file_error(errors, deck_json_path, "format_version must be 1")
@@ -72,7 +136,9 @@ def verify_deck_json(
         append_file_error(errors, deck_json_path, "deck_id must match folder name")
     if not isinstance(deck_json.get("name"), str) or deck_json.get("name") == "":
         append_file_error(errors, deck_json_path, "name is required")
-    if deck_json.get("card_count") != len(card_rows):
+    if not isinstance(card_count, int) or isinstance(card_count, bool):
+        append_file_error(errors, deck_json_path, "card_count must be an integer")
+    elif card_count != len(card_rows):
         append_file_error(
             errors,
             deck_json_path,
@@ -80,11 +146,46 @@ def verify_deck_json(
         )
 
 
+def validate_field_length(
+    errors: list[str],
+    path: Path,
+    line_number: int,
+    field_name: str,
+    value: str,
+    field_size: int,
+) -> None:
+    if utf8_length(value) >= field_size:
+        append_file_error(
+            errors,
+            path,
+            (
+                f"line {line_number}: {field_name} exceeds "
+                f"{field_size - 1} UTF-8 bytes"
+            ),
+        )
+
+
 def verify_cards(deck_dir: Path, card_rows: list[str], errors: list[str]) -> None:
     cards_path = deck_dir / "cards.tsv"
     seen_card_ids: set[str] = set()
 
+    if len(card_rows) == 0:
+        append_file_error(errors, cards_path, "must contain at least one card")
+    if len(card_rows) > DECK_MAX_CARDS:
+        append_file_error(
+            errors,
+            cards_path,
+            f"must contain at most {DECK_MAX_CARDS} cards",
+        )
+
     for line_number, row in enumerate(card_rows, start=1):
+        if utf8_length(row) >= DECK_MAX_LINE_LENGTH:
+            append_file_error(
+                errors,
+                cards_path,
+                f"line {line_number}: row exceeds {DECK_MAX_LINE_LENGTH - 1} bytes",
+            )
+
         fields = row.split("\t")
         if len(fields) != 5:
             append_file_error(
@@ -96,12 +197,31 @@ def verify_cards(deck_dir: Path, card_rows: list[str], errors: list[str]) -> Non
                 ),
             )
             continue
-        card_id = fields[0]
+        unescaped_fields: list[str] = []
+        field_names = ("card_id", "note_id", "front", "back", "tags")
+        for field_name, field in zip(field_names, fields):
+            unescaped = unescape_card_field(field)
+            if unescaped is None:
+                append_file_error(
+                    errors,
+                    cards_path,
+                    f"line {line_number}: {field_name} has a bad escape",
+                )
+                unescaped = ""
+            unescaped_fields.append(unescaped)
+
+        card_id, note_id, front, back, tags = unescaped_fields
         if card_id == "":
             append_file_error(
                 errors,
                 cards_path,
                 f"line {line_number}: card_id is required",
+            )
+        elif not card_id_is_valid(card_id):
+            append_file_error(
+                errors,
+                cards_path,
+                f"line {line_number}: card_id is invalid",
             )
         elif card_id in seen_card_ids:
             append_file_error(
@@ -110,6 +230,60 @@ def verify_cards(deck_dir: Path, card_rows: list[str], errors: list[str]) -> Non
                 f"line {line_number}: duplicate card_id {card_id}",
             )
         seen_card_ids.add(card_id)
+
+        if front == "":
+            append_file_error(
+                errors,
+                cards_path,
+                f"line {line_number}: front is required",
+            )
+        if back == "":
+            append_file_error(
+                errors,
+                cards_path,
+                f"line {line_number}: back is required",
+            )
+
+        validate_field_length(
+            errors,
+            cards_path,
+            line_number,
+            "card_id",
+            card_id,
+            DECK_MAX_ID_LENGTH,
+        )
+        validate_field_length(
+            errors,
+            cards_path,
+            line_number,
+            "note_id",
+            note_id,
+            DECK_MAX_ID_LENGTH,
+        )
+        validate_field_length(
+            errors,
+            cards_path,
+            line_number,
+            "front",
+            front,
+            DECK_MAX_TEXT_LENGTH,
+        )
+        validate_field_length(
+            errors,
+            cards_path,
+            line_number,
+            "back",
+            back,
+            DECK_MAX_TEXT_LENGTH,
+        )
+        validate_field_length(
+            errors,
+            cards_path,
+            line_number,
+            "tags",
+            tags,
+            DECK_MAX_TAGS_LENGTH,
+        )
 
 
 def verify_settings(
@@ -169,6 +343,8 @@ def verify_text_deck(deck_dir: Path) -> list[str]:
     if not deck_dir.is_dir():
         append_file_error(errors, deck_dir, "missing")
         return errors
+    if not deck_id_is_valid(deck_dir.name):
+        append_file_error(errors, deck_dir, "deck folder id is invalid")
 
     deck_json = load_deck_json(deck_dir, errors)
     card_rows = read_text_rows(deck_dir / "cards.tsv", errors)

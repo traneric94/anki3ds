@@ -34,6 +34,7 @@ make
 make test
 make test-host
 make test-converter
+make test-tools
 make verify-ci
 make verify-sample-decks
 make verify-local
@@ -55,7 +56,8 @@ make run-emulator-fresh-samples
 
 Verification gates:
 
-- `make verify-ci` is the portable CI gate. It runs `make test` and
+- `make verify-ci` is the portable CI gate. It runs `make test`, including
+  host C tests, converter tests, and verifier-tool tests, then runs
   `make verify-sample-decks`.
 - `make verify-sample-decks` checks the tracked sample decks for required
   files, matching `deck.json` metadata, valid `settings.tsv`, five-field
@@ -223,6 +225,14 @@ make test-converter
 ```
 
 The converter should have automated tests because it handles user data.
+Run verifier-tool tests with:
+
+```sh
+make test-tools
+```
+
+The text-deck verifier is part of the package safety net because it rejects
+source or staged sample decks that the 3DS app would fail to load.
 
 Minimum converter tests:
 

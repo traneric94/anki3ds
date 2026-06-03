@@ -11,7 +11,7 @@ OPTIONAL_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
-.PHONY: all app-3ds clean test test-host test-converter verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
 all: app-3ds
 
@@ -21,7 +21,7 @@ app-3ds:
 clean:
 	$(MAKE) -C app-3ds clean
 
-test: test-host test-converter
+test: test-host test-converter test-tools
 
 test-host:
 	$(HOST_CC) $(HOST_CFLAGS) \
@@ -47,6 +47,9 @@ test-host:
 
 test-converter:
 	python3 -m unittest tests/test_converter.py
+
+test-tools:
+	python3 -m unittest tests/test_verify_text_deck.py
 
 verify-ci: test verify-sample-decks
 

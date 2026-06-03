@@ -49,7 +49,8 @@ app-3ds/anki3ds.3dsx
 app-3ds/anki3ds.smdh
 ```
 
-To run host-side parser, scheduler, and review-state tests:
+To run host-side parser, scheduler, review-state, converter, and verifier
+tests:
 
 ```sh
 make test
