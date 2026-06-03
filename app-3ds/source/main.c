@@ -38,6 +38,7 @@
 #define STATUS_MESSAGE_WIDTH 31
 #define BATTERY_LOW_LEVEL 1
 #define BATTERY_POLL_INTERVAL_SECONDS 600
+#define DAY_CHECK_INTERVAL_SECONDS 60
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -460,6 +461,24 @@ static bool battery_poll_is_due(time_t *next_poll_time, time_t now)
 	}
 
 	return now >= *next_poll_time;
+}
+
+static void schedule_next_day_check(time_t *next_check_time, time_t now)
+{
+	if (next_check_time == NULL || now == (time_t)-1)
+		return;
+
+	*next_check_time = now + DAY_CHECK_INTERVAL_SECONDS;
+}
+
+static bool day_check_is_due(time_t *next_check_time, time_t now)
+{
+	if (next_check_time == NULL || now == (time_t)-1)
+		return false;
+	if (*next_check_time == 0)
+		return true;
+
+	return now >= *next_check_time;
 }
 
 static unsigned char rgb565_red(uint16_t pixel)
@@ -1291,9 +1310,8 @@ static void app_update_review_return_modes_for_day_change(
 		app->exit_return_mode = target_mode;
 }
 
-static bool app_refresh_day_if_changed(struct app_state *app)
+static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today)
 {
-	unsigned int today = app_time_current_day();
 	enum app_mode target_mode;
 
 	if (today == 0 || today == app->current_day)
@@ -2021,6 +2039,7 @@ int main(int argc, char *argv[])
 	bool frame_dirty = true;
 	unsigned int idle_wait_count = 0;
 	time_t next_battery_poll_time = 0;
+	time_t next_day_check_time = 0;
 	time_t now;
 	struct app_control_repeat navigation_repeat;
 
@@ -2032,6 +2051,8 @@ int main(int argc, char *argv[])
 	app_init(&app);
 	now = time(NULL);
 	schedule_next_battery_poll(&next_battery_poll_time, now);
+	if (app.current_day != 0)
+		schedule_next_day_check(&next_day_check_time, now);
 	show_scan_then_scan_decks(&app);
 	draw_app(&app);
 
@@ -2077,10 +2098,16 @@ int main(int argc, char *argv[])
 		now = time(NULL);
 		bool battery_poll_due = battery_poll_is_due(&next_battery_poll_time, now);
 		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
+		bool day_check_due = day_check_is_due(&next_day_check_time, now);
+		bool day_changed = day_check_due ?
+			app_refresh_day_if_changed(&app, app_time_local_day_from_time(now)) :
+			false;
 		if (battery_poll_due)
 			schedule_next_battery_poll(&next_battery_poll_time, now);
+		if (day_check_due)
+			schedule_next_day_check(&next_day_check_time, now);
 
-		if (app_refresh_day_if_changed(&app))
+		if (day_changed)
 		{
 			draw_app(&app);
 			frame_dirty = true;

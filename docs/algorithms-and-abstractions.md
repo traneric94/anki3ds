@@ -193,12 +193,15 @@ timeout before scanning controls again. The wait starts short for responsive
 input, then backs off while idle to avoid busy redraw/poll loops while still
 letting `aptMainLoop` run regularly.
 
-The app tracks the current local calendar day while it is open. If a valid day
-change is observed, deck-select rescans summaries, and an active review session
-updates the scheduler's `today`, clears one-step undo, recomputes daily counts,
-and repositions to the next due card. If a review or summary screen is visible,
-the screen redraws immediately; modal return targets are updated so canceling a
-modal lands on the correct review or summary screen for the new day.
+The app tracks the current local calendar day while it is open. The main loop
+checks for a local-day change at most once per minute, using the loop's existing
+`time()` result so it does not run calendar conversion on every idle tick. If a
+valid day change is observed, deck-select rescans summaries, and an active
+review session updates the scheduler's `today`, clears one-step undo,
+recomputes daily counts, and repositions to the next due card. If a review or
+summary screen is visible, the screen redraws immediately; modal return targets
+are updated so canceling a modal lands on the correct review or summary screen
+for the new day.
 
 The app samples PTMU battery state at startup, then at most once every ten
 minutes. Periodic checks first ask PTMU whether the shell is open; battery level
