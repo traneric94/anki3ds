@@ -8,6 +8,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_layout.h"
 #include "app_power.h"
 #include "app_time.h"
 #include "app_text.h"
@@ -2718,6 +2719,54 @@ static void test_media_image_loads_rgb565(void)
 	remove(TEST_MEDIA_PATH);
 }
 
+static void test_app_layout_media_images_fit_top_screen(void)
+{
+	check(
+		app_layout_rect_fits_top_screen(
+			APP_LAYOUT_MEDIA_IMAGE_X,
+			APP_LAYOUT_MEDIA_FRONT_Y,
+			MEDIA_IMAGE_MAX_WIDTH,
+			MEDIA_IMAGE_MAX_HEIGHT
+		),
+		"front media image fits top screen"
+	);
+	check(
+		app_layout_rect_fits_top_screen(
+			APP_LAYOUT_MEDIA_IMAGE_X,
+			APP_LAYOUT_MEDIA_BACK_Y,
+			MEDIA_IMAGE_MAX_WIDTH,
+			MEDIA_IMAGE_MAX_HEIGHT
+		),
+		"back media image fits top screen"
+	);
+	check(
+		!app_layout_rect_fits_top_screen(-1, 0, 1, 1),
+		"layout rejects negative x"
+	);
+	check(
+		!app_layout_rect_fits_top_screen(
+			APP_LAYOUT_TOP_SCREEN_WIDTH - MEDIA_IMAGE_MAX_WIDTH + 1,
+			0,
+			MEDIA_IMAGE_MAX_WIDTH,
+			MEDIA_IMAGE_MAX_HEIGHT
+		),
+		"layout rejects overflowing width"
+	);
+	check(
+		!app_layout_rect_fits_top_screen(
+			0,
+			APP_LAYOUT_TOP_SCREEN_HEIGHT - MEDIA_IMAGE_MAX_HEIGHT + 1,
+			MEDIA_IMAGE_MAX_WIDTH,
+			MEDIA_IMAGE_MAX_HEIGHT
+		),
+		"layout rejects overflowing height"
+	);
+	check(
+		!app_layout_rect_fits_top_screen(0, 0, 0, MEDIA_IMAGE_MAX_HEIGHT),
+		"layout rejects zero width"
+	);
+}
+
 static void test_media_image_rejects_bad_files(void)
 {
 	static const unsigned char bad_magic[] = {
@@ -3403,6 +3452,7 @@ int main(void)
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();
+	test_app_layout_media_images_fit_top_screen();
 	test_media_image_loads_rgb565();
 	test_media_image_rejects_bad_files();
 	test_media_cache_reuses_loaded_image();

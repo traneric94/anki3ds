@@ -22,6 +22,7 @@ test-host:
 	cc -std=c99 -Wall -Wextra -Werror -Iapp-3ds/include \
 		tests/test_deck_scheduler.c \
 		app-3ds/source/app_controls.c \
+		app-3ds/source/app_layout.c \
 		app-3ds/source/app_power.c \
 		app-3ds/source/app_settings.c \
 		app-3ds/source/app_text.c \

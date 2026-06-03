@@ -6,6 +6,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_layout.h"
 #include "app_power.h"
 #include "app_text.h"
 #include "app_time.h"
@@ -25,20 +26,7 @@
 #define IDLE_INPUT_FAST_WAIT_COUNT 10
 #define IDLE_INPUT_MID_WAIT_COUNT 30
 #define IDLE_INPUT_MAX_WAIT_COUNT 60
-#define TEXT_LEFT 1
-#define TEXT_WIDTH 48
-#define MEDIA_TEXT_WIDTH 25
-#define TOP_SCREEN_WIDTH 400
-#define TOP_SCREEN_HEIGHT 240
-#define MEDIA_IMAGE_X 224
-#define MEDIA_FRONT_Y 72
-#define MEDIA_BACK_Y 160
-#define DECK_NAME_HEADER_WIDTH 42
-#define DECK_NAME_SELECTOR_WIDTH 22
-#define DECK_SELECTOR_FIRST_ROW 5
-#define DECK_SELECTOR_VISIBLE_ROWS 16
 #define STATUS_MESSAGE_SIZE 64
-#define STATUS_MESSAGE_WIDTH 31
 #define DAY_CHECK_INTERVAL_SECONDS 60
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -211,10 +199,10 @@ static void draw_wrapped_text_columns(
 )
 {
 	int current_row = row;
-	int column = TEXT_LEFT;
+	int column = APP_LAYOUT_TEXT_LEFT;
 	bool truncated = false;
 
-	console_move(current_row, TEXT_LEFT);
+	console_move(current_row, APP_LAYOUT_TEXT_LEFT);
 
 	for (size_t index = 0; text[index] != '\0'; )
 	{
@@ -238,9 +226,9 @@ static void draw_wrapped_text_columns(
 		if (value == '\n')
 		{
 			current_row++;
-			column = TEXT_LEFT;
+			column = APP_LAYOUT_TEXT_LEFT;
 			if (current_row < row + max_rows)
-				console_move(current_row, TEXT_LEFT);
+				console_move(current_row, APP_LAYOUT_TEXT_LEFT);
 			index += char_length;
 			continue;
 		}
@@ -251,16 +239,16 @@ static void draw_wrapped_text_columns(
 			char_length = 1;
 		}
 
-		if (column >= TEXT_LEFT + max_columns)
+		if (column >= APP_LAYOUT_TEXT_LEFT + max_columns)
 		{
 			current_row++;
-			column = TEXT_LEFT;
+			column = APP_LAYOUT_TEXT_LEFT;
 			if (current_row >= row + max_rows)
 			{
 				truncated = true;
 				break;
 			}
-			console_move(current_row, TEXT_LEFT);
+			console_move(current_row, APP_LAYOUT_TEXT_LEFT);
 		}
 
 		if (value == ' ' && text[index] == '\t')
@@ -274,7 +262,7 @@ static void draw_wrapped_text_columns(
 
 	if (truncated && max_rows > 0 && max_columns >= 3)
 	{
-		console_move(row + max_rows - 1, TEXT_LEFT + max_columns - 3);
+		console_move(row + max_rows - 1, APP_LAYOUT_TEXT_LEFT + max_columns - 3);
 		printf("...");
 	}
 }
@@ -513,7 +501,7 @@ static void draw_top_image(const struct media_image *image, int x, int y)
 	{
 		int screen_y = y + (int)source_y;
 
-		if (screen_y < 0 || screen_y >= TOP_SCREEN_HEIGHT)
+		if (screen_y < 0 || screen_y >= APP_LAYOUT_TOP_SCREEN_HEIGHT)
 			continue;
 
 		for (unsigned int source_x = 0; source_x < image->width; source_x++)
@@ -522,13 +510,13 @@ static void draw_top_image(const struct media_image *image, int x, int y)
 			uint16_t pixel;
 			size_t offset;
 
-			if (screen_x < 0 || screen_x >= TOP_SCREEN_WIDTH)
+			if (screen_x < 0 || screen_x >= APP_LAYOUT_TOP_SCREEN_WIDTH)
 				continue;
 
 			pixel = image->pixels[source_y * image->width + source_x];
 			offset = (
-				(size_t)(TOP_SCREEN_HEIGHT - screen_y - 1) +
-				(size_t)screen_x * TOP_SCREEN_HEIGHT
+				(size_t)(APP_LAYOUT_TOP_SCREEN_HEIGHT - screen_y - 1) +
+				(size_t)screen_x * APP_LAYOUT_TOP_SCREEN_HEIGHT
 			) * 3;
 
 			framebuffer[offset] = rgb565_blue(pixel);
@@ -850,7 +838,7 @@ static void draw_header(const struct app_state *app)
 {
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[2;1HDeck: ");
-	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[3;1HDue %lu  New %lu  Done %u",
 		(unsigned long)app->session.due_count,
@@ -893,11 +881,14 @@ static void draw_deck_select_screen(const struct app_state *app)
 	}
 	else
 	{
-		if (app->selected_deck_index >= DECK_SELECTOR_VISIBLE_ROWS)
-			first_visible_deck = app->selected_deck_index - DECK_SELECTOR_VISIBLE_ROWS + 1;
+		if (app->selected_deck_index >= APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS)
+		{
+			first_visible_deck =
+				app->selected_deck_index - APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS + 1;
+		}
 		visible_deck_count = app->deck_index.count - first_visible_deck;
-		if (visible_deck_count > DECK_SELECTOR_VISIBLE_ROWS)
-			visible_deck_count = DECK_SELECTOR_VISIBLE_ROWS;
+		if (visible_deck_count > APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS)
+			visible_deck_count = APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS;
 
 		for (size_t visible_index = 0; visible_index < visible_deck_count; visible_index++)
 		{
@@ -907,12 +898,12 @@ static void draw_deck_select_screen(const struct app_state *app)
 
 			printf(
 				"\x1b[%lu;1H%s ",
-				(unsigned long)(DECK_SELECTOR_FIRST_ROW + visible_index),
+				(unsigned long)(APP_LAYOUT_DECK_SELECTOR_FIRST_ROW + visible_index),
 				marker
 			);
 			print_truncated(
 				app->deck_index.entries[index].display_name,
-				DECK_NAME_SELECTOR_WIDTH
+				APP_LAYOUT_DECK_NAME_SELECTOR_WIDTH
 			);
 			if (summary->deck_load_result == DECK_LOAD_OK)
 			{
@@ -991,7 +982,7 @@ static void draw_review_screen(const struct app_state *app)
 			card->front,
 			9,
 			5,
-			front_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
 		printf("\x1b[15;1HBack");
 		printf("\x1b[16;1H------------------------------------------------");
@@ -999,10 +990,22 @@ static void draw_review_screen(const struct app_state *app)
 			card->back,
 			17,
 			6,
-			back_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+			back_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
-		draw_card_media(app, card->front_media, MEDIA_IMAGE_X, MEDIA_FRONT_Y, 14);
-		draw_card_media(app, card->back_media, MEDIA_IMAGE_X, MEDIA_BACK_Y, 23);
+		draw_card_media(
+			app,
+			card->front_media,
+			APP_LAYOUT_MEDIA_IMAGE_X,
+			APP_LAYOUT_MEDIA_FRONT_Y,
+			14
+		);
+		draw_card_media(
+			app,
+			card->back_media,
+			APP_LAYOUT_MEDIA_IMAGE_X,
+			APP_LAYOUT_MEDIA_BACK_Y,
+			23
+		);
 	}
 	else
 	{
@@ -1010,9 +1013,15 @@ static void draw_review_screen(const struct app_state *app)
 			card->front,
 			9,
 			15,
-			front_has_media ? MEDIA_TEXT_WIDTH : TEXT_WIDTH
+			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
-		draw_card_media(app, card->front_media, MEDIA_IMAGE_X, MEDIA_FRONT_Y, 21);
+		draw_card_media(
+			app,
+			card->front_media,
+			APP_LAYOUT_MEDIA_IMAGE_X,
+			APP_LAYOUT_MEDIA_FRONT_Y,
+			21
+		);
 	}
 }
 
@@ -1065,7 +1074,7 @@ static void draw_actions_screen(const struct app_state *app)
 	printf("\x1b[8;1H%s Daily limits", settings_marker);
 	printf("\x1b[10;1H%s Reset deck progress", reset_marker);
 	printf("\x1b[13;1HDeck: ");
-	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 
 	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 	{
@@ -1114,7 +1123,7 @@ static void draw_settings_screen(const struct app_state *app)
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[3;1HDaily limits");
 	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf("\x1b[8;1H%s New cards:    %s", new_marker, new_limit);
 	printf("\x1b[10;1H%s Review cards: %s", review_marker, review_limit);
 	printf("\x1b[13;1H0 means all available cards.");
@@ -1131,7 +1140,7 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[3;1HReset deck progress?");
 	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
+	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf("\x1b[8;1HThis removes saved review");
 	printf("\x1b[9;1Hstate for this deck.");
 	printf("\x1b[12;1HCards stay in cards.tsv.");
@@ -1210,7 +1219,7 @@ static void draw_status_message(const struct app_state *app)
 		return;
 
 	printf("\x1b[24;1HStatus: ");
-	print_truncated(app->status_message, STATUS_MESSAGE_WIDTH);
+	print_truncated(app->status_message, APP_LAYOUT_STATUS_MESSAGE_WIDTH);
 }
 
 static void draw_scanning_screen(const struct app_state *app)
@@ -1240,7 +1249,7 @@ static void draw_scanning_progress_screen(
 		if (deck_name != NULL && deck_name[0] != '\0')
 		{
 			printf("\x1b[9;1HDeck: ");
-			print_truncated(deck_name, DECK_NAME_HEADER_WIDTH);
+			print_truncated(deck_name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 		}
 	}
 	else

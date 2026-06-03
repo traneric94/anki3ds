@@ -1,0 +1,27 @@
+#ifndef ANKI3DS_APP_LAYOUT_H
+#define ANKI3DS_APP_LAYOUT_H
+
+#include <stdbool.h>
+
+#define APP_LAYOUT_TEXT_LEFT 1
+#define APP_LAYOUT_TEXT_WIDTH 48
+#define APP_LAYOUT_MEDIA_TEXT_WIDTH 25
+#define APP_LAYOUT_TOP_SCREEN_WIDTH 400
+#define APP_LAYOUT_TOP_SCREEN_HEIGHT 240
+#define APP_LAYOUT_MEDIA_IMAGE_X 224
+#define APP_LAYOUT_MEDIA_FRONT_Y 72
+#define APP_LAYOUT_MEDIA_BACK_Y 160
+#define APP_LAYOUT_DECK_NAME_HEADER_WIDTH 42
+#define APP_LAYOUT_DECK_NAME_SELECTOR_WIDTH 22
+#define APP_LAYOUT_DECK_SELECTOR_FIRST_ROW 5
+#define APP_LAYOUT_DECK_SELECTOR_VISIBLE_ROWS 16
+#define APP_LAYOUT_STATUS_MESSAGE_WIDTH 31
+
+bool app_layout_rect_fits_top_screen(
+	int x,
+	int y,
+	unsigned int width,
+	unsigned int height
+);
+
+#endif

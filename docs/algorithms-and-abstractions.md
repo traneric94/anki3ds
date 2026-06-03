@@ -254,8 +254,10 @@ separate reset screen with `X`.
 
 Cards may reference front/back `.a3i` media. The app keeps a two-slot media
 cache for the active deck, enough for the current card's front and back images.
-This avoids repeated SD reads on redraws while keeping memory bounded. Loading a
-deck clears the cache.
+This avoids repeated SD reads on redraws while keeping memory bounded. The
+review-screen image positions live in `app_layout`, and host tests check that
+maximum-size front and back images fit within the top screen. Loading a deck
+clears the cache.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
@@ -408,6 +410,7 @@ Keep the portable logic separate from the libctru shell:
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
 | `review_log` | append-only study transition rows | scheduler decisions, rollback policy, rendering |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
+| `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
