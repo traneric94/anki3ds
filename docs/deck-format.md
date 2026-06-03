@@ -227,8 +227,9 @@ Rules:
 - `rating` is `again`, `hard`, `good`, `easy`, or `-` for non-rating events
 - old/new scheduler fields use the same meanings as `state.tsv`
 - the app stops appending when the next row would exceed 262144 bytes
-- if the existing log does not end in a newline, appending stops so a new row is
-  not concatenated onto a partial interrupted row
+- if the existing log does not end in a newline, the app rewrites the complete
+  prefix before appending so a new row is not concatenated onto a partial
+  interrupted row
 
 This can support debugging and possible desktop import later. The current
 one-step undo is still an in-memory scheduler snapshot saved back to
