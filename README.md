@@ -118,6 +118,9 @@ The converter simplifies simple HTML in exported fields before writing
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
 
+Conversion failures print a concise `error: ...` message and exit nonzero so
+the input can be fixed without reading a Python traceback.
+
 If your export includes durable source identifiers, pass them through so
 re-imported card text keeps the same on-device review state:
 

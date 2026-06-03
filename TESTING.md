@@ -151,6 +151,7 @@ Minimum converter tests:
 - writes expected deck folder layout
 - preserves existing review state on re-import
 - preserves card IDs across text edits when stable source ID fields are supplied
+- reports conversion errors without Python tracebacks
 
 ## Save-State Tests
 

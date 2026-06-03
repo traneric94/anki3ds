@@ -2,7 +2,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -498,6 +498,26 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(front, "front")
             self.assertEqual(back, "back")
             self.assertEqual(tags, "")
+
+    def test_cli_reports_conversion_errors_without_traceback(self):
+        cards_input = "\tback\n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr), mock.patch(
+                "sys.argv",
+                ["anki3ds_convert.py", str(input_path), str(output)],
+            ):
+                self.assertEqual(main(), 1)
+
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("error: line 1: front field is empty", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_write_split_decks_writes_numbered_sibling_decks(self):
         cards = convert_lines(

@@ -7,6 +7,7 @@ import argparse
 import hashlib
 from html.parser import HTMLParser
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -699,30 +700,35 @@ def main() -> int:
     if args.note_id_field is not None and args.note_id_field < 0:
         raise SystemExit("field indexes must be non-negative")
 
-    lines = args.input.read_text(encoding="utf-8").splitlines()
-    cards = convert_lines(
-        lines,
-        args.front_field,
-        args.back_field,
-        args.tags_field,
-        args.front_media_field,
-        args.back_media_field,
-        args.card_id_field,
-        args.note_id_field,
-    )
-    deck_id = args.deck_id if args.deck_id is not None else args.output.name
-    if args.split_large_decks:
-        written_paths = write_split_decks(
-            args.output,
-            deck_id,
-            args.deck_name,
-            cards,
-            args.media_root,
+    try:
+        lines = args.input.read_text(encoding="utf-8").splitlines()
+        cards = convert_lines(
+            lines,
+            args.front_field,
+            args.back_field,
+            args.tags_field,
+            args.front_media_field,
+            args.back_media_field,
+            args.card_id_field,
+            args.note_id_field,
         )
-        print(f"wrote {len(cards)} cards to {len(written_paths)} deck folder(s)")
-    else:
-        write_deck(args.output, deck_id, args.deck_name, cards, args.media_root)
-        print(f"wrote {len(cards)} cards to {args.output}")
+        deck_id = args.deck_id if args.deck_id is not None else args.output.name
+        if args.split_large_decks:
+            written_paths = write_split_decks(
+                args.output,
+                deck_id,
+                args.deck_name,
+                cards,
+                args.media_root,
+            )
+            print(f"wrote {len(cards)} cards to {len(written_paths)} deck folder(s)")
+        else:
+            write_deck(args.output, deck_id, args.deck_name, cards, args.media_root)
+            print(f"wrote {len(cards)} cards to {args.output}")
+    except (OSError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+
     return 0
 
 
