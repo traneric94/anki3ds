@@ -124,6 +124,8 @@ install-local-sample-decks: verify-sample-decks
 		deck_dir="$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
 		rm -f "$$deck_dir/deck.json" "$$deck_dir/cards.tsv" "$$deck_dir/settings.tsv" \
+			"$$deck_dir/deck.json.tmp" "$$deck_dir/deck.json.bak" \
+			"$$deck_dir/cards.tsv.tmp" "$$deck_dir/cards.tsv.bak" \
 			"$$deck_dir/settings.tsv.tmp" "$$deck_dir/settings.tsv.bak"; \
 		rm -rf "$$deck_dir/media"; \
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \
@@ -149,6 +151,8 @@ install-azahar-sample-decks: verify-sample-decks
 		deck_dir="$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
 		rm -f "$$deck_dir/deck.json" "$$deck_dir/cards.tsv" "$$deck_dir/settings.tsv" \
+			"$$deck_dir/deck.json.tmp" "$$deck_dir/deck.json.bak" \
+			"$$deck_dir/cards.tsv.tmp" "$$deck_dir/cards.tsv.bak" \
 			"$$deck_dir/settings.tsv.tmp" "$$deck_dir/settings.tsv.bak"; \
 		rm -rf "$$deck_dir/media"; \
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \

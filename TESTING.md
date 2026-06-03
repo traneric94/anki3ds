@@ -111,9 +111,9 @@ to clear only tracked sample-deck progress files before a fresh manual pass.
 The `prepare-local-samples-fresh` and `prepare-azahar-samples-fresh` targets
 install the tracked sample decks first, then perform that progress reset.
 Sample install targets replace source-owned files such as `deck.json`,
-`cards.tsv` and `settings.tsv`, remove stale `settings.tsv.tmp` and
-`settings.tsv.bak`, and preserve `state.tsv` and `review-log.tsv`; fresh
-targets clear those files plus `state.tsv.tmp`, `state.tsv.bak`,
+`cards.tsv` and `settings.tsv`, remove stale `deck.json`/`cards.tsv`/`settings.tsv`
+temp and backup files, and preserve `state.tsv` and `review-log.tsv`; fresh
+targets clear those progress files plus `state.tsv.tmp`, `state.tsv.bak`,
 `review-log.tsv.tmp`, and `review-log.tsv.bak` so stale progress should not
 carry into a pass. Default sample installs also remove old `media-demo` folders
 from the sample root so a text-only acceptance pass shows exactly the text
