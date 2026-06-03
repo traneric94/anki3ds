@@ -103,6 +103,25 @@ class ConverterTests(unittest.TestCase):
                 tags_field=2,
             )
 
+    def test_convert_lines_requires_non_empty_media_for_image_tags(self):
+        with self.assertRaisesRegex(ValueError, "non-empty media field"):
+            convert_lines(
+                ['front text <img src="front.ppm">\tback\ttag\t'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+                front_media_field=3,
+            )
+
+        with self.assertRaisesRegex(ValueError, "non-empty media field"):
+            convert_lines(
+                ['front\tback text <img src="back.ppm">\ttag\t'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+                back_media_field=3,
+            )
+
     def test_convert_lines_reads_media_fields(self):
         cards = convert_lines(
             ["front\tback\ttag\tfront.ppm\tback.ppm"],
@@ -418,6 +437,31 @@ class ConverterTests(unittest.TestCase):
             media = (output / "media" / "front.a3i").read_bytes()
             self.assertEqual(media[:8], b"A3I1\x02\x00\x01\x00")
             self.assertEqual(media[8:12], b"\x00\xf8\xe0\x07")
+
+    def test_write_deck_converts_inline_image_with_media_field(self):
+        cards = convert_lines(
+            ['front <img src="front.ppm">\tback\ttag\tfront.ppm'],
+            0,
+            1,
+            2,
+            front_media_field=3,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+            (media_root / "front.ppm").write_bytes(
+                b"P6\n1 1\n255\n" + bytes([255, 0, 0])
+            )
+
+            write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
+            self.assertEqual(line.split("\t")[2], "front")
+            self.assertEqual(line.split("\t")[5], "front.a3i")
+            self.assertTrue((output / "media" / "front.a3i").exists())
 
     def test_load_ppm_rgb_accepts_crlf_header(self):
         with tempfile.TemporaryDirectory() as temp_dir:

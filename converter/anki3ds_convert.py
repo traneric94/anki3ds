@@ -314,11 +314,14 @@ def convert_lines(
         if len(fields) <= max_field:
             raise ValueError(f"line {line_number}: expected at least {max_field + 1} fields")
 
-        if text_contains_image_tag(fields[front_field]) and front_media_field is None:
+        front_has_image = text_contains_image_tag(fields[front_field])
+        back_has_image = text_contains_image_tag(fields[back_field])
+
+        if front_has_image and front_media_field is None:
             raise ValueError(
                 f"line {line_number}: front image tags require --front-media-field"
             )
-        if text_contains_image_tag(fields[back_field]) and back_media_field is None:
+        if back_has_image and back_media_field is None:
             raise ValueError(
                 f"line {line_number}: back image tags require --back-media-field"
             )
@@ -336,6 +339,14 @@ def convert_lines(
             if back_media_field is not None
             else ""
         )
+        if front_has_image and not front_media:
+            raise ValueError(
+                f"line {line_number}: front image tags require a non-empty media field"
+            )
+        if back_has_image and not back_media:
+            raise ValueError(
+                f"line {line_number}: back image tags require a non-empty media field"
+            )
 
         if not front:
             raise ValueError(f"line {line_number}: front field is empty")

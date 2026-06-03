@@ -155,6 +155,11 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --media-root path/to/media
 ```
 
+If exported front/back HTML contains an inline `<img>` tag, map that side to a
+non-empty `--front-media-field` or `--back-media-field`. The converter rejects
+inline images without an explicit media filename so images are not silently
+dropped.
+
 ## Current Status
 
 Multi-deck text and small-image review works at build level: the app scans

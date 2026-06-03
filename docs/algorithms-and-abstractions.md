@@ -434,7 +434,10 @@ Algorithm:
 8. Write `cards.tsv`, escaping backslashes, tabs, and newlines.
 9. If media fields and `--media-root` are provided, convert referenced binary
    PPM `P6` files into bounded raw `.a3i` files under `media/`.
-10. Write default `settings.tsv` if it does not already exist.
+10. Reject inline `<img>` tags unless the same side has a non-empty mapped
+    media field, so image-bearing exports do not silently become text-only
+    cards.
+11. Write default `settings.tsv` if it does not already exist.
 
 The converter deliberately does not open or rewrite existing `state.tsv`,
 `review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,

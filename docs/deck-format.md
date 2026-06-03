@@ -216,6 +216,10 @@ The converter can convert binary PPM `P6` images into `.a3i` files when
 `--media-root` is provided. It can also validate and copy existing `.a3i` files
 from that media root. Without `--media-root`, media fields must already
 reference `.a3i` files that will be copied beside the deck manually.
+If an exported front/back field contains an inline `<img>` tag, that side must
+also provide a non-empty media field; otherwise the converter rejects the card
+so the image is not silently dropped. Image-only cards still need non-empty text
+because `cards.tsv` front/back fields are required.
 Common image formats such as PNG/JPEG should be converted to PPM first or added
 through a future optional desktop dependency. The 3DS app intentionally does no
 general-purpose image decoding.
