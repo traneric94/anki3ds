@@ -282,3 +282,22 @@ Notes:
   artifacts. Status warnings for `log skipped` and `log kept` now use the
   caution color. Full button/render acceptance is deferred to the final manual
   pass.
+
+## 2026-06-03 - UI Warning And Battery Retry Launch Check
+
+Build: local working tree
+Command: `make run-emulator`
+Steps:
+- Ran `make test`, `make`, and `make install-local-sd`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Host tests now cover short retry scheduling for closed-shell or failed battery
+  samples and bad-settings deck summaries. Load-error paths are truncated, bad
+  settings are surfaced as ignored in deck stats, and `reset state` status text
+  uses the caution color. Full button/render acceptance is deferred to the final
+  manual pass.

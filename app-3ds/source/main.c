@@ -457,6 +457,11 @@ static bool app_state_allows_study(const struct app_state *app)
 	return review_state_load_result_allows_save(app->state_load_result);
 }
 
+static bool settings_load_result_needs_warning(enum app_settings_load_result result)
+{
+	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
+}
+
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
 {
 	return app_review_should_show_queue(app->state_load_result, &app->session) ?
@@ -500,7 +505,8 @@ static const char *status_message_color(const char *message)
 		strstr(message, "requires") != NULL ||
 		strstr(message, "Nothing") != NULL ||
 		strstr(message, "skipped") != NULL ||
-		strstr(message, "kept") != NULL
+		strstr(message, "kept") != NULL ||
+		strstr(message, "reset state") != NULL
 	)
 	{
 		return APP_COLOR_YELLOW;
@@ -1036,13 +1042,23 @@ static void draw_deck_select_screen(const struct app_state *app)
 				deck_summary_state_allows_study(summary)
 			)
 			{
-				printf(
-					" N:%lu L:%lu R:%lu S:%lu",
-					(unsigned long)summary->new_due_count,
-					(unsigned long)summary->learning_due_count,
-					(unsigned long)summary->review_due_count,
-					(unsigned long)summary->suspended_count
-				);
+				if (settings_load_result_needs_warning(summary->settings_load_result))
+				{
+					printf(
+						APP_COLOR_RESET APP_COLOR_YELLOW
+						" settings ignored" APP_COLOR_RESET
+					);
+				}
+				else
+				{
+					printf(
+						" N:%lu L:%lu R:%lu S:%lu",
+						(unsigned long)summary->new_due_count,
+						(unsigned long)summary->learning_due_count,
+						(unsigned long)summary->review_due_count,
+						(unsigned long)summary->suspended_count
+					);
+				}
 			}
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
@@ -1080,9 +1096,10 @@ static void draw_load_error_screen(const struct app_state *app)
 	app_console_clear();
 	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
 	printf("\x1b[3;1H" APP_COLOR_RED "Could not load deck." APP_COLOR_RESET);
-	printf(
-		"\x1b[5;1H%s",
-		app->active_cards_path[0] ? app->active_cards_path : DECK_INDEX_ROOT_PATH
+	printf("\x1b[5;1H");
+	print_truncated(
+		app->active_cards_path[0] ? app->active_cards_path : DECK_INDEX_ROOT_PATH,
+		APP_LAYOUT_TEXT_WIDTH
 	);
 	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
 	printf("\x1b[10;1HCopy cards.tsv to the path above.");
@@ -1621,22 +1638,35 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				deck_summary_state_allows_study(summary)
 			)
 			{
+				int details_row = 12;
+
+				if (settings_load_result_needs_warning(summary->settings_load_result))
+				{
+					printf(
+						"\x1b[12;1H" APP_COLOR_YELLOW
+						"Settings ignored; defaults" APP_COLOR_RESET
+					);
+					details_row = 14;
+				}
 				printf(
-					"\x1b[12;1HDue: N %lu  L %lu  R %lu",
+					"\x1b[%d;1HDue: N %lu  L %lu  R %lu",
+					details_row,
 					(unsigned long)summary->new_due_count,
 					(unsigned long)summary->learning_due_count,
 					(unsigned long)summary->review_due_count
 				);
 				printf(
-					"\x1b[14;1HTotal due: %lu",
+					"\x1b[%d;1HTotal due: %lu",
+					details_row + 2,
 					(unsigned long)summary->due_count
 				);
 				printf(
-					"\x1b[16;1HCards: %lu  Suspended: %lu",
+					"\x1b[%d;1HCards: %lu  Suspended: %lu",
+					details_row + 4,
 					(unsigned long)summary->card_count,
 					(unsigned long)summary->suspended_count
 				);
-				draw_due_legend(18, true);
+				draw_due_legend(details_row + 6, true);
 			}
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
@@ -2823,7 +2853,8 @@ int main(int argc, char *argv[])
 		{
 			app_power_schedule_next_battery_poll_after_sample(
 				&next_battery_poll_time,
-				now
+				now,
+				battery_sample_result
 			);
 		}
 		if (day_check_due)

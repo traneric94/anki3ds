@@ -307,7 +307,8 @@ static void test_app_power_battery_sample_policy(void)
 
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600
+		1600,
+		APP_POWER_BATTERY_SAMPLE_UNCHANGED
 	);
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
@@ -340,17 +341,30 @@ static void test_app_power_battery_sample_policy(void)
 
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600
+		1600,
+		APP_POWER_BATTERY_SAMPLE_READ_FAILED
 	);
 	check(
-		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
-		"battery read failure schedules retry interval"
+		next_poll_time == 1600 + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS,
+		"battery read failure schedules short retry interval"
 	);
 
 	next_poll_time = 1600;
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
-		1600
+		1600,
+		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
+	);
+	check(
+		next_poll_time == 1600 + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS,
+		"closed shell sample schedules short retry interval"
+	);
+
+	next_poll_time = 1600;
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		1600,
+		APP_POWER_BATTERY_SAMPLE_CHANGED
 	);
 	check(
 		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
@@ -3439,6 +3453,7 @@ static void remove_test_deck_dir(const char *deck_id)
 static void cleanup_deck_index_test_root(void)
 {
 	remove_test_deck_dir("alpha");
+	remove_test_deck_dir("bad-settings");
 	remove_test_deck_dir("bad-state");
 	remove_test_deck_dir("beta");
 	remove_test_deck_dir("broken");
@@ -3623,6 +3638,46 @@ static void test_deck_summary_counts_due_cards(void)
 	check(summary.learning_due_count == 1, "summary learning due count");
 	check(summary.review_due_count == 1, "summary review due count");
 	check(summary.suspended_count == 1, "summary suspended count includes saved state");
+
+	cleanup_deck_index_test_root();
+}
+
+static void test_deck_summary_reports_bad_settings_with_default_counts(void)
+{
+	struct deck_entry entry;
+	struct deck_summary summary;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/bad-settings", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+
+	check(
+		deck_index_build_entry(&entry, TEST_DECK_ROOT, "bad-settings"),
+		"bad settings summary deck entry builds"
+	);
+	write_file(
+		entry.cards_path,
+		"card-1\tnote-1\tfront 1\tback 1\ttag\n"
+		"card-2\tnote-2\tfront 2\tback 2\ttag\n"
+	);
+	write_file(entry.settings_path, "new_limit\tbad\n");
+
+	deck_summary_load(&summary, &entry, TEST_TODAY);
+
+	check(summary.deck_load_result == DECK_LOAD_OK, "bad settings summary deck loads");
+	check(
+		summary.settings_load_result == APP_SETTINGS_LOAD_BAD_FORMAT,
+		"bad settings summary reports ignored settings"
+	);
+	check(
+		summary.state_load_result == REVIEW_STATE_LOAD_NOT_FOUND,
+		"bad settings summary starts without state"
+	);
+	check(summary.card_count == 2, "bad settings summary keeps card count");
+	check(summary.due_count == 2, "bad settings summary keeps default due count");
+	check(summary.new_due_count == 2, "bad settings summary keeps default new count");
 
 	cleanup_deck_index_test_root();
 }
@@ -4183,6 +4238,7 @@ int main(void)
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
 	test_deck_summary_counts_due_cards();
+	test_deck_summary_reports_bad_settings_with_default_counts();
 	test_deck_summary_suppresses_bad_state_counts();
 	test_deck_summary_from_session_counts_due_cards();
 	test_deck_summary_reports_load_error();
