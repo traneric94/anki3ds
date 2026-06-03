@@ -12,20 +12,20 @@ letters do not match the 3DS button label.
 | `Y` | `X` | Choose Again after reveal, open controls where available |
 | `L` | `Q` | Undo last rating or suspend action |
 | `R` | `W` | Open suspend confirmation |
-| D-pad Up | `T` | Move selection up, scroll review text up |
-| D-pad Down | `G` | Move selection down, scroll review text down |
-| D-pad Left | `F` | Decrease daily-limit preset |
-| D-pad Right | `H` | Increase daily-limit preset |
+| D-pad or Circle Pad Up | `T` | Move selection up, scroll review text up |
+| D-pad or Circle Pad Down | `G` | Move selection down, scroll review text down |
+| D-pad or Circle Pad Left | `F` | Decrease daily-limit preset |
+| D-pad or Circle Pad Right | `H` | Increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
 | `START` | `M` | Open exit confirmation |
 
-Tapping a D-pad direction moves or scrolls once. Holding a single D-pad
+Tapping a D-pad or Circle Pad direction moves or scrolls once. Holding a single
 direction for roughly 300 ms starts repeat movement, review-text scrolling, or
 daily-limit value changes, then repeats roughly every 80 ms. The app keeps the
 input loop responsive while a button is held so deck selection, action
 selection, and review text scrolling do not fall into the idle backoff cadence.
-Pressing multiple D-pad directions together does not move or change values.
-D-pad directions pressed or held together with command buttons are ignored.
+Pressing multiple directions together does not move or change values.
+Directions pressed or held together with command buttons are ignored.
 Face-button actions such as reveal, rating, save, reset, and exit remain
 single-press actions. After reveal, pressing more than one rating button at the
 same time does not save a rating. Save, restore-confirm, suspend-confirm,

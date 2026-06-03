@@ -40,20 +40,52 @@ static void test_maps_3ds_keys_to_app_buttons(void)
 		"KEY_R maps to R"
 	);
 	check(
+		app_controls_buttons_from_3ds_keys(KEY_DUP) == APP_CONTROL_BUTTON_UP,
+		"KEY_DUP maps to Up"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_DDOWN) == APP_CONTROL_BUTTON_DOWN,
+		"KEY_DDOWN maps to Down"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_DLEFT) == APP_CONTROL_BUTTON_LEFT,
+		"KEY_DLEFT maps to Left"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_DRIGHT) == APP_CONTROL_BUTTON_RIGHT,
+		"KEY_DRIGHT maps to Right"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_CPAD_UP) == APP_CONTROL_BUTTON_UP,
+		"KEY_CPAD_UP maps to Up"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_CPAD_DOWN) == APP_CONTROL_BUTTON_DOWN,
+		"KEY_CPAD_DOWN maps to Down"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_CPAD_LEFT) == APP_CONTROL_BUTTON_LEFT,
+		"KEY_CPAD_LEFT maps to Left"
+	);
+	check(
+		app_controls_buttons_from_3ds_keys(KEY_CPAD_RIGHT) == APP_CONTROL_BUTTON_RIGHT,
+		"KEY_CPAD_RIGHT maps to Right"
+	);
+	check(
 		app_controls_buttons_from_3ds_keys(KEY_UP) == APP_CONTROL_BUTTON_UP,
-		"KEY_UP maps to Up"
+		"KEY_UP alias maps to Up"
 	);
 	check(
 		app_controls_buttons_from_3ds_keys(KEY_DOWN) == APP_CONTROL_BUTTON_DOWN,
-		"KEY_DOWN maps to Down"
+		"KEY_DOWN alias maps to Down"
 	);
 	check(
 		app_controls_buttons_from_3ds_keys(KEY_LEFT) == APP_CONTROL_BUTTON_LEFT,
-		"KEY_LEFT maps to Left"
+		"KEY_LEFT alias maps to Left"
 	);
 	check(
 		app_controls_buttons_from_3ds_keys(KEY_RIGHT) == APP_CONTROL_BUTTON_RIGHT,
-		"KEY_RIGHT maps to Right"
+		"KEY_RIGHT alias maps to Right"
 	);
 	check(
 		app_controls_buttons_from_3ds_keys(KEY_SELECT) == APP_CONTROL_BUTTON_SELECT,
