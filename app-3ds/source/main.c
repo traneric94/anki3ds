@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "app_settings.h"
+#include "app_controls.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
@@ -126,6 +127,33 @@ static void select_top_screen(void)
 static void select_bottom_screen(void)
 {
 	consoleSelect(&bottom_screen);
+}
+
+static enum app_control_mode app_control_mode_for_app_mode(enum app_mode mode)
+{
+	switch (mode)
+	{
+	case APP_MODE_DECK_SELECT:
+		return APP_CONTROL_MODE_DECK_SELECT;
+	case APP_MODE_LOAD_ERROR:
+		return APP_CONTROL_MODE_LOAD_ERROR;
+	case APP_MODE_REVIEW:
+		return APP_CONTROL_MODE_REVIEW;
+	case APP_MODE_SUMMARY:
+		return APP_CONTROL_MODE_SUMMARY;
+	case APP_MODE_ACTIONS:
+		return APP_CONTROL_MODE_ACTIONS;
+	case APP_MODE_SETTINGS:
+		return APP_CONTROL_MODE_SETTINGS;
+	case APP_MODE_CONTROLS:
+		return APP_CONTROL_MODE_CONTROLS;
+	case APP_MODE_CONFIRM_RESET:
+		return APP_CONTROL_MODE_CONFIRM_RESET;
+	case APP_MODE_CONFIRM_EXIT:
+		return APP_CONTROL_MODE_CONFIRM_EXIT;
+	}
+
+	return APP_CONTROL_MODE_DECK_SELECT;
 }
 
 static void console_move(int row, int column)
@@ -1663,18 +1691,6 @@ static bool app_handle_settings_input(struct app_state *app, u32 keys_down)
 	return false;
 }
 
-static bool app_can_open_controls(const struct app_state *app)
-{
-	if (app->mode == APP_MODE_CONFIRM_EXIT || app->mode == APP_MODE_CONFIRM_RESET)
-		return false;
-	if (app->mode == APP_MODE_CONTROLS)
-		return false;
-	if (app->mode == APP_MODE_REVIEW && app->revealed)
-		return false;
-
-	return true;
-}
-
 static bool app_handle_controls_input(struct app_state *app, u32 keys_down)
 {
 	if (keys_down & (KEY_B | KEY_SELECT | KEY_Y))
@@ -1689,6 +1705,9 @@ static bool app_handle_controls_input(struct app_state *app, u32 keys_down)
 
 static bool app_handle_input(struct app_state *app, u32 keys_down)
 {
+	unsigned int buttons = app_controls_buttons_from_3ds_keys(keys_down);
+	enum scheduler_rating rating;
+
 	if (app->mode == APP_MODE_CONFIRM_EXIT)
 		return app_handle_exit_confirmation_input(app, keys_down);
 
@@ -1701,7 +1720,10 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (app->mode == APP_MODE_CONTROLS)
 		return app_handle_controls_input(app, keys_down);
 
-	if ((keys_down & KEY_Y) && app_can_open_controls(app))
+	if (
+		(buttons & APP_CONTROL_BUTTON_Y) &&
+		app_controls_can_open(app_control_mode_for_app_mode(app->mode), app->revealed)
+	)
 	{
 		app_open_controls(app);
 		return true;
@@ -1756,7 +1778,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (!app->revealed)
 	{
-		if (keys_down & KEY_A)
+		if (app_controls_should_show_answer(buttons, app->revealed))
 		{
 			app->revealed = true;
 			return true;
@@ -1765,14 +1787,8 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return false;
 	}
 
-	if (keys_down & KEY_Y)
-		return rate_current_card(app, SCHEDULER_RATING_AGAIN);
-	if (keys_down & KEY_X)
-		return rate_current_card(app, SCHEDULER_RATING_HARD);
-	if (keys_down & KEY_B)
-		return rate_current_card(app, SCHEDULER_RATING_GOOD);
-	if (keys_down & KEY_A)
-		return rate_current_card(app, SCHEDULER_RATING_EASY);
+	if (app_controls_rating_for_buttons(buttons, app->revealed, &rating))
+		return rate_current_card(app, rating);
 
 	return false;
 }

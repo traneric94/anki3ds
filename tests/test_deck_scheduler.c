@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "app_settings.h"
+#include "app_controls.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
@@ -236,6 +237,90 @@ static void test_scheduler_schedules_due_days(void)
 	check(session.rating_counts[SCHEDULER_RATING_GOOD] == 1, "good count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_EASY] == 1, "easy count tracked");
 	check(session.reviewed_count == 4, "reviewed count tracks ratings");
+}
+
+static void test_app_controls_review_front_actions(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+
+	check(
+		app_controls_can_open(APP_CONTROL_MODE_REVIEW, false),
+		"controls can open before reveal"
+	);
+	check(
+		!app_controls_can_open(APP_CONTROL_MODE_REVIEW, true),
+		"controls cannot steal revealed Y rating"
+	);
+	check(
+		app_controls_should_show_answer(APP_CONTROL_BUTTON_A, false),
+		"A shows answer before reveal"
+	);
+	check(
+		!app_controls_should_show_answer(APP_CONTROL_BUTTON_A, true),
+		"A does not show answer after reveal"
+	);
+	check(
+		!app_controls_rating_for_buttons(APP_CONTROL_BUTTON_A, false, &rating),
+		"A is not Easy before reveal"
+	);
+	check(
+		!app_controls_rating_for_buttons(APP_CONTROL_BUTTON_X, false, &rating),
+		"X is not Hard before reveal"
+	);
+	check(
+		!app_controls_rating_for_buttons(APP_CONTROL_BUTTON_Y, false, &rating),
+		"Y is not Again before reveal"
+	);
+}
+
+static void test_app_controls_review_rating_keys(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+
+	check(
+		app_controls_rating_for_buttons(APP_CONTROL_BUTTON_Y, true, &rating),
+		"Y rates after reveal"
+	);
+	check(rating == SCHEDULER_RATING_AGAIN, "Y maps to Again");
+	check(
+		app_controls_rating_for_buttons(APP_CONTROL_BUTTON_X, true, &rating),
+		"X rates after reveal"
+	);
+	check(rating == SCHEDULER_RATING_HARD, "X maps to Hard");
+	check(
+		app_controls_rating_for_buttons(APP_CONTROL_BUTTON_B, true, &rating),
+		"B rates after reveal"
+	);
+	check(rating == SCHEDULER_RATING_GOOD, "B maps to Good");
+	check(
+		app_controls_rating_for_buttons(APP_CONTROL_BUTTON_A, true, &rating),
+		"A rates after reveal"
+	);
+	check(rating == SCHEDULER_RATING_EASY, "A maps to Easy");
+}
+
+static void test_app_controls_modal_controls(void)
+{
+	check(
+		app_controls_can_open(APP_CONTROL_MODE_DECK_SELECT, false),
+		"controls can open from deck select"
+	);
+	check(
+		app_controls_can_open(APP_CONTROL_MODE_SETTINGS, false),
+		"controls can open from settings"
+	);
+	check(
+		!app_controls_can_open(APP_CONTROL_MODE_CONTROLS, false),
+		"controls screen does not reopen itself"
+	);
+	check(
+		!app_controls_can_open(APP_CONTROL_MODE_CONFIRM_EXIT, false),
+		"controls cannot open from exit confirmation"
+	);
+	check(
+		!app_controls_can_open(APP_CONTROL_MODE_CONFIRM_RESET, false),
+		"controls cannot open from reset confirmation"
+	);
 }
 
 static void test_scheduler_rejects_invalid_rating(void)
@@ -1899,6 +1984,9 @@ int main(void)
 	test_deck_load_card_limit();
 	test_tracked_sample_decks_load();
 	test_scheduler_schedules_due_days();
+	test_app_controls_review_front_actions();
+	test_app_controls_review_rating_keys();
+	test_app_controls_modal_controls();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();

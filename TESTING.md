@@ -124,7 +124,8 @@ make test-host
 ```
 
 The host C suite includes an M7-shaped daily-use workflow covering two decks,
-rating undo, suspension restore, daily limits, and relaunch persistence.
+rating undo, suspension restore, daily limits, relaunch persistence, and the
+review key map for reveal and Again/Hard/Good/Easy ratings.
 
 Run converter tests with:
 

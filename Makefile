@@ -21,6 +21,7 @@ test: test-host test-converter
 test-host:
 	cc -std=c99 -Wall -Wextra -Werror -Iapp-3ds/include \
 		tests/test_deck_scheduler.c \
+		app-3ds/source/app_controls.c \
 		app-3ds/source/app_settings.c \
 		app-3ds/source/deck.c \
 		app-3ds/source/deck_index.c \

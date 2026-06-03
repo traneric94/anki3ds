@@ -169,6 +169,11 @@ for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
 framework yet.
 
+The review button map lives in the small `app_controls` module so the
+reveal/rating rules can be host-tested without libctru. `main.c` still owns
+state transitions and side effects, but the stable review mapping is: front
+side `A` reveals; after reveal, `Y/X/B/A` choose Again/Hard/Good/Easy.
+
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
 When the screen is unchanged, the app waits for HID input with an adaptive
