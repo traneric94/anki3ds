@@ -132,7 +132,7 @@ Rules:
 
 - `review_count` is a non-negative integer
 - `last_rating` is numeric: `0` Again, `1` Hard, `2` Good, `3` Easy
-- `due_day` is days since the Unix epoch
+- `due_day` is local calendar days since 1970-01-01
 - `interval_days` is the current review interval
 - `ease_permille` is the ease factor scaled by 1000, such as `2500` for 2.5
 - `lapses` counts review-card Again ratings

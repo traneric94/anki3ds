@@ -248,6 +248,11 @@ during review or settings edits.
 `rating_counts` are live session counters. Restored state contributes to
 per-card `review_count`, but not to the current session's rating-count totals.
 
+The scheduler's day number is derived from the device's local calendar date.
+It is not `time() / 86400`, because UTC rollover can make due cards and daily
+limits advance early in western time zones. The date conversion lives in
+`app_time` so local-day behavior can be host-tested without libctru.
+
 ## Settings
 
 Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use

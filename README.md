@@ -92,6 +92,13 @@ To launch the current `.3dsx` in Azahar from a normal macOS session:
 make run-emulator
 ```
 
+To install the tracked sample decks into Azahar's SD directory and launch the
+current build in one command:
+
+```sh
+make run-emulator-samples
+```
+
 By default this expects Azahar at:
 
 ```text

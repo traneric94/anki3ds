@@ -6,6 +6,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_time.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
@@ -15,7 +16,6 @@
 #include "scheduler.h"
 
 #define APP_VERSION "0.5.0-dev"
-#define SECONDS_PER_DAY 86400
 #define IDLE_INPUT_WAIT_INITIAL_NS 100000000LL
 #define IDLE_INPUT_WAIT_MID_NS 250000000LL
 #define IDLE_INPUT_WAIT_MAX_NS 500000000LL
@@ -159,16 +159,6 @@ static enum app_control_mode app_control_mode_for_app_mode(enum app_mode mode)
 static void console_move(int row, int column)
 {
 	printf("\x1b[%d;%dH", row, column);
-}
-
-static unsigned int current_day(void)
-{
-	time_t now = time(NULL);
-
-	if (now == (time_t)-1 || now < 0)
-		return 0;
-
-	return (unsigned int)(now / SECONDS_PER_DAY);
 }
 
 static void draw_wrapped_text_columns(
@@ -519,7 +509,7 @@ static void draw_card_media(
 
 static void app_scan_decks(struct app_state *app)
 {
-	unsigned int today = current_day();
+	unsigned int today = app_time_current_day();
 	char selected_deck_id[DECK_MAX_NAME_LENGTH];
 	const struct deck_entry *selected_deck;
 
@@ -664,7 +654,7 @@ static void app_load_selected_deck(struct app_state *app)
 			&app->settings,
 			app->active_settings_path
 		);
-		scheduler_init(&app->session, app->deck.card_count, current_day());
+		scheduler_init(&app->session, app->deck.card_count, app_time_current_day());
 		scheduler_set_daily_limits(
 			&app->session,
 			app->settings.new_limit,
@@ -692,7 +682,7 @@ static void app_load_selected_deck(struct app_state *app)
 	{
 		app_set_status(app, "Deck load failed");
 		app->mode = APP_MODE_LOAD_ERROR;
-		scheduler_init(&app->session, 0, current_day());
+		scheduler_init(&app->session, 0, app_time_current_day());
 	}
 
 	app_refresh_selected_deck_summary(app);

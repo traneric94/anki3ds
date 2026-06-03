@@ -40,6 +40,7 @@ make install-local-sample-decks
 make install-azahar-sample-deck
 make install-azahar-sample-decks
 make run-emulator
+make run-emulator-samples
 ```
 
 The local SD mirror lives at:

@@ -11,7 +11,7 @@ Use Azahar for the first local loop because it supports `.3dsx` homebrew files.
 Useful local loop:
 
 ```text
-edit code -> make -> make run-emulator -> fix obvious problems
+edit code -> make -> make run-emulator-samples -> fix obvious problems
 ```
 
 Then, at checkpoint boundaries:
@@ -51,6 +51,12 @@ Install the sample decks there with:
 
 ```sh
 make install-azahar-sample-decks
+```
+
+Or install the sample decks and launch the current build in one command:
+
+```sh
+make run-emulator-samples
 ```
 
 ## M1 Local Test

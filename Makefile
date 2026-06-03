@@ -6,7 +6,7 @@ APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo media-demo sample
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 
-.PHONY: all app-3ds clean test test-host test-converter install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator
+.PHONY: all app-3ds clean test test-host test-converter install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator run-emulator-samples
 
 all: app-3ds
 
@@ -23,6 +23,7 @@ test-host:
 		tests/test_deck_scheduler.c \
 		app-3ds/source/app_controls.c \
 		app-3ds/source/app_settings.c \
+		app-3ds/source/app_time.c \
 		app-3ds/source/deck.c \
 		app-3ds/source/deck_index.c \
 		app-3ds/source/deck_summary.c \
@@ -66,3 +67,5 @@ check-emulator:
 
 run-emulator: app-3ds check-emulator
 	open -a "$(AZAHAR_APP)" app-3ds/anki3ds.3dsx
+
+run-emulator-samples: install-azahar-sample-decks run-emulator

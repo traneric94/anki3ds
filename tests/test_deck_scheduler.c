@@ -1,11 +1,14 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_time.h"
 #include "deck.h"
 #include "deck_index.h"
 #include "deck_summary.h"
@@ -28,6 +31,7 @@
 #define TEST_MEDIA_PATH "/private/tmp/anki3ds-media-test.a3i"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
+#define TEST_SECONDS_PER_DAY 86400
 
 static int failures;
 
@@ -200,6 +204,64 @@ static void test_tracked_sample_decks_load(void)
 			APP_SETTINGS_LOAD_OK,
 		"tracked media demo settings load"
 	);
+}
+
+static void set_test_timezone(const char *timezone)
+{
+	check(setenv("TZ", timezone, 1) == 0, "test timezone sets");
+	tzset();
+}
+
+static time_t make_utc_timestamp(
+	int year,
+	int month,
+	int month_day,
+	int hour,
+	int minute,
+	int second
+)
+{
+	struct tm timestamp;
+
+	set_test_timezone("UTC0");
+	memset(&timestamp, 0, sizeof(timestamp));
+	timestamp.tm_year = year - 1900;
+	timestamp.tm_mon = month - 1;
+	timestamp.tm_mday = month_day;
+	timestamp.tm_hour = hour;
+	timestamp.tm_min = minute;
+	timestamp.tm_sec = second;
+	timestamp.tm_isdst = -1;
+
+	return mktime(&timestamp);
+}
+
+static void test_app_time_local_calendar_day(void)
+{
+	time_t timestamp = make_utc_timestamp(2026, 6, 3, 0, 30, 0);
+	unsigned int local_day;
+	unsigned int utc_day;
+
+	check(app_time_day_from_local_date(1970, 1, 1) == 0, "epoch local day");
+	check(app_time_day_from_local_date(1970, 3, 1) == 59, "non-leap March day");
+	check(app_time_day_from_local_date(1972, 3, 1) == 790, "leap March day");
+	check(
+		app_time_day_from_local_date(5000, 1, 1) == SCHEDULER_MAX_DAY,
+		"future local day clamps"
+	);
+	check(timestamp != (time_t)-1, "UTC timestamp builds");
+
+	set_test_timezone("EST5EDT,M3.2.0,M11.1.0");
+	local_day = app_time_local_day_from_time(timestamp);
+	utc_day = (unsigned int)(timestamp / TEST_SECONDS_PER_DAY);
+
+	check(
+		local_day == app_time_day_from_local_date(2026, 6, 2),
+		"local evening stays on local calendar day"
+	);
+	check(local_day != utc_day, "local day differs from UTC rollover day");
+
+	set_test_timezone("UTC0");
 }
 
 static void test_scheduler_schedules_due_days(void)
@@ -2002,6 +2064,7 @@ int main(void)
 	test_deck_load_rejects_duplicate_card_ids();
 	test_deck_load_card_limit();
 	test_tracked_sample_decks_load();
+	test_app_time_local_calendar_day();
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();
 	test_app_controls_review_rating_keys();
