@@ -22,6 +22,14 @@ static bool parse_unsigned_field(const char *field, unsigned int max, unsigned i
 	char *end = NULL;
 	unsigned long parsed;
 
+	if (field == NULL || value == NULL || field[0] == '\0')
+		return false;
+	for (size_t index = 0; field[index] != '\0'; index++)
+	{
+		if (field[index] < '0' || field[index] > '9')
+			return false;
+	}
+
 	errno = 0;
 	parsed = strtoul(field, &end, 10);
 

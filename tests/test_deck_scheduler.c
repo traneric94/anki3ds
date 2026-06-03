@@ -3530,6 +3530,63 @@ static void test_app_settings_bad_file_uses_defaults(void)
 	remove(TEST_SETTINGS_PATH);
 }
 
+static void test_app_settings_rejects_non_plain_unsigned_values(void)
+{
+	struct app_settings settings;
+
+	remove(TEST_SETTINGS_TEMP_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
+	write_file(TEST_SETTINGS_PATH, "new_limit\t+1\nreview_limit\t2\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) ==
+			APP_SETTINGS_LOAD_BAD_FORMAT,
+		"signed settings value reports ignored"
+	);
+	check(
+		settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT,
+		"signed settings value uses new default"
+	);
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"signed settings value uses review default"
+	);
+
+	write_file(TEST_SETTINGS_PATH, "new_limit\t 1\nreview_limit\t2\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) ==
+			APP_SETTINGS_LOAD_BAD_FORMAT,
+		"spaced settings value reports ignored"
+	);
+	check(
+		settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT,
+		"spaced settings value uses new default"
+	);
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"spaced settings value uses review default"
+	);
+
+	write_file(TEST_SETTINGS_PATH, "new_limit\t1000001\nreview_limit\t2\n");
+
+	check(
+		app_settings_load(&settings, TEST_SETTINGS_PATH) ==
+			APP_SETTINGS_LOAD_BAD_FORMAT,
+		"oversized settings value reports ignored"
+	);
+	check(
+		settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT,
+		"oversized settings value uses new default"
+	);
+	check(
+		settings.review_limit == APP_SETTINGS_DEFAULT_REVIEW_LIMIT,
+		"oversized settings value uses review default"
+	);
+
+	remove(TEST_SETTINGS_PATH);
+}
+
 static void test_app_settings_duplicate_rows_use_defaults(void)
 {
 	struct app_settings settings;
@@ -4808,6 +4865,7 @@ int main(void)
 	test_app_settings_bad_temp_falls_back_to_backup();
 	test_app_settings_bad_primary_prefers_backup_before_temp();
 	test_app_settings_bad_file_uses_defaults();
+	test_app_settings_rejects_non_plain_unsigned_values();
 	test_app_settings_duplicate_rows_use_defaults();
 	test_app_settings_empty_file_uses_defaults();
 	test_app_settings_save_round_trip();
