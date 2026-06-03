@@ -294,7 +294,10 @@ static void test_app_power_battery_sample_policy(void)
 		1600,
 		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
 	);
-	check(next_poll_time == 1600, "closed shell leaves battery poll due");
+	check(
+		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"closed shell schedules next battery poll"
+	);
 	check(
 		!app_power_battery_sample_changes_display(
 			APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED

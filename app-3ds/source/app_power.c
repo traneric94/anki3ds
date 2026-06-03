@@ -14,9 +14,7 @@ void app_power_schedule_next_battery_poll_after_sample(
 	enum app_power_battery_sample_result result
 )
 {
-	if (result == APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED)
-		return;
-
+	(void)result;
 	app_power_schedule_next_battery_poll(next_poll_time, now);
 }
 

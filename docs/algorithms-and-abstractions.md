@@ -222,9 +222,11 @@ minutes. Periodic checks first ask PTMU whether the shell is open; battery level
 and charging state are read only when the shell reports open. The app does not
 call the battery service on every button press. If the system clock is briefly
 unavailable, the periodic poll timer arms itself when a valid clock reading
-appears. The bottom screen shows the last valid open-shell battery sample as a
-compact `level/5` line, including charging and low-battery states. Battery
-status changes redraw the screen only when that visible status changes.
+appears. Closed-shell checks also schedule the next ten-minute poll instead of
+remaining immediately due. The bottom screen shows the last valid open-shell
+battery sample as a compact `level/5` line, including charging and low-battery
+states. Battery status changes redraw the screen only when that visible status
+changes.
 
 Review algorithm:
 
@@ -270,7 +272,8 @@ in-memory review queue from advancing past the durable SD-card state.
 After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
 the app appends diagnostic rows to `review-log.tsv` with the before/after
 scheduler fields for the affected cards. Review logging is best-effort and
-append-only: a log append failure does not roll back a saved study action.
+append-only until the next row would exceed the configured size cap: a log
+append failure does not roll back a saved study action.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant
