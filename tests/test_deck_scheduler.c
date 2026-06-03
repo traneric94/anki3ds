@@ -800,6 +800,15 @@ static void test_app_controls_navigation_repeat(void)
 	struct app_control_repeat repeat;
 	unsigned int repeated;
 
+	check(
+		APP_CONTROL_REPEAT_INITIAL_TICKS >= 15,
+		"navigation repeat does not treat quick taps as holds"
+	);
+	check(
+		APP_CONTROL_REPEAT_INTERVAL_TICKS >= 3,
+		"navigation repeat interval stays human-readable"
+	);
+
 	app_controls_repeat_init(&repeat);
 	repeated = app_controls_repeat_buttons(
 		&repeat,

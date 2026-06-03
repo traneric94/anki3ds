@@ -211,7 +211,9 @@ stay single-press. Held input keeps the idle wait counter short while a button
 is down, so selector movement does not slow down as if the app were idle. While
 a repeatable D-pad key was held on the previous scan, the unchanged-screen path
 waits for one VBlank instead of entering the longer HID idle wait; after release
-it returns to the adaptive low-power idle path.
+it returns to the adaptive low-power idle path. Repeat starts after about
+300 ms and then fires about every 80 ms, keeping normal taps to one movement
+while still making long deck lists usable.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.

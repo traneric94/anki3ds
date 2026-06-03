@@ -19,8 +19,9 @@ letters do not match the 3DS button label.
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
 | `START` | `M` | Open exit confirmation |
 
-Holding a single D-pad direction repeats movement or daily-limit value changes
-after a short delay. The app keeps the input loop responsive while a button is
+Tapping a D-pad direction moves once. Holding a single D-pad direction for
+roughly 300 ms starts repeat movement or daily-limit value changes, then repeats
+roughly every 80 ms. The app keeps the input loop responsive while a button is
 held so deck and action selection do not fall into the idle backoff cadence.
 Pressing multiple D-pad directions together does not move or change values.
 D-pad directions pressed together with command buttons are ignored. Face-button
