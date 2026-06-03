@@ -1450,6 +1450,30 @@ static void test_review_state_unknown_only_file_is_bad_format(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_duplicate_card_row_is_bad_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+		"card-1\t2\t3\t20002\t4\t2600\t0\t0\t100\t20000\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"duplicate state card row is bad format"
+	);
+	check(session.cards[0].review_count == 0, "duplicate state leaves session unchanged");
+	check(session.due_count == deck.card_count, "duplicate state leaves due count unchanged");
+
+	remove(TEST_STATE_PATH);
+}
+
 static void test_review_state_loads_previous_current_format(void)
 {
 	struct deck deck;
@@ -2634,6 +2658,7 @@ int main(void)
 	test_review_state_bad_primary_prefers_backup_before_temp();
 	test_review_state_empty_file_is_bad_format();
 	test_review_state_unknown_only_file_is_bad_format();
+	test_review_state_duplicate_card_row_is_bad_format();
 	test_review_state_loads_previous_current_format();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();

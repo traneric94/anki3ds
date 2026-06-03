@@ -147,6 +147,7 @@ Rules:
 - `first_review_day` is the first day this card was reviewed, or `0` if unknown
 - `last_review_day` is the most recent review day, or `0` if unknown
 - unknown card IDs are ignored when loading state
+- duplicate rows for the same current deck `card_id` are malformed
 - previous eight-column state rows still load with first/last review day as `0`
 - previous seven-column state rows still load with `suspended=0`
 - old four-column state rows, `card_id done review_count last_rating`, still load

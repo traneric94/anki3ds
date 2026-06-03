@@ -273,6 +273,7 @@ static enum review_state_load_result review_state_load_file(
 	FILE *file = fopen(path, "r");
 	char line[STATE_MAX_LINE_LENGTH];
 	struct scheduler_session staged = *session;
+	bool matched_cards[DECK_MAX_CARDS];
 	size_t matched_row_count = 0;
 
 	if (file == NULL)
@@ -280,6 +281,7 @@ static enum review_state_load_result review_state_load_file(
 
 	*loaded_file = true;
 
+	memset(matched_cards, 0, sizeof(matched_cards));
 	staged.undo.available = false;
 	staged.undo.kind = SCHEDULER_UNDO_NONE;
 
@@ -304,6 +306,13 @@ static enum review_state_load_result review_state_load_file(
 		card_index = find_card_index(deck, state.card_id);
 		if (card_index == deck->card_count)
 			continue;
+		if (matched_cards[card_index])
+		{
+			fclose(file);
+			return REVIEW_STATE_LOAD_BAD_FORMAT;
+		}
+
+		matched_cards[card_index] = true;
 		matched_row_count++;
 
 		if (

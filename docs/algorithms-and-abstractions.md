@@ -124,8 +124,9 @@ Load algorithm:
 5. Find the matching card by `card_id`.
 6. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
-7. Restore matching per-card scheduler state into a staged scheduler.
-8. Reposition the scheduler to the first due card.
+7. Reject duplicate rows for the same current deck card.
+8. Restore matching per-card scheduler state into a staged scheduler.
+9. Reposition the scheduler to the first due card.
 
 Old rows migrate `done=0` to due today and `done=1` to tomorrow with a one-day
 interval. Bad rows are rejected before the staged scheduler is committed, so a
