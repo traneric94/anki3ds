@@ -195,6 +195,8 @@ static void deck_index_store(struct deck_index *index, const struct deck_entry *
 {
 	size_t largest_index = 0;
 
+	index->total_count++;
+
 	if (index->count < DECK_INDEX_MAX_DECKS)
 	{
 		index->entries[index->count] = *deck;

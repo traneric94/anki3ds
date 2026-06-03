@@ -37,7 +37,8 @@ Algorithm:
 5. Reject entries whose folder name or paths exceed fixed limits.
 6. Probe `cards.tsv` with `fopen`; only entries with readable cards are listed.
 7. Optionally read the deck display name from `deck.json`.
-8. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
+8. Count every valid deck folder.
+9. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
 
 `deck_index_scan` stores a compact `deck_entry` for each deck: folder id,
 display name, cards path, state path, settings path, and metadata path. The
@@ -49,7 +50,7 @@ Current practical constraints:
 - Discovery order is sorted by folder id.
 - The app only reads the `name` string from deck metadata during deck scanning.
 - The selector stores at most `DECK_INDEX_MAX_DECKS` decks, shows a bounded
-  scroll window, and reports overflow.
+  scroll window, and reports overflow as visible/total deck counts.
 - SD rescan is explicit from the deck selector with `SELECT`.
 - Rescan keeps the selected folder id highlighted when that deck still exists.
 - Returning from review, summary, or load-error screens reuses the cached deck

@@ -909,7 +909,13 @@ static void draw_deck_select_screen(const struct app_state *app)
 				)
 			);
 		if (app->deck_index.overflowed)
-			printf("\x1b[23;1HShowing first %u decks.", (unsigned int)DECK_INDEX_MAX_DECKS);
+		{
+			printf(
+				"\x1b[23;1HShowing %lu/%lu decks.",
+				(unsigned long)app->deck_index.count,
+				(unsigned long)app->deck_index.total_count
+			);
+		}
 	}
 }
 
@@ -1243,12 +1249,25 @@ static void show_scan_then_scan_decks(struct app_state *app)
 	draw_scanning_screen(app);
 	present_current_frame();
 	app_scan_decks(app);
-	snprintf(
-		app->status_message,
-		sizeof(app->status_message),
-		"Scan done; %lu decks",
-		(unsigned long)app->deck_index.count
-	);
+	if (app->deck_index.overflowed)
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Scan done; %lu/%lu decks shown",
+			(unsigned long)app->deck_index.count,
+			(unsigned long)app->deck_index.total_count
+		);
+	}
+	else
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Scan done; %lu decks",
+			(unsigned long)app->deck_index.count
+		);
+	}
 }
 
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
@@ -1357,7 +1376,18 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[5;1HSTART: confirm exit");
 			printf("\x1b[7;1HY: controls");
 		}
-		printf("\x1b[27;1HFound: %lu", (unsigned long)app->deck_index.count);
+		if (app->deck_index.overflowed)
+		{
+			printf(
+				"\x1b[27;1HFound: %lu/%lu",
+				(unsigned long)app->deck_index.count,
+				(unsigned long)app->deck_index.total_count
+			);
+		}
+		else
+		{
+			printf("\x1b[27;1HFound: %lu", (unsigned long)app->deck_index.count);
+		}
 		break;
 	case APP_MODE_LOAD_ERROR:
 		printf("\x1b[1;1HLoad error");

@@ -24,6 +24,7 @@ struct deck_entry
 struct deck_index
 {
 	size_t count;
+	size_t total_count;
 	bool overflowed;
 	struct deck_entry entries[DECK_INDEX_MAX_DECKS];
 };
