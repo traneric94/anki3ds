@@ -55,6 +55,11 @@ actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
 If `START` opens exit confirmation from the controls screen, canceling exit
 returns to the controls screen.
 
+The controls screen is contextual. Its top screen lists controls for the screen
+that opened it, including empty deck-list and review-state-error variants, so it
+does not show review-only controls from deck select, load error, summary, or
+daily limits.
+
 ## Actions Flow
 
 From review or summary, `SELECT` opens actions. The default selected action is

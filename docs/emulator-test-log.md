@@ -301,3 +301,20 @@ Notes:
   settings are surfaced as ignored in deck stats, and `reset state` status text
   uses the caution color. Full button/render acceptance is deferred to the final
   manual pass.
+
+## 2026-06-03 - Contextual Controls Launch Check
+
+Build: local working tree
+Command: `make run-emulator`
+Steps:
+- Ran `make test`, `make`, and `make install-local-sd`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- The controls screen now shows prompts for the screen that opened it, including
+  separate review-front and review-rating variants. Full button/render
+  acceptance is deferred to the final manual pass.

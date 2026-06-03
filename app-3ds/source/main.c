@@ -1386,29 +1386,116 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	printf("\x1b[12;1HUse B or SELECT to cancel.");
 }
 
+static void draw_controls_screen_footer(void)
+{
+	printf("\x1b[21;1HSTART: confirm exit");
+	printf("\x1b[24;1HHere: B, Y, or SELECT returns.");
+}
+
 static void draw_controls_screen(const struct app_state *app)
 {
-	(void)app;
-
 	app_console_clear();
 	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
-	printf("\x1b[3;1H" APP_COLOR_BLUE "Controls" APP_COLOR_RESET);
-	printf("\x1b[5;1HReview front: A shows answer");
-	printf("\x1b[7;1HAfter reveal ratings:");
-	printf(
-		"\x1b[9;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET
-		"      " APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET
-	);
-	printf(
-		"\x1b[11;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET
-		"       " APP_COLOR_BLUE "A Easy" APP_COLOR_RESET
-	);
-	printf("\x1b[13;1HL: undo last action");
-	printf("\x1b[15;1HR: confirm suspend");
-	printf("\x1b[17;1HD-pad: move / daily limits");
-	printf("\x1b[19;1HSELECT: actions / rescan / cancel");
-	printf("\x1b[21;1HSTART: confirm exit");
-	printf("\x1b[24;1HB, Y, or SELECT returns.");
+
+	switch (app->controls_return_mode)
+	{
+	case APP_MODE_DECK_SELECT:
+		printf("\x1b[3;1H" APP_COLOR_BLUE "Deck list controls" APP_COLOR_RESET);
+		if (app->deck_index.count > 0)
+		{
+			printf("\x1b[5;1HA: open selected deck");
+			printf("\x1b[7;1HD-pad Up/Down: choose");
+			printf("\x1b[9;1HSELECT: rescan decks");
+			printf("\x1b[11;1HY: controls");
+		}
+		else
+		{
+			printf("\x1b[5;1HSELECT: rescan decks");
+			printf("\x1b[7;1HY: controls");
+		}
+		break;
+	case APP_MODE_LOAD_ERROR:
+		printf("\x1b[3;1H" APP_COLOR_RED "Load error controls" APP_COLOR_RESET);
+		printf("\x1b[5;1HB or SELECT: deck list");
+		printf("\x1b[7;1HY: controls");
+		break;
+	case APP_MODE_SUMMARY:
+		if (!app_state_allows_study(app))
+		{
+			printf(
+				"\x1b[3;1H" APP_COLOR_RED
+				"Review state controls" APP_COLOR_RESET
+			);
+			printf("\x1b[5;1HSELECT: actions");
+			printf("\x1b[7;1HB: deck list");
+			printf("\x1b[9;1HY: controls");
+			printf("\x1b[13;1HReset progress to study.");
+		}
+		else
+		{
+			printf(
+				"\x1b[3;1H" APP_COLOR_GREEN
+				"No-due controls" APP_COLOR_RESET
+			);
+			printf("\x1b[5;1HB: deck list");
+			printf("\x1b[7;1HL: undo last action");
+			printf("\x1b[9;1HSELECT: actions");
+			printf("\x1b[11;1HY: controls");
+		}
+		break;
+	case APP_MODE_ACTIONS:
+		printf("\x1b[3;1H" APP_COLOR_BLUE "Actions controls" APP_COLOR_RESET);
+		printf("\x1b[5;1HA: choose selected");
+		printf("\x1b[7;1HD-pad Up/Down: choose");
+		printf("\x1b[9;1HB or SELECT: cancel");
+		printf("\x1b[11;1HY: controls");
+		break;
+	case APP_MODE_SETTINGS:
+		printf("\x1b[3;1H" APP_COLOR_BLUE "Daily-limit controls" APP_COLOR_RESET);
+		printf("\x1b[5;1HD-pad Up/Down: field");
+		printf("\x1b[7;1HD-pad Left/Right: value");
+		printf("\x1b[9;1HA: save limits");
+		printf("\x1b[11;1HB or SELECT: cancel");
+		printf("\x1b[13;1HY: controls");
+		break;
+	case APP_MODE_REVIEW:
+	default:
+		if (app->revealed)
+		{
+			printf(
+				"\x1b[3;1H" APP_COLOR_BLUE
+				"Review rating controls" APP_COLOR_RESET
+			);
+			printf(
+				"\x1b[5;1H" APP_COLOR_RED "Y: Again" APP_COLOR_RESET
+				"      " APP_COLOR_YELLOW "X: Hard" APP_COLOR_RESET
+			);
+			printf(
+				"\x1b[7;1H" APP_COLOR_GREEN "B: Good" APP_COLOR_RESET
+				"       " APP_COLOR_BLUE "A: Easy" APP_COLOR_RESET
+			);
+			printf("\x1b[9;1HL: undo last action");
+			printf("\x1b[11;1HR: confirm suspend");
+			printf("\x1b[13;1HSELECT: actions");
+			printf("\x1b[15;1HY: controls");
+		}
+		else
+		{
+			printf(
+				"\x1b[3;1H" APP_COLOR_BLUE
+				"Review front controls" APP_COLOR_RESET
+			);
+			printf("\x1b[5;1HA: show answer");
+			printf("\x1b[7;1HB: deck list");
+			printf("\x1b[9;1HL: undo last action");
+			printf("\x1b[11;1HR: confirm suspend");
+			printf("\x1b[13;1HSELECT: actions");
+			printf("\x1b[15;1HY: controls");
+		}
+		break;
+	}
+
+	draw_controls_screen_footer();
 }
 
 static void draw_battery_status(const struct app_state *app)
