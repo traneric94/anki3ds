@@ -152,7 +152,7 @@ updating card content.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can
-load `state.tsv.bak`.
+load a valid `state.tsv.tmp` or `state.tsv.bak`.
 
 This is an early day-level spaced repetition format. Minute-level learning
 steps, single-card unsuspend UI, burying, filtered decks, and review logs are

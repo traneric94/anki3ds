@@ -1034,6 +1034,84 @@ static void test_review_state_loads_backup_when_primary_is_bad(void)
 	remove(TEST_STATE_BACKUP_PATH);
 }
 
+static void test_review_state_loads_temp_when_primary_and_backup_missing(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_TEMP_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"temp state loads when primary and backup are missing"
+	);
+	check(session.cards[0].review_count == 1, "temp state card loads");
+	check(!scheduler_card_is_due(&session, 0), "temp state due day loads");
+
+	remove(TEST_STATE_TEMP_PATH);
+}
+
+static void test_review_state_bad_temp_falls_back_to_backup(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_TEMP_PATH, "bad\n");
+	write_file(
+		TEST_STATE_BACKUP_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"backup state loads when temp is bad"
+	);
+	check(session.cards[0].review_count == 1, "backup after bad temp restores card");
+	check(!scheduler_card_is_due(&session, 0), "backup after bad temp restores due day");
+
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
+static void test_review_state_bad_primary_prefers_backup_before_temp(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "bad\n");
+	write_file(
+		TEST_STATE_BACKUP_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+	write_file(
+		TEST_STATE_TEMP_PATH,
+		"card-1\t2\t3\t20004\t4\t2650\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"backup state loads before temp when primary is bad"
+	);
+	check(session.cards[0].review_count == 1, "bad primary backup review count wins");
+	check(session.cards[0].interval_days == 1, "bad primary backup interval wins");
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
 static void test_review_state_empty_file_is_bad_format(void)
 {
 	struct deck deck;
@@ -2145,6 +2223,9 @@ int main(void)
 	test_review_state_round_trip_suspended_card();
 	test_review_state_loads_backup_when_primary_missing();
 	test_review_state_loads_backup_when_primary_is_bad();
+	test_review_state_loads_temp_when_primary_and_backup_missing();
+	test_review_state_bad_temp_falls_back_to_backup();
+	test_review_state_bad_primary_prefers_backup_before_temp();
 	test_review_state_empty_file_is_bad_format();
 	test_review_state_unknown_only_file_is_bad_format();
 	test_review_state_loads_previous_current_format();

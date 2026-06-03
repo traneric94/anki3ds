@@ -75,6 +75,7 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
 
 During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
+On load, a valid temp state file can recover an interrupted first save.
 
 Deck settings live beside the selected deck:
 
