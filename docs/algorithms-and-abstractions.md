@@ -278,10 +278,10 @@ with the top-screen state string because SD-card save failures are otherwise
 easy to mistake for scheduler bugs during emulator or hardware testing.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
-opens a confirmation screen. Pressing `X` there removes the active `state.tsv`
-and reloads the selected deck. If reload succeeds, the bottom status confirms
-`Progress reset`; if removal fails, the app leaves the current session in place
-and shows `reset failed`.
+opens a confirmation screen. Pressing `X` there removes the active
+`review-log.tsv` and `state.tsv`, then reloads the selected deck. If reload
+succeeds, the bottom status confirms `Progress reset`; if removal fails, the
+app leaves the current session in place and shows `reset failed`.
 
 `START` opens an exit confirmation screen from every normal app mode. Pressing
 `A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This

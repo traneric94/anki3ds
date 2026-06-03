@@ -1796,7 +1796,14 @@ static bool suspend_current_card(struct app_state *app)
 
 static bool reset_progress(struct app_state *app)
 {
-	if (app->active_state_path[0] == '\0')
+	if (app->active_state_path[0] == '\0' || app->active_review_log_path[0] == '\0')
+	{
+		app->state_message = "reset failed";
+		app_set_status(app, "Reset failed");
+		return false;
+	}
+
+	if (!review_log_delete(app->active_review_log_path))
 	{
 		app->state_message = "reset failed";
 		app_set_status(app, "Reset failed");

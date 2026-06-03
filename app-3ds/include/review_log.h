@@ -25,6 +25,7 @@ struct review_log_entry
 };
 
 bool review_log_append(const char *path, const struct review_log_entry *entry);
+bool review_log_delete(const char *path);
 const char *review_log_event_name(enum review_log_event event);
 
 #endif

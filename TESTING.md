@@ -84,7 +84,8 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/review-log.tsv
 ```
 
 This log is not required for loading progress; it records accepted rating,
-suspend, and undo transitions after `state.tsv` saves successfully.
+suspend, and undo transitions after `state.tsv` saves successfully. Resetting
+deck progress removes the log before removing `state.tsv`.
 
 Deck settings live beside the selected deck:
 

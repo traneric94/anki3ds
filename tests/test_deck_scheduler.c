@@ -2151,6 +2151,16 @@ static void test_review_log_appends_study_events(void)
 	remove(TEST_REVIEW_LOG_PATH);
 }
 
+static void test_review_log_delete_removes_log_file(void)
+{
+	write_file(TEST_REVIEW_LOG_PATH, "study history\n");
+
+	check(review_log_delete(TEST_REVIEW_LOG_PATH), "review log delete succeeds");
+	check(access(TEST_REVIEW_LOG_PATH, F_OK) != 0, "review log delete removes file");
+	check(review_log_delete(TEST_REVIEW_LOG_PATH), "review log delete accepts missing file");
+	check(!review_log_delete(NULL), "review log delete rejects null path");
+}
+
 static void test_review_state_bad_load_does_not_mutate_session(void)
 {
 	struct deck deck;
@@ -3285,6 +3295,7 @@ int main(void)
 	test_storage_replace_file_commits_first_save();
 	test_storage_delete_save_files_removes_related_files();
 	test_review_log_appends_study_events();
+	test_review_log_delete_removes_log_file();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();

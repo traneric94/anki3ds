@@ -240,6 +240,8 @@ This can support debugging and possible desktop import later. The current
 one-step undo is still an in-memory scheduler snapshot saved back to
 `state.tsv`; the review log is not read by the 3DS app.
 
+Resetting deck progress removes `review-log.tsv` before removing `state.tsv`.
+
 ## Compatibility Policy
 
 Once the 3DS app reads a released format version, future converter versions

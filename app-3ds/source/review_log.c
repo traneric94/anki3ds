@@ -126,3 +126,18 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 
 	return true;
 }
+
+bool review_log_delete(const char *path)
+{
+	FILE *file;
+
+	if (path == NULL)
+		return false;
+
+	file = fopen(path, "rb");
+	if (file == NULL)
+		return true;
+
+	fclose(file);
+	return remove(path) == 0;
+}
