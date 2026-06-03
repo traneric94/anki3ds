@@ -11,19 +11,19 @@ cleanup should happen on the desktop before files are copied to the SD card.
 
 ### 3DS App
 
-Planned stack:
+Current stack:
 
 - language: C
 - SDK: devkitPro
-- libraries: libctru, likely citro2d for rendering
-- first package target: `.3dsx`
+- libraries: libctru console rendering
+- package target: `.3dsx`
 - later package target: optional `.cia`
 
 Responsibilities:
 
 - discover decks on the SD card
 - load a simple deck format
-- show front and back text
+- show front and back text plus bounded `.a3i` images
 - collect ratings: Again, Hard, Good, Easy
 - update scheduling state
 - save after every review
@@ -31,10 +31,10 @@ Responsibilities:
 
 ### Desktop Converter
 
-Planned stack:
+Current stack:
 
 - language: Python
-- first input: Anki plain-text export
+- input: Anki-style plain-text export
 - later input: `.apkg` or AnkiConnect, if worthwhile
 
 Responsibilities:
@@ -44,7 +44,7 @@ Responsibilities:
 - strip or simplify HTML
 - generate stable card IDs
 - preserve progress when importing updated card content
-- resize media later, after text review is reliable
+- convert binary PPM images or copy existing `.a3i` media
 
 ## Milestones
 
@@ -212,5 +212,5 @@ Do not attempt FSRS parity in the first version.
 - Move parsing and conversion complexity to the desktop.
 - Make every hardware test small and repeatable.
 - Preserve review state separately from imported card content.
-- Prefer text-only correctness before media support.
+- Keep media bounded and optional; preserve text correctness first.
 - Follow the C conventions in `docs/c-style-and-architecture.md`.

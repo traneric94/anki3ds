@@ -36,7 +36,7 @@ anki3ds/
 
 ## Build
 
-The 3DS app currently builds a text-only multi-deck reviewer.
+The 3DS app currently builds a text and small-image multi-deck reviewer.
 
 ```sh
 make
