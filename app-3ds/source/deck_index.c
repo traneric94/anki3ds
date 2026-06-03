@@ -248,6 +248,18 @@ bool deck_index_build_entry(struct deck_entry *entry, const char *root_path, con
 		return false;
 	if (
 		!path_join_deck_file(
+			entry->review_log_path,
+			sizeof(entry->review_log_path),
+			root_path,
+			deck_id,
+			"review-log.tsv"
+		)
+	)
+	{
+		return false;
+	}
+	if (
+		!path_join_deck_file(
 			entry->settings_path,
 			sizeof(entry->settings_path),
 			root_path,

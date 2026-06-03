@@ -10,6 +10,7 @@ The 3DS app should read a simple format that avoids full Anki complexity.
   cards.tsv
   settings.tsv
   state.tsv
+  review-log.tsv
   media/
 ```
 
@@ -174,16 +175,15 @@ Rules:
 - old four-column state rows, `card_id done review_count last_rating`, still load
   as a migration path
 
-`state.tsv` is owned by the 3DS app. The converter should preserve it when
-updating card content.
+`state.tsv` and `review-log.tsv` are owned by the 3DS app. The converter should
+preserve them when updating card content.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can
 load a valid `state.tsv.tmp` or `state.tsv.bak`.
 
 This is an early day-level spaced repetition format. Minute-level learning
-steps, single-card unsuspend UI, burying, filtered decks, and review logs are
-planned later.
+steps, single-card unsuspend UI, burying, and filtered decks are planned later.
 Older app builds that only accept unframed seven- or eight-column rows will
 reject state saved by this version.
 
@@ -218,15 +218,27 @@ general-purpose image decoding.
 
 ## Review Log
 
-Later versions may write an append-only review log:
+The app appends study transitions to `review-log.tsv` beside `state.tsv` after
+a rating, suspend, or undo action has been accepted and `state.tsv` has saved.
+The log is diagnostic and append-only; a failed append does not roll back the
+review state or block the study action.
 
 ```text
-review_id<TAB>card_id<TAB>timestamp<TAB>rating<TAB>old_state<TAB>new_state
+timestamp<TAB>day<TAB>event<TAB>card_id<TAB>rating<TAB>old_review_count<TAB>old_due_day<TAB>old_interval_days<TAB>old_ease_permille<TAB>old_lapses<TAB>old_suspended<TAB>new_review_count<TAB>new_due_day<TAB>new_interval_days<TAB>new_ease_permille<TAB>new_lapses<TAB>new_suspended
 ```
 
-This can support multi-step undo, debugging, and possible desktop import later.
-The current one-step undo is an in-memory scheduler snapshot saved back to
-`state.tsv`.
+Rules:
+
+- `timestamp` is Unix time in seconds, or `0` if the clock is unavailable
+- `day` is local calendar days since 1970-01-01
+- `event` is `rating`, `suspend`, or `undo`
+- `card_id` must not include tabs or newlines
+- `rating` is `again`, `hard`, `good`, `easy`, or `-` for non-rating events
+- old/new scheduler fields use the same meanings as `state.tsv`
+
+This can support debugging and possible desktop import later. The current
+one-step undo is still an in-memory scheduler snapshot saved back to
+`state.tsv`; the review log is not read by the 3DS app.
 
 ## Compatibility Policy
 

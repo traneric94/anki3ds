@@ -16,6 +16,7 @@
 #include "deck_summary.h"
 #include "media_cache.h"
 #include "media_image.h"
+#include "review_log.h"
 #include "review_state.h"
 #include "scheduler.h"
 #include "storage.h"
@@ -31,6 +32,7 @@
 #define TEST_STORAGE_BACKUP_PATH TEST_STORAGE_PATH ".bak"
 #define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
 #define TEST_MEDIA_PATH "/private/tmp/anki3ds-media-test.a3i"
+#define TEST_REVIEW_LOG_PATH "/private/tmp/anki3ds-review-log-test.tsv"
 #define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 #define TEST_SECONDS_PER_DAY 86400
@@ -2092,6 +2094,63 @@ static void test_storage_delete_save_files_removes_related_files(void)
 	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage delete removes backup");
 }
 
+static void test_review_log_appends_study_events(void)
+{
+	struct scheduler_session session;
+	struct review_log_entry entry;
+	struct scheduler_card initial_card;
+	struct scheduler_card rated_card;
+
+	remove(TEST_REVIEW_LOG_PATH);
+	scheduler_init(&session, 1, TEST_TODAY);
+	initial_card = session.cards[0];
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	rated_card = session.cards[0];
+
+	memset(&entry, 0, sizeof(entry));
+	entry.timestamp = 12345;
+	entry.day = TEST_TODAY;
+	entry.event = REVIEW_LOG_EVENT_RATING;
+	entry.card_id = "card-1";
+	entry.rating = SCHEDULER_RATING_GOOD;
+	entry.before = initial_card;
+	entry.after = rated_card;
+
+	check(review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log appends rating");
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+		),
+		"review log writes rating transition"
+	);
+
+	entry.timestamp = 12346;
+	entry.event = REVIEW_LOG_EVENT_UNDO;
+	entry.rating = SCHEDULER_RATING_COUNT;
+	entry.before = rated_card;
+	entry.after = initial_card;
+
+	check(review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log appends undo");
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+			"12346\t20000\tundo\tcard-1\t-\t1\t20001\t1\t2500\t0\t0\t"
+			"0\t20000\t0\t2500\t0\t0\n"
+		),
+		"review log preserves appended transitions"
+	);
+	check(!review_log_append(NULL, &entry), "review log rejects null path");
+	check(!review_log_append(TEST_REVIEW_LOG_PATH, NULL), "review log rejects null entry");
+	entry.card_id = "bad\tid";
+	check(!review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log rejects tab id");
+
+	remove(TEST_REVIEW_LOG_PATH);
+}
+
 static void test_review_state_bad_load_does_not_mutate_session(void)
 {
 	struct deck deck;
@@ -2443,7 +2502,7 @@ static void write_binary_file(const char *path, const unsigned char *content, si
 
 static bool file_equals(const char *path, const char *content)
 {
-	char buffer[128];
+	char buffer[512];
 	FILE *file = fopen(path, "r");
 	size_t bytes_read;
 	bool matches;
@@ -2507,6 +2566,10 @@ static void test_deck_index_builds_paths(void)
 	check(strcmp(entry.deck_json_path, "/root/sample/deck.json") == 0, "deck json path builds");
 	check(strcmp(entry.cards_path, "/root/sample/cards.tsv") == 0, "cards path builds");
 	check(strcmp(entry.state_path, "/root/sample/state.tsv") == 0, "state path builds");
+	check(
+		strcmp(entry.review_log_path, "/root/sample/review-log.tsv") == 0,
+		"review log path builds"
+	);
 	check(
 		strcmp(entry.settings_path, "/root/sample/settings.tsv") == 0,
 		"settings path builds"
@@ -3221,6 +3284,7 @@ int main(void)
 	test_storage_replace_file_commits_temp_file();
 	test_storage_replace_file_commits_first_save();
 	test_storage_delete_save_files_removes_related_files();
+	test_review_log_appends_study_events();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();

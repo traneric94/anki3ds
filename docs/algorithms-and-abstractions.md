@@ -14,13 +14,13 @@ desktop export
   -> deck loads cards.tsv
   -> scheduler starts a session
   -> review_state overlays state.tsv when present
-  -> app reveals, rates, saves after each rating
+  -> app reveals, rates, saves state, and appends accepted transitions
 ```
 
 Imported card content is owned by the converter and stored in `cards.tsv`.
 Local review progress is owned by the 3DS app and stored in `state.tsv`.
-Those files should stay separate so a deck can be re-imported without losing
-local progress.
+Diagnostic study history is appended to `review-log.tsv`. Those files should
+stay separate so a deck can be re-imported without losing local progress.
 
 ## Deck Discovery
 
@@ -32,8 +32,8 @@ Algorithm:
 1. Open `sdmc:/3ds/anki3ds/decks`.
 2. Iterate directory entries.
 3. Reject ids outside the portable allowlist: letters, numbers, `_`, and `-`.
-4. Build `deck.json`, `cards.tsv`, `state.tsv`, and `settings.tsv` paths from
-   the folder name.
+4. Build `deck.json`, `cards.tsv`, `state.tsv`, `review-log.tsv`, and
+   `settings.tsv` paths from the folder name.
 5. Reject entries whose folder name or paths exceed fixed limits.
 6. Probe `cards.tsv` with `fopen`; only entries with readable cards are listed.
 7. Optionally read the deck display name from `deck.json`.
@@ -41,9 +41,10 @@ Algorithm:
 9. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
 
 `deck_index_scan` stores a compact `deck_entry` for each deck: folder id,
-display name, cards path, state path, settings path, and metadata path. The
-folder id remains the stable runtime id. The display name falls back to the
-folder id when `deck.json` is missing or malformed.
+display name, cards path, state path, review-log path, settings path, media
+path, and metadata path. The folder id remains the stable runtime id. The
+display name falls back to the folder id when `deck.json` is missing or
+malformed.
 
 Current practical constraints:
 
@@ -266,6 +267,11 @@ undo, or restore-suspended action, the app restores that snapshot and leaves the
 user on the current workflow screen with the save error visible. This keeps the
 in-memory review queue from advancing past the durable SD-card state.
 
+After a rating, suspend, or undo action saves `state.tsv`, the app appends a
+diagnostic row to `review-log.tsv` with the before/after scheduler fields for
+the affected card. Review logging is best-effort and append-only: a log append
+failure does not roll back a saved study action.
+
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant
 with the top-screen state string because SD-card save failures are otherwise
@@ -376,16 +382,16 @@ Algorithm:
    PPM `P6` files into bounded raw `.a3i` files under `media/`.
 10. Write default `settings.tsv` if it does not already exist.
 
-The converter deliberately does not open or rewrite existing `state.tsv` or
-`settings.tsv`, so review progress and deck-specific daily limits survive
-re-imports into the same deck folder. To keep progress attached to edited card
-text, pass stable source ID fields during conversion; otherwise content-derived
-fallback IDs change when the normalized front/back/tags content changes. The
-folder id is the runtime deck id on the 3DS, so the converter defaults
-`deck_id` from the output folder name and rejects mismatches. Current converter
-media support is deliberately narrow: PPM `P6` in, `.a3i` out. Rich
-HTML/template rendering and Anki collection parsing still belong on the desktop
-side rather than on the 3DS.
+The converter deliberately does not open or rewrite existing `state.tsv`,
+`review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,
+and deck-specific daily limits survive re-imports into the same deck folder. To
+keep progress attached to edited card text, pass stable source ID fields during
+conversion; otherwise content-derived fallback IDs change when the normalized
+front/back/tags content changes. The folder id is the runtime deck id on the
+3DS, so the converter defaults `deck_id` from the output folder name and
+rejects mismatches. Current converter media support is deliberately narrow: PPM
+`P6` in, `.a3i` out. Rich HTML/template rendering and Anki collection parsing
+still belong on the desktop side rather than on the 3DS.
 
 ## C Boundaries We Want
 
@@ -393,10 +399,11 @@ Keep the portable logic separate from the libctru shell:
 
 | Boundary | Owns | Should Not Own |
 | --- | --- | --- |
-| `deck_index` | deck folder scan, deck id validation, cards/state path construction | card parsing, review state parsing, rendering |
+| `deck_index` | deck folder scan, deck id validation, deck-local path construction | card parsing, review state parsing, rendering |
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
 | `scheduler` | per-card session state, rating transitions, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
+| `review_log` | append-only study transition rows | scheduler decisions, rollback policy, rendering |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |

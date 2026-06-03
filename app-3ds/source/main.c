@@ -14,6 +14,7 @@
 #include "deck_summary.h"
 #include "media_cache.h"
 #include "media_image.h"
+#include "review_log.h"
 #include "review_state.h"
 #include "scheduler.h"
 
@@ -105,6 +106,7 @@ struct app_state
 	size_t selected_deck_index;
 	char active_cards_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_state_path[DECK_INDEX_MAX_PATH_LENGTH];
+	char active_review_log_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_settings_path[DECK_INDEX_MAX_PATH_LENGTH];
 	char active_media_path[DECK_INDEX_MAX_PATH_LENGTH];
 	struct app_settings settings;
@@ -733,6 +735,11 @@ static void app_load_selected_deck(struct app_state *app)
 
 	copy_string(app->active_cards_path, sizeof(app->active_cards_path), entry->cards_path);
 	copy_string(app->active_state_path, sizeof(app->active_state_path), entry->state_path);
+	copy_string(
+		app->active_review_log_path,
+		sizeof(app->active_review_log_path),
+		entry->review_log_path
+	);
 	copy_string(
 		app->active_settings_path,
 		sizeof(app->active_settings_path),
@@ -1595,14 +1602,52 @@ static bool save_review_state(struct app_state *app)
 	return app->state_save_result == REVIEW_STATE_SAVE_OK;
 }
 
+static void append_review_log_entry(
+	struct app_state *app,
+	enum review_log_event event,
+	size_t card_index,
+	enum scheduler_rating rating,
+	const struct scheduler_card *before
+)
+{
+	struct review_log_entry entry;
+	time_t timestamp;
+
+	if (before == NULL)
+		return;
+	if (app->active_review_log_path[0] == '\0')
+		return;
+	if (card_index >= app->deck.card_count || card_index >= app->session.card_count)
+		return;
+
+	timestamp = time(NULL);
+	if (timestamp == (time_t)-1)
+		timestamp = 0;
+
+	entry.timestamp = timestamp;
+	entry.day = app->session.today;
+	entry.event = event;
+	entry.card_id = app->deck.cards[card_index].card_id;
+	entry.rating = rating;
+	entry.before = *before;
+	entry.after = app->session.cards[card_index];
+	(void)review_log_append(app->active_review_log_path, &entry);
+}
+
 static bool rate_current_card(struct app_state *app, enum scheduler_rating rating)
 {
 	const char *rating_name = scheduler_rating_name(rating);
+	size_t card_index;
+	struct scheduler_card before;
 
 	if (!app->revealed)
 		return false;
+	if (!scheduler_has_current(&app->session))
+		return false;
 
 	save_session_rollback(app);
+	card_index = scheduler_current_index(&app->session);
+	before = app->session.cards[card_index];
 	scheduler_rate_current(&app->session, rating);
 	if (!save_review_state(app))
 	{
@@ -1612,6 +1657,13 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		return true;
 	}
 
+	append_review_log_entry(
+		app,
+		REVIEW_LOG_EVENT_RATING,
+		card_index,
+		rating,
+		&before
+	);
 	app->revealed = false;
 
 	if (scheduler_is_complete(&app->session))
@@ -1641,7 +1693,22 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 
 static bool undo_last_action(struct app_state *app)
 {
+	size_t card_index = 0;
+	struct scheduler_card before;
+	bool can_log_undo = false;
+
 	save_session_rollback(app);
+	if (
+		app->session.undo.available &&
+		app->session.undo.card_index < app->session.card_count &&
+		app->session.undo.card_index < app->deck.card_count
+	)
+	{
+		card_index = app->session.undo.card_index;
+		before = app->session.cards[card_index];
+		can_log_undo = true;
+	}
+
 	if (!scheduler_undo_last(&app->session))
 	{
 		app->state_message = "nothing to undo";
@@ -1656,6 +1723,16 @@ static bool undo_last_action(struct app_state *app)
 		return true;
 	}
 
+	if (can_log_undo)
+	{
+		append_review_log_entry(
+			app,
+			REVIEW_LOG_EVENT_UNDO,
+			card_index,
+			SCHEDULER_RATING_COUNT,
+			&before
+		);
+	}
 	app->state_message = "undone";
 	app_set_status(app, "Undo saved");
 	app->revealed = false;
@@ -1665,7 +1742,21 @@ static bool undo_last_action(struct app_state *app)
 
 static bool suspend_current_card(struct app_state *app)
 {
+	size_t card_index = 0;
+	struct scheduler_card before;
+	bool can_log_suspend = false;
+
 	save_session_rollback(app);
+	if (
+		scheduler_has_current(&app->session) &&
+		scheduler_current_index(&app->session) < app->deck.card_count
+	)
+	{
+		card_index = scheduler_current_index(&app->session);
+		before = app->session.cards[card_index];
+		can_log_suspend = true;
+	}
+
 	if (!scheduler_suspend_current(&app->session))
 	{
 		app->state_message = "nothing to suspend";
@@ -1680,6 +1771,16 @@ static bool suspend_current_card(struct app_state *app)
 		return true;
 	}
 
+	if (can_log_suspend)
+	{
+		append_review_log_entry(
+			app,
+			REVIEW_LOG_EVENT_SUSPEND,
+			card_index,
+			SCHEDULER_RATING_COUNT,
+			&before
+		);
+	}
 	app->state_message = "suspended";
 	app_set_status(app, "Suspend saved");
 	app->revealed = false;

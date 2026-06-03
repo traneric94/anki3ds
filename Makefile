@@ -31,6 +31,7 @@ test-host:
 		app-3ds/source/deck_summary.c \
 		app-3ds/source/media_cache.c \
 		app-3ds/source/media_image.c \
+		app-3ds/source/review_log.c \
 		app-3ds/source/review_state.c \
 		app-3ds/source/scheduler.c \
 		app-3ds/source/storage.c \

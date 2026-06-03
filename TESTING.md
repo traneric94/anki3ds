@@ -77,6 +77,15 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
 On load, a valid temp state file can recover an interrupted first save.
 
+The app also appends diagnostic study transitions beside the selected deck:
+
+```text
+sdmc:/3ds/anki3ds/decks/<deck-id>/review-log.tsv
+```
+
+This log is not required for loading progress; it records accepted rating,
+suspend, and undo transitions after `state.tsv` saves successfully.
+
 Deck settings live beside the selected deck:
 
 ```text
