@@ -848,14 +848,17 @@ static void app_open_controls(struct app_state *app)
 	app->mode = APP_MODE_CONTROLS;
 }
 
-static void app_init(struct app_state *app)
+static enum app_power_battery_sample_result app_init(struct app_state *app)
 {
+	enum app_power_battery_sample_result battery_sample_result;
+
 	memset(app, 0, sizeof(*app));
 	app->current_day = app_time_current_day();
 	app->battery_service_available = R_SUCCEEDED(ptmuInit());
-	app_sample_battery(app);
+	battery_sample_result = app_sample_battery(app);
 	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;
+	return battery_sample_result;
 }
 
 static void draw_header(const struct app_state *app)
@@ -2670,6 +2673,7 @@ int main(int argc, char *argv[])
 	time_t next_battery_poll_time = 0;
 	time_t next_day_check_time = 0;
 	time_t now;
+	enum app_power_battery_sample_result startup_battery_sample_result;
 	struct app_control_repeat navigation_repeat;
 
 	gfxInitDefault();
@@ -2677,9 +2681,13 @@ int main(int argc, char *argv[])
 	consoleInit(GFX_BOTTOM, &bottom_screen);
 
 	app_controls_repeat_init(&navigation_repeat);
-	app_init(&app);
+	startup_battery_sample_result = app_init(&app);
 	now = time(NULL);
-	app_power_schedule_next_battery_poll(&next_battery_poll_time, now);
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_battery_poll_time,
+		now,
+		startup_battery_sample_result
+	);
 	if (app.current_day != 0)
 		schedule_next_day_check(&next_day_check_time, now);
 	show_scan_then_scan_decks(&app);

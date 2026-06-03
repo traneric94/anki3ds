@@ -326,6 +326,17 @@ static void test_app_power_battery_sample_policy(void)
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
 		1600,
+		APP_POWER_BATTERY_SAMPLE_UNAVAILABLE
+	);
+	check(
+		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"unavailable battery service schedules normal poll interval"
+	);
+
+	next_poll_time = 1600;
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		1600,
 		APP_POWER_BATTERY_SAMPLE_CHANGED
 	);
 	check(
