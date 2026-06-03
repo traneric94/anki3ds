@@ -38,6 +38,8 @@ screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
 list size and wraps between the first and last decks. Basic terminal-style
 colors are used for status: blue headings, green selected/saved/safe items,
 red errors/reset actions, and yellow cautions.
+If deck scan ignores non-hidden entries because they are not valid deck ids or
+do not contain `cards.tsv`, the selector shows an ignored count.
 
 ## Review Flow
 

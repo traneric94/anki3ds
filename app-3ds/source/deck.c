@@ -140,6 +140,28 @@ static bool deck_has_card_id(const struct deck *deck, const char *card_id)
 	return false;
 }
 
+static void deck_load_report_init(struct deck_load_report *report)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = 0;
+	report->parse_result = DECK_PARSE_OK;
+}
+
+static void deck_load_report_set(
+	struct deck_load_report *report,
+	unsigned int line_number,
+	enum deck_parse_result parse_result
+)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = line_number;
+	report->parse_result = parse_result;
+}
+
 void deck_init(struct deck *deck, const char *name)
 {
 	memset(deck, 0, sizeof(*deck));
@@ -199,13 +221,19 @@ enum deck_parse_result deck_parse_card_line(struct card *card, const char *line)
 	return DECK_PARSE_OK;
 }
 
-enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
+enum deck_load_result deck_load_cards_with_report(
+	struct deck *deck,
+	const char *path,
+	struct deck_load_report *report
+)
 {
 	FILE *file;
 	struct deck *loaded;
 	char line[DECK_MAX_LINE_LENGTH];
 	enum deck_load_result result = DECK_LOAD_OK;
+	unsigned int line_number = 0;
 
+	deck_load_report_init(report);
 	if (deck == NULL || path == NULL)
 		return DECK_LOAD_BAD_FORMAT;
 
@@ -227,9 +255,11 @@ enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 		struct card card;
 		enum deck_parse_result parse_result = deck_parse_card_line(&card, line);
 
+		line_number++;
 		if (!line_has_complete_read(file, line))
 		{
 			consume_line_remainder(file);
+			deck_load_report_set(report, line_number, DECK_PARSE_FIELD_TOO_LONG);
 			result = DECK_LOAD_BAD_FORMAT;
 			break;
 		}
@@ -238,16 +268,23 @@ enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 			continue;
 		if (parse_result != DECK_PARSE_OK)
 		{
+			deck_load_report_set(report, line_number, parse_result);
 			result = DECK_LOAD_BAD_FORMAT;
 			break;
 		}
 		if (loaded->card_count >= DECK_MAX_CARDS)
 		{
+			deck_load_report_set(report, line_number, DECK_PARSE_OK);
 			result = DECK_LOAD_TOO_LARGE;
 			break;
 		}
 		if (deck_has_card_id(loaded, card.card_id))
 		{
+			deck_load_report_set(
+				report,
+				line_number,
+				DECK_PARSE_DUPLICATE_CARD_ID
+			);
 			result = DECK_LOAD_BAD_FORMAT;
 			break;
 		}
@@ -262,12 +299,20 @@ enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
 	fclose(file);
 
 	if (result == DECK_LOAD_OK && loaded->card_count == 0)
+	{
+		deck_load_report_set(report, 0, DECK_PARSE_EMPTY);
 		result = DECK_LOAD_BAD_FORMAT;
+	}
 	if (result == DECK_LOAD_OK)
 		*deck = *loaded;
 
 	free(loaded);
 	return result;
+}
+
+enum deck_load_result deck_load_cards(struct deck *deck, const char *path)
+{
+	return deck_load_cards_with_report(deck, path, NULL);
 }
 
 const char *deck_parse_result_name(enum deck_parse_result result)
@@ -288,6 +333,8 @@ const char *deck_parse_result_name(enum deck_parse_result result)
 		return "bad escape";
 	case DECK_PARSE_BAD_CARD_ID:
 		return "bad card id";
+	case DECK_PARSE_DUPLICATE_CARD_ID:
+		return "duplicate card id";
 	}
 
 	return "unknown";

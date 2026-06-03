@@ -35,6 +35,7 @@ enum deck_parse_result
 	DECK_PARSE_MISSING_REQUIRED_FIELD,
 	DECK_PARSE_BAD_ESCAPE,
 	DECK_PARSE_BAD_CARD_ID,
+	DECK_PARSE_DUPLICATE_CARD_ID,
 };
 
 enum deck_load_result
@@ -46,9 +47,20 @@ enum deck_load_result
 	DECK_LOAD_OUT_OF_MEMORY,
 };
 
+struct deck_load_report
+{
+	unsigned int line_number;
+	enum deck_parse_result parse_result;
+};
+
 void deck_init(struct deck *deck, const char *name);
 enum deck_parse_result deck_parse_card_line(struct card *card, const char *line);
 enum deck_load_result deck_load_cards(struct deck *deck, const char *path);
+enum deck_load_result deck_load_cards_with_report(
+	struct deck *deck,
+	const char *path,
+	struct deck_load_report *report
+);
 const char *deck_parse_result_name(enum deck_parse_result result);
 const char *deck_load_result_name(enum deck_load_result result);
 

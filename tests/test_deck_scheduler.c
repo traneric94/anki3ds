@@ -4051,11 +4051,13 @@ static void test_deck_index_scans_sorted_decks_with_cards(void)
 	create_test_deck_dir("zeta", true);
 	create_test_deck_dir("empty", false);
 	create_test_deck_dir("alpha", true);
+	create_test_deck_dir("bad id", true);
 
 	deck_index_scan(&index, TEST_DECK_ROOT);
 
 	check(index.count == 2, "deck index scans only folders with cards");
 	check(index.total_count == 2, "deck index counts valid decks");
+	check(index.ignored_count == 2, "deck index counts ignored entries");
 	check(strcmp(index.entries[0].id, "alpha") == 0, "deck index sorts first deck");
 	check(strcmp(index.entries[1].id, "zeta") == 0, "deck index sorts second deck");
 	check(deck_index_find(&index, "alpha", &entry_index), "deck index finds first deck");
@@ -4088,6 +4090,7 @@ static void test_deck_index_loads_display_names(void)
 
 	check(index.count == 4, "deck index scans named decks");
 	check(index.total_count == 4, "deck index counts named decks");
+	check(index.ignored_count == 0, "deck index has no ignored named decks");
 	check(strcmp(index.entries[0].id, "alpha") == 0, "named deck id remains folder id");
 	check(strcmp(index.entries[0].display_name, "Alpha Deck") == 0, "deck name loads");
 	check(strcmp(index.entries[1].display_name, "beta") == 0, "bad deck name falls back");
@@ -4127,6 +4130,7 @@ static void test_deck_index_reports_overflow(void)
 		"deck index counts all valid decks"
 	);
 	check(index.overflowed, "deck index reports overflow");
+	check(index.ignored_count == 0, "deck index overflow ignores no entries");
 	check(strcmp(index.entries[0].id, "deck00") == 0, "deck index keeps sorted first deck");
 	check(
 		strcmp(index.entries[DECK_INDEX_MAX_DECKS - 1].id, "deck63") == 0,

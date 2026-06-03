@@ -254,7 +254,8 @@ state from its previous card range.
 Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
 shows the selected deck position plus new/learning/review due counts in the
-multi-deck selector, loads optional per-deck `settings.tsv` daily limits, can
+multi-deck selector, reports ignored non-hidden entries during deck scans,
+loads optional per-deck `settings.tsv` daily limits, can
 edit those daily limits from the `SELECT` actions screen, reveals answers,
 records ratings, schedules cards with a
 day-level spaced repetition algorithm, saves local `state.tsv` progress beside
@@ -271,8 +272,9 @@ restore-suspended actions append best-effort `review-log.tsv` rows for
 debugging. The no-due summary separates current-session rating counts from the
 persisted count of cards reviewed today and distinguishes daily-limit exhaustion
 from a fully clear deck. Valid saved state with no matching current card ids
-starts fresh with a visible unmatched-state warning. An in-app controls screen is available
-with `Y` from non-rating screens and unrevealed review cards.
+starts fresh with a visible unmatched-state warning. Deck load errors show the
+first failing line and parser reason when available. An in-app controls screen
+is available with `Y` from non-rating screens and unrevealed review cards.
 
 See:
 

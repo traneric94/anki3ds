@@ -73,6 +73,11 @@ static bool file_exists(const char *path)
 	return true;
 }
 
+static bool entry_name_is_hidden(const char *name)
+{
+	return name[0] == '.';
+}
+
 static const char *find_json_string_value(const char *line, const char *key)
 {
 	const char *cursor = strstr(line, key);
@@ -292,10 +297,18 @@ void deck_index_scan(struct deck_index *index, const char *root_path)
 	{
 		struct deck_entry deck;
 
+		if (entry_name_is_hidden(entry->d_name))
+			continue;
 		if (!deck_index_build_entry(&deck, root_path, entry->d_name))
+		{
+			index->ignored_count++;
 			continue;
+		}
 		if (!file_exists(deck.cards_path))
+		{
+			index->ignored_count++;
 			continue;
+		}
 		deck_index_load_display_name(
 			deck.display_name,
 			sizeof(deck.display_name),

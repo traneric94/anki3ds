@@ -38,7 +38,9 @@ Algorithm:
 6. Probe `cards.tsv` with `fopen`; only entries with readable cards are listed.
 7. Optionally read the deck display name from `deck.json`.
 8. Count every valid deck folder.
-9. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
+9. Count non-hidden ignored entries with invalid ids, overlong paths, or no
+   readable `cards.tsv`.
+10. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
 
 `deck_index_scan` stores a compact `deck_entry` for each deck: folder id,
 display name, cards path, state path, review-log path, settings path, and
@@ -58,6 +60,8 @@ Current practical constraints:
 - Startup and explicit rescans draw a scanning screen before SD traversal, then
   update progress before each deck summary load so large deck lists do not look
   like a blank or frozen app.
+- The selector reports ignored entries so copied folders such as `My Deck/` or
+  incomplete deck payloads do not fail silently.
 - Missing deck root or zero valid decks is a recoverable deck-selector state.
 
 This boundary is small enough to host-test without libctru: build one entry,
@@ -102,8 +106,10 @@ text in fixed-size buffers, with `DECK_MAX_CARDS` as the current hard limit.
 Card IDs reject control characters after unescaping so `state.tsv` can store
 raw IDs without ambiguity.
 Load errors are returned as small enums so the app can show concise on-device
-messages. The staged deck is heap allocated so the supported card limit does
-not create a large stack frame while loading a deck.
+messages. The optional load report carries the first failing line number plus
+the parser reason for malformed rows, empty decks, and over-cap decks. The
+staged deck is heap allocated so the supported card limit does not create a
+large stack frame while loading a deck.
 
 The deck module should stay about deck data and card parsing. It should not know
 about 3DS input, screens, review progress, or SD-card discovery.

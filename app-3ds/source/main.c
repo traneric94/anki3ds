@@ -84,6 +84,7 @@ struct app_state
 	u8 battery_level;
 	unsigned int current_day;
 	enum deck_load_result load_result;
+	struct deck_load_report load_report;
 	enum app_settings_load_result settings_load_result;
 	enum app_settings_save_result settings_save_result;
 	enum review_state_load_result state_load_result;
@@ -758,6 +759,8 @@ static void app_load_selected_deck(struct app_state *app)
 	unsigned int today = app_time_current_day();
 
 	app->current_day = today;
+	app->load_report.line_number = 0;
+	app->load_report.parse_result = DECK_PARSE_OK;
 
 	if (app->deck_index.count == 0)
 	{
@@ -801,7 +804,11 @@ static void app_load_selected_deck(struct app_state *app)
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
 	app->state_message = "State: not loaded";
 	app->settings_message = "settings not saved";
-	app->load_result = deck_load_cards(&app->deck, app->active_cards_path);
+	app->load_result = deck_load_cards_with_report(
+		&app->deck,
+		app->active_cards_path,
+		&app->load_report
+	);
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
@@ -970,6 +977,14 @@ static void draw_deck_select_screen(const struct app_state *app)
 		printf("\x1b[5;1H" APP_COLOR_YELLOW "No decks found." APP_COLOR_RESET);
 		printf("\x1b[7;1HCreate a folder like:");
 		printf("\x1b[8;1H%s/my-deck/cards.tsv", DECK_INDEX_ROOT_PATH);
+		if (app->deck_index.ignored_count > 0)
+		{
+			printf(
+				"\x1b[10;1HIgnored %lu entries.",
+				(unsigned long)app->deck_index.ignored_count
+			);
+			printf("\x1b[11;1HUse letters, digits, _ -");
+		}
 	}
 	else
 	{
@@ -1053,9 +1068,17 @@ static void draw_deck_select_screen(const struct app_state *app)
 		if (app->deck_index.overflowed)
 		{
 			printf(
-				"\x1b[23;1HShowing %lu/%lu decks.",
+				"\x1b[23;1HShowing %lu/%lu decks. Ignored %lu.",
 				(unsigned long)app->deck_index.count,
-				(unsigned long)app->deck_index.total_count
+				(unsigned long)app->deck_index.total_count,
+				(unsigned long)app->deck_index.ignored_count
+			);
+		}
+		else if (app->deck_index.ignored_count > 0)
+		{
+			printf(
+				"\x1b[23;1HIgnored %lu entries.",
+				(unsigned long)app->deck_index.ignored_count
 			);
 		}
 	}
@@ -1072,7 +1095,26 @@ static void draw_load_error_screen(const struct app_state *app)
 		APP_LAYOUT_TEXT_WIDTH
 	);
 	printf("\x1b[7;1HResult: %s", deck_load_result_name(app->load_result));
-	printf("\x1b[10;1HCopy cards.tsv to the path above.");
+	if (app->load_report.line_number > 0 && app->load_result == DECK_LOAD_TOO_LARGE)
+	{
+		printf(
+			"\x1b[9;1HLine %u: too many cards",
+			app->load_report.line_number
+		);
+	}
+	else if (app->load_report.line_number > 0)
+	{
+		printf(
+			"\x1b[9;1HLine %u: %s",
+			app->load_report.line_number,
+			deck_parse_result_name(app->load_report.parse_result)
+		);
+	}
+	else if (app->load_report.parse_result == DECK_PARSE_EMPTY)
+	{
+		printf("\x1b[9;1Hcards.tsv has no cards.");
+	}
+	printf("\x1b[12;1HFix cards.tsv at the path above.");
 }
 
 static void draw_review_screen(const struct app_state *app)
@@ -1716,6 +1758,15 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					);
 					details_row = 16;
 				}
+				if (state_load_result_needs_warning(summary->state_load_result))
+				{
+					printf(
+						"\x1b[%d;1H" APP_COLOR_YELLOW
+						"State unmatched; fresh" APP_COLOR_RESET,
+						details_row
+					);
+					details_row += 2;
+				}
 				printf(
 					"\x1b[%d;1HDue: N %lu  L %lu  R %lu",
 					details_row,
@@ -1768,9 +1819,18 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		if (app->deck_index.overflowed)
 		{
 			printf(
-				"\x1b[27;1HFound: %lu/%lu",
+				"\x1b[27;1HFound: %lu/%lu  Ignored: %lu",
 				(unsigned long)app->deck_index.count,
-				(unsigned long)app->deck_index.total_count
+				(unsigned long)app->deck_index.total_count,
+				(unsigned long)app->deck_index.ignored_count
+			);
+		}
+		else if (app->deck_index.ignored_count > 0)
+		{
+			printf(
+				"\x1b[27;1HFound: %lu  Ignored: %lu",
+				(unsigned long)app->deck_index.count,
+				(unsigned long)app->deck_index.ignored_count
 			);
 		}
 		else
