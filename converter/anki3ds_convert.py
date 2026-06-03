@@ -22,6 +22,8 @@ DECK_MAX_LINE_LENGTH = 1024
 DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 MEDIA_IMAGE_MAX_WIDTH = 160
 MEDIA_IMAGE_MAX_HEIGHT = 72
+MEDIA_IMAGE_MAGIC = b"A3I1"
+MEDIA_IMAGE_HEADER_BYTES = 8
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
 
 BLOCK_TAGS = {
@@ -446,7 +448,7 @@ def write_a3i_image(path: Path, width: int, height: int, pixels: bytes) -> None:
     validate_rgb_image(width, height, pixels)
 
     with path.open("wb") as file:
-        file.write(b"A3I1")
+        file.write(MEDIA_IMAGE_MAGIC)
         file.write(width.to_bytes(2, "little"))
         file.write(height.to_bytes(2, "little"))
 
@@ -459,10 +461,50 @@ def converted_media_name(source_name: str) -> str:
     return f"{Path(source_name).stem}.a3i"
 
 
+def validate_a3i_content(path: Path, content: bytes) -> None:
+    if len(content) < MEDIA_IMAGE_HEADER_BYTES or content[:4] != MEDIA_IMAGE_MAGIC:
+        raise ValueError(f"{path}: bad A3I media header")
+
+    width = int.from_bytes(content[4:6], "little")
+    height = int.from_bytes(content[6:8], "little")
+    if (
+        width <= 0
+        or height <= 0
+        or width > MEDIA_IMAGE_MAX_WIDTH
+        or height > MEDIA_IMAGE_MAX_HEIGHT
+    ):
+        raise ValueError(f"{path}: invalid A3I dimensions")
+
+    expected_size = MEDIA_IMAGE_HEADER_BYTES + width * height * 2
+    if len(content) != expected_size:
+        raise ValueError(f"{path}: A3I pixel data length does not match dimensions")
+
+
+def copy_a3i_media_file(
+    media_root: Path,
+    source_name: str,
+    output_media_dir: Path,
+) -> str:
+    output_name = converted_media_name(source_name)
+    if not media_name_is_valid(output_name):
+        raise ValueError(f"{source_name}: converted media name is invalid")
+
+    source_path = media_root / source_name
+    content = source_path.read_bytes()
+    validate_a3i_content(source_path, content)
+
+    output_media_dir.mkdir(parents=True, exist_ok=True)
+    (output_media_dir / output_name).write_bytes(content)
+    return output_name
+
+
 def convert_media_file(media_root: Path, source_name: str, output_media_dir: Path) -> str:
     output_name = converted_media_name(source_name)
     if not media_name_is_valid(output_name):
         raise ValueError(f"{source_name}: converted media name is invalid")
+
+    if Path(source_name).suffix.lower() == ".a3i":
+        return copy_a3i_media_file(media_root, source_name, output_media_dir)
 
     source_path = media_root / source_name
     output_path = output_media_dir / output_name

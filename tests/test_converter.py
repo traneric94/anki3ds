@@ -386,6 +386,53 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(media[:8], b"A3I1\x02\x00\x01\x00")
             self.assertEqual(media[8:12], b"\x00\xf8\xe0\x07")
 
+    def test_write_deck_copies_existing_a3i_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.a3i\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+        media_content = b"A3I1\x01\x00\x01\x00\x00\xf8"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+            (media_root / "front.a3i").write_bytes(media_content)
+
+            write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
+            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
+            self.assertEqual(line.split("\t")[5], "front.a3i")
+            self.assertEqual(
+                (output / "media" / "front.a3i").read_bytes(),
+                media_content,
+            )
+
+    def test_write_deck_rejects_invalid_a3i_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.a3i\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+            (media_root / "front.a3i").write_bytes(b"A3I1\x02\x00\x01\x00\x00\xf8")
+
+            with self.assertRaisesRegex(ValueError, "A3I pixel data"):
+                write_deck(output, "sample", "Sample", cards, media_root=media_root)
+
     def test_write_deck_rejects_media_output_collision(self):
         cards = convert_lines(
             [
