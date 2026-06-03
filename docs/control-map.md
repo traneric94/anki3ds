@@ -19,13 +19,13 @@ letters do not match the 3DS button label.
 | `SELECT` | `N` | Rescan decks, open actions, cancel action/settings screens |
 | `START` | `M` | Open exit confirmation |
 
-Holding a D-pad direction repeats movement or daily-limit value changes after a
-short delay. Pressing opposite D-pad directions together does not move or change
-values. Face-button actions such as reveal, rating, save, reset, and exit remain
-single-press actions. After reveal, pressing more than one rating button at the
-same time does not save a rating. Save, reset, action-confirm, exit-open, and
-exit-confirm buttons are also ignored when pressed together with another command
-button.
+Holding a single D-pad direction repeats movement or daily-limit value changes
+after a short delay. Pressing multiple D-pad directions together does not move
+or change values. Face-button actions such as reveal, rating, save, reset, and
+exit remain single-press actions. After reveal, pressing more than one rating
+button at the same time does not save a rating. Save, reset, action-confirm,
+exit-open, and exit-confirm buttons are also ignored when pressed together with
+another command button.
 
 ## Review Flow
 

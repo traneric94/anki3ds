@@ -487,6 +487,14 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 	);
 	check(down, "ambiguous up/down leaves output unchanged");
 	check(
+		!app_controls_up_down_direction(
+			APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_RIGHT,
+			&down
+		),
+		"up/down axis rejects diagonal directions"
+	);
+	check(down, "diagonal up/down leaves output unchanged");
+	check(
 		!app_controls_up_down_direction(APP_CONTROL_BUTTON_UP, NULL),
 		"up/down axis output is required"
 	);
@@ -509,6 +517,14 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 		"left/right axis rejects opposite directions"
 	);
 	check(right, "ambiguous left/right leaves output unchanged");
+	check(
+		!app_controls_left_right_direction(
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right axis rejects diagonal directions"
+	);
+	check(right, "diagonal left/right leaves output unchanged");
 	check(
 		!app_controls_left_right_direction(APP_CONTROL_BUTTON_LEFT, NULL),
 		"left/right axis output is required"
