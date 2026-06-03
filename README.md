@@ -197,6 +197,9 @@ dropped.
 Text flash cards are the only supported import path. `--text-only` is accepted
 for compatibility with earlier commands; the converter always accepts plain
 text front/back fields and rejects media options plus inline image tags.
+Re-importing a deck also removes any stale `media/` directory from that output
+folder while preserving saved review state, review logs, and daily-limit
+settings.
 
 Conversion failures print a concise `error: ...` message and exit nonzero so
 the input can be fixed without reading a Python traceback.

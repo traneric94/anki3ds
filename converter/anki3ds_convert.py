@@ -21,6 +21,7 @@ DECK_MAX_TAGS_LENGTH = 128
 DECK_MAX_LINE_LENGTH = 1024
 DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 DEFAULT_SETTINGS = "new_limit\t20\nreview_limit\t200\n"
+TEXT_ONLY_OBSOLETE_DIRECTORIES = ("media",)
 
 BLOCK_TAGS = {
     "address",
@@ -311,10 +312,18 @@ def convert_lines(
 
 
 def remove_path_if_present(path: Path) -> None:
-    if path.is_dir():
+    if path.is_symlink():
+        path.unlink()
+    elif path.is_dir():
         shutil.rmtree(path)
     elif path.exists():
         path.unlink()
+
+
+def remove_obsolete_text_only_artifacts(output_dir: Path) -> None:
+    for directory_name in TEXT_ONLY_OBSOLETE_DIRECTORIES:
+        remove_path_if_present(output_dir / directory_name)
+
 
 def commit_deck_payload_files(
     output_dir: Path,
@@ -414,6 +423,7 @@ def write_deck(
     validate_device_cards(cards)
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    remove_obsolete_text_only_artifacts(output_dir)
 
     deck_json = {
         "format_version": 1,

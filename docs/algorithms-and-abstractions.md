@@ -430,25 +430,26 @@ Algorithm:
    and `card_id` from note/front/back.
 7. Reject media options and inline `<img>` tags so image-bearing exports do not
    silently become text-only cards.
-8. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
-    final files with rollback if either commit step fails.
-9. Write default `settings.tsv` if it does not already exist.
-10. For `--split-large-decks`, remove obsolete converter-generated sibling
+8. Remove obsolete `media/` output left by older non-text builds.
+9. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
+   final files with rollback if either commit step fails.
+10. Write default `settings.tsv` if it does not already exist.
+11. For `--split-large-decks`, remove obsolete converter-generated sibling
     chunk folders after the current single-folder or split-folder output has
     been written.
 
 The converter deliberately does not open or rewrite existing `state.tsv`,
 `review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,
 and deck-specific daily limits survive re-imports into the same deck folder.
-Obsolete split chunks are different: once the current import no longer writes a
-converter-generated chunk, that stale folder is removed so it does not remain
-studiable on the 3DS. To keep progress attached to edited card text, pass
-stable source ID fields during conversion; otherwise content-derived fallback
-IDs change when the normalized front/back/tags content changes. The folder id
-is the runtime deck id on the 3DS, so the converter defaults `deck_id` from the
-output folder name and rejects mismatches. Rich HTML/template rendering, media
-conversion, and Anki collection parsing still belong outside this 3DS text-card
-scope.
+The old `media/` subdirectory and obsolete split chunks are different: once the
+current import can no longer use them, those stale outputs are removed so they
+do not remain part of the 3DS text-card workflow. To keep progress attached to
+edited card text, pass stable source ID fields during conversion; otherwise
+content-derived fallback IDs change when the normalized front/back/tags content
+changes. The folder id is the runtime deck id on the 3DS, so the converter
+defaults `deck_id` from the output folder name and rejects mismatches. Rich
+HTML/template rendering, media conversion, and Anki collection parsing still
+belong outside this 3DS text-card scope.
 
 ## C Boundaries We Want
 

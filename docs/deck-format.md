@@ -82,6 +82,8 @@ Rules:
   sibling deck folders within this limit
 - split re-import removes stale converter-generated sibling chunks after the
   current output is written
+- text-only re-import removes a stale `media/` directory from the active output
+  folder while preserving progress and settings files
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
 - long front/back fields can be scrolled on the review screen with D-pad
   Up/Down

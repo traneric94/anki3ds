@@ -224,6 +224,35 @@ class ConverterTests(unittest.TestCase):
                 "new_limit\t1\nreview_limit\t2\n",
             )
 
+    def test_write_deck_removes_stale_media_without_touching_progress(self):
+        cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+            output.mkdir()
+            media = output / "media"
+            media.mkdir()
+            (media / "old.bin").write_bytes(b"old media")
+            state = output / "state.tsv"
+            review_log = output / "review-log.tsv"
+            settings = output / "settings.tsv"
+            state.write_text("existing-state\n", encoding="utf-8")
+            review_log.write_text("existing-log\n", encoding="utf-8")
+            settings.write_text("new_limit\t5\nreview_limit\t6\n", encoding="utf-8")
+
+            write_deck(output, "sample", "Sample", cards)
+
+            self.assertFalse(media.exists())
+            self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertEqual(
+                review_log.read_text(encoding="utf-8"),
+                "existing-log\n",
+            )
+            self.assertEqual(
+                settings.read_text(encoding="utf-8"),
+                "new_limit\t5\nreview_limit\t6\n",
+            )
+
     def test_write_deck_creates_default_settings(self):
         cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
 
