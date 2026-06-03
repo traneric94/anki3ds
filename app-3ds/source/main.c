@@ -156,6 +156,31 @@ static enum app_control_mode app_control_mode_for_app_mode(enum app_mode mode)
 	return APP_CONTROL_MODE_DECK_SELECT;
 }
 
+static bool app_mode_uses_navigation_repeat(enum app_mode mode)
+{
+	return (
+		mode == APP_MODE_DECK_SELECT ||
+		mode == APP_MODE_ACTIONS ||
+		mode == APP_MODE_SETTINGS
+	);
+}
+
+static u32 keys_for_repeat_buttons(unsigned int buttons)
+{
+	u32 keys = 0;
+
+	if (buttons & APP_CONTROL_BUTTON_UP)
+		keys |= KEY_DUP;
+	if (buttons & APP_CONTROL_BUTTON_DOWN)
+		keys |= KEY_DDOWN;
+	if (buttons & APP_CONTROL_BUTTON_LEFT)
+		keys |= KEY_DLEFT;
+	if (buttons & APP_CONTROL_BUTTON_RIGHT)
+		keys |= KEY_DRIGHT;
+
+	return keys;
+}
+
 static void console_move(int row, int column)
 {
 	printf("\x1b[%d;%dH", row, column);
@@ -1802,11 +1827,13 @@ int main(int argc, char *argv[])
 	unsigned int idle_wait_count = 0;
 	time_t next_battery_poll_time = 0;
 	time_t now;
+	struct app_control_repeat navigation_repeat;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &top_screen);
 	consoleInit(GFX_BOTTOM, &bottom_screen);
 
+	app_controls_repeat_init(&navigation_repeat);
 	app_init(&app);
 	now = time(NULL);
 	if (now != (time_t)-1)
@@ -1832,7 +1859,23 @@ int main(int argc, char *argv[])
 		hidScanInput();
 
 		u32 keys_down = hidKeysDown();
-		if (keys_down != 0)
+		u32 keys_held = hidKeysHeld();
+		unsigned int repeat_buttons = 0;
+		if (app_mode_uses_navigation_repeat(app.mode))
+		{
+			repeat_buttons = app_controls_repeat_buttons(
+				&navigation_repeat,
+				app_controls_buttons_from_3ds_keys(keys_down),
+				app_controls_buttons_from_3ds_keys(keys_held)
+			);
+		}
+		else
+		{
+			app_controls_repeat_reset(&navigation_repeat);
+		}
+
+		keys_down |= keys_for_repeat_buttons(repeat_buttons);
+		if (keys_down != 0 || repeat_buttons != 0)
 		{
 			idle_wait_count = 0;
 		}

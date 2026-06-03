@@ -173,6 +173,9 @@ The review button map lives in the small `app_controls` module so the
 reveal/rating rules can be host-tested without libctru. `main.c` still owns
 state transitions and side effects, but the stable review mapping is: front
 side `A` reveals; after reveal, `Y/X/B/A` choose Again/Hard/Good/Easy.
+D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
+deck select, actions, and settings modes, so ratings and destructive actions
+stay single-press.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.

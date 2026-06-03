@@ -40,6 +40,64 @@ unsigned int app_controls_buttons_from_3ds_keys(unsigned int keys)
 	return buttons;
 }
 
+void app_controls_repeat_init(struct app_control_repeat *repeat)
+{
+	app_controls_repeat_reset(repeat);
+}
+
+void app_controls_repeat_reset(struct app_control_repeat *repeat)
+{
+	if (repeat == NULL)
+		return;
+
+	repeat->buttons = 0;
+	repeat->tick_count = 0;
+}
+
+unsigned int app_controls_repeat_buttons(
+	struct app_control_repeat *repeat,
+	unsigned int buttons_down,
+	unsigned int buttons_held
+)
+{
+	unsigned int held_navigation = buttons_held & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+	unsigned int down_navigation = buttons_down & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+
+	if (repeat == NULL)
+		return 0;
+	if (held_navigation == 0)
+	{
+		app_controls_repeat_reset(repeat);
+		return 0;
+	}
+	if (down_navigation != 0 || held_navigation != repeat->buttons)
+	{
+		repeat->buttons = held_navigation;
+		repeat->tick_count = 0;
+		return 0;
+	}
+
+	if (repeat->tick_count < APP_CONTROL_REPEAT_INITIAL_TICKS)
+	{
+		repeat->tick_count++;
+		return repeat->tick_count == APP_CONTROL_REPEAT_INITIAL_TICKS ?
+			held_navigation :
+			0;
+	}
+
+	repeat->tick_count++;
+	if (
+		repeat->tick_count >=
+		APP_CONTROL_REPEAT_INITIAL_TICKS + APP_CONTROL_REPEAT_INTERVAL_TICKS
+	)
+	{
+		repeat->tick_count = APP_CONTROL_REPEAT_INITIAL_TICKS;
+		return held_navigation;
+	}
+
+	return 0;
+}
+
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed

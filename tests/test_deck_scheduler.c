@@ -385,6 +385,51 @@ static void test_app_controls_modal_controls(void)
 	);
 }
 
+static void test_app_controls_navigation_repeat(void)
+{
+	struct app_control_repeat repeat;
+	unsigned int repeated;
+
+	app_controls_repeat_init(&repeat);
+	repeated = app_controls_repeat_buttons(
+		&repeat,
+		APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_DOWN
+	);
+	check(repeated == 0, "navigation repeat ignores initial edge");
+
+	for (unsigned int tick = 1; tick < APP_CONTROL_REPEAT_INITIAL_TICKS; tick++)
+	{
+		repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+		check(repeated == 0, "navigation repeat waits before first repeat");
+	}
+
+	repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+	check(
+		repeated == APP_CONTROL_BUTTON_DOWN,
+		"navigation repeat emits first held direction"
+	);
+
+	for (unsigned int tick = 1; tick < APP_CONTROL_REPEAT_INTERVAL_TICKS; tick++)
+	{
+		repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+		check(repeated == 0, "navigation repeat waits between repeats");
+	}
+
+	repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_DOWN);
+	check(
+		repeated == APP_CONTROL_BUTTON_DOWN,
+		"navigation repeat emits interval repeat"
+	);
+
+	repeated = app_controls_repeat_buttons(&repeat, 0, APP_CONTROL_BUTTON_RIGHT);
+	check(repeated == 0, "navigation repeat resets on direction change");
+
+	app_controls_repeat_reset(&repeat);
+	repeated = app_controls_repeat_buttons(&repeat, 0, 0);
+	check(repeated == 0, "navigation repeat release stays quiet");
+}
+
 static void test_scheduler_rejects_invalid_rating(void)
 {
 	struct scheduler_session session;
@@ -2069,6 +2114,7 @@ int main(void)
 	test_app_controls_review_front_actions();
 	test_app_controls_review_rating_keys();
 	test_app_controls_modal_controls();
+	test_app_controls_navigation_repeat();
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();

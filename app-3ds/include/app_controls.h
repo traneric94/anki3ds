@@ -17,6 +17,11 @@
 #define APP_CONTROL_BUTTON_RIGHT  (1u << 9)
 #define APP_CONTROL_BUTTON_SELECT (1u << 10)
 #define APP_CONTROL_BUTTON_START  (1u << 11)
+#define APP_CONTROL_BUTTON_NAVIGATION_MASK \
+	(APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN | \
+	APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT)
+#define APP_CONTROL_REPEAT_INITIAL_TICKS 6
+#define APP_CONTROL_REPEAT_INTERVAL_TICKS 2
 
 enum app_control_mode
 {
@@ -31,7 +36,20 @@ enum app_control_mode
 	APP_CONTROL_MODE_CONFIRM_EXIT,
 };
 
+struct app_control_repeat
+{
+	unsigned int buttons;
+	unsigned int tick_count;
+};
+
 unsigned int app_controls_buttons_from_3ds_keys(unsigned int keys);
+void app_controls_repeat_init(struct app_control_repeat *repeat);
+void app_controls_repeat_reset(struct app_control_repeat *repeat);
+unsigned int app_controls_repeat_buttons(
+	struct app_control_repeat *repeat,
+	unsigned int buttons_down,
+	unsigned int buttons_held
+);
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed
