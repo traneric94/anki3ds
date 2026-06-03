@@ -119,6 +119,14 @@ static PrintConsole top_screen;
 static PrintConsole bottom_screen;
 static struct media_cache media_cache;
 
+static void draw_scanning_progress_screen(
+	const struct app_state *app,
+	size_t loaded_count,
+	size_t total_count,
+	const char *deck_name
+);
+static void present_current_frame(void);
+
 static void select_top_screen(void)
 {
 	consoleSelect(&top_screen);
@@ -570,6 +578,13 @@ static void app_scan_decks(struct app_state *app)
 	{
 		if (index < app->deck_index.count)
 		{
+			draw_scanning_progress_screen(
+				app,
+				index,
+				app->deck_index.count,
+				app->deck_index.entries[index].display_name
+			);
+			present_current_frame();
 			deck_summary_load(
 				&app->deck_summaries[index],
 				&app->deck_index.entries[index],
@@ -1130,16 +1145,54 @@ static void draw_status_message(const struct app_state *app)
 
 static void draw_scanning_screen(const struct app_state *app)
 {
+	draw_scanning_progress_screen(app, 0, 0, NULL);
+}
+
+static void draw_scanning_progress_screen(
+	const struct app_state *app,
+	size_t loaded_count,
+	size_t total_count,
+	const char *deck_name
+)
+{
 	select_top_screen();
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds");
 	printf("\x1b[3;1HScanning decks...");
 	printf("\x1b[5;1H%s", DECK_INDEX_ROOT_PATH);
+	if (total_count > 0)
+	{
+		printf(
+			"\x1b[7;1HLoading summary %lu/%lu",
+			(unsigned long)(loaded_count + 1),
+			(unsigned long)total_count
+		);
+		if (deck_name != NULL && deck_name[0] != '\0')
+		{
+			printf("\x1b[9;1HDeck: ");
+			print_truncated(deck_name, DECK_NAME_HEADER_WIDTH);
+		}
+	}
+	else
+	{
+		printf("\x1b[7;1HReading deck folders");
+	}
 
 	select_bottom_screen();
 	consoleClear();
 	printf("\x1b[1;1HDeck scan");
-	printf("\x1b[3;1HReading SD card");
+	if (total_count > 0)
+	{
+		printf(
+			"\x1b[3;1HLoaded: %lu/%lu summaries",
+			(unsigned long)loaded_count,
+			(unsigned long)total_count
+		);
+	}
+	else
+	{
+		printf("\x1b[3;1HReading SD card");
+	}
 	draw_battery_warning(app);
 	select_top_screen();
 }

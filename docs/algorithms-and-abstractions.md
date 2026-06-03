@@ -54,8 +54,9 @@ Current practical constraints:
 - Rescan keeps the selected folder id highlighted when that deck still exists.
 - Returning from review, summary, or load-error screens reuses the cached deck
   list and refreshes only the active deck's summary from the in-memory session.
-- Startup and explicit rescans draw a scanning screen before SD traversal, so
-  slow summary loads do not look like a blank or frozen app.
+- Startup and explicit rescans draw a scanning screen before SD traversal, then
+  update progress before each deck summary load so large deck lists do not look
+  like a blank or frozen app.
 - Missing deck root or zero valid decks is a recoverable deck-selector state.
 
 This boundary is small enough to host-test without libctru: build one entry,
