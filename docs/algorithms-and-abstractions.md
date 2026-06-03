@@ -164,8 +164,9 @@ does not outrank a known previous save. Empty state files and files with no rows
 matching the current deck are treated as malformed, so a truncated save cannot
 silently reset all progress and then be overwritten as fresh state. If every
 available state copy is malformed, review-state saves are blocked until the
-user resets deck progress. Reset removes `state.tsv`, `state.tsv.tmp`, and
-`state.tsv.bak` for the active deck. The shared `storage` module owns the
+user resets deck progress. Opening that deck enters a reset-needed summary
+screen instead of a review queue. Reset removes `state.tsv`, `state.tsv.tmp`,
+and `state.tsv.bak` for the active deck. The shared `storage` module owns the
 remove/rename order for both review state and settings. This remains simple to
 inspect on the SD card while avoiding the known remove-before-rename data-loss
 window.

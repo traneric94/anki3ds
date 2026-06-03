@@ -421,6 +421,11 @@ static bool deck_summary_state_allows_study(const struct deck_summary *summary)
 	return review_state_load_result_allows_save(summary->state_load_result);
 }
 
+static bool app_state_allows_study(const struct app_state *app)
+{
+	return review_state_load_result_allows_save(app->state_load_result);
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -770,7 +775,12 @@ static void app_load_selected_deck(struct app_state *app)
 		);
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
-		if (scheduler_is_complete(&app->session))
+		if (!app_state_allows_study(app))
+		{
+			app_set_status(app, "Reset bad state first");
+			app->mode = APP_MODE_SUMMARY;
+		}
+		else if (scheduler_is_complete(&app->session))
 		{
 			app_set_status(app, "Loaded; no cards due");
 			app->mode = APP_MODE_SUMMARY;
@@ -1043,6 +1053,16 @@ static void draw_summary_screen(const struct app_state *app)
 
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds Review");
+	if (!app_state_allows_study(app))
+	{
+		printf("\x1b[3;1HReview state error");
+		printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
+		printf("\x1b[7;1HState:         %s", app->state_message);
+		printf("\x1b[10;1HUse SELECT actions, then");
+		printf("\x1b[11;1Hreset deck progress.");
+		return;
+	}
+
 	printf("\x1b[3;1HNo cards due now");
 	printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
 	printf("\x1b[6;1HStudied today: %u", session->reviewed_count);
@@ -1513,6 +1533,17 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 	{
 		char new_limit[16];
 		char review_limit[16];
+
+		if (!app_state_allows_study(app))
+		{
+			printf("\x1b[1;1HReview state error");
+			printf("\x1b[3;1HSELECT: actions");
+			printf("\x1b[5;1HB: deck list");
+			printf("\x1b[7;1HSTART: confirm exit");
+			printf("\x1b[9;1HY: controls");
+			printf("\x1b[13;1HReset progress to study.");
+			break;
+		}
 
 		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
 		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);

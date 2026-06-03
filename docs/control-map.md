@@ -58,6 +58,7 @@ restore suspended cards.
 - Press `B` or `SELECT` to cancel.
 - Reset progress requires `X` on the reset confirmation screen.
 - A successful reset reloads the deck and shows `Progress reset`.
+- If a deck opens with malformed saved state, use this reset flow before study.
 
 ## Daily Limits
 
