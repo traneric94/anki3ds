@@ -8,6 +8,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_power.h"
 #include "app_time.h"
 #include "deck.h"
 #include "deck_index.h"
@@ -213,6 +214,46 @@ static void test_tracked_sample_decks_load(void)
 		app_settings_load(&settings, "sample-decks/media-demo/settings.tsv") ==
 			APP_SETTINGS_LOAD_OK,
 		"tracked media demo settings load"
+	);
+}
+
+static void test_app_power_battery_poll_schedule(void)
+{
+	time_t next_poll_time = 0;
+
+	app_power_schedule_next_battery_poll(&next_poll_time, 1000);
+	check(
+		next_poll_time == 1000 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"battery poll schedules ten minutes out"
+	);
+	check(
+		!app_power_battery_poll_is_due(&next_poll_time, 1599),
+		"battery poll is not due before interval"
+	);
+	check(
+		app_power_battery_poll_is_due(&next_poll_time, 1600),
+		"battery poll is due at interval"
+	);
+}
+
+static void test_app_power_battery_poll_arms_after_missing_clock(void)
+{
+	time_t next_poll_time = 0;
+
+	app_power_schedule_next_battery_poll(&next_poll_time, (time_t)-1);
+	check(next_poll_time == 0, "battery poll does not arm without clock");
+	check(
+		!app_power_battery_poll_is_due(&next_poll_time, (time_t)-1),
+		"battery poll is not due without clock"
+	);
+	check(next_poll_time == 0, "battery poll stays unarmed without clock");
+	check(
+		!app_power_battery_poll_is_due(&next_poll_time, 2000),
+		"battery poll arms when clock returns"
+	);
+	check(
+		next_poll_time == 2000 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"battery poll stores recovered clock schedule"
 	);
 }
 
@@ -2391,6 +2432,8 @@ int main(void)
 	test_deck_load_rejects_duplicate_card_ids();
 	test_deck_load_card_limit();
 	test_tracked_sample_decks_load();
+	test_app_power_battery_poll_schedule();
+	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_time_local_calendar_day();
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();

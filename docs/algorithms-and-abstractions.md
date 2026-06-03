@@ -379,6 +379,7 @@ Keep the portable logic separate from the libctru shell:
 | `scheduler` | per-card session state, rating transitions, current-card selection | file paths, card text parsing, rendering |
 | `review_state` | `state.tsv` load/save, card-id matching, persistence errors | deck discovery, button mapping, screens |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
+| `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |

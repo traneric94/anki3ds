@@ -6,6 +6,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_power.h"
 #include "app_time.h"
 #include "deck.h"
 #include "deck_index.h"
@@ -36,8 +37,6 @@
 #define DECK_SELECTOR_VISIBLE_ROWS 16
 #define STATUS_MESSAGE_SIZE 64
 #define STATUS_MESSAGE_WIDTH 31
-#define BATTERY_LOW_LEVEL 1
-#define BATTERY_POLL_INTERVAL_SECONDS 600
 #define DAY_CHECK_INTERVAL_SECONDS 60
 
 static const unsigned int daily_limit_presets[] = {
@@ -442,27 +441,6 @@ static void wait_for_idle_input(unsigned int idle_wait_count)
 	hidWaitForAnyEvent(true, 0, idle_input_wait_ns(idle_wait_count));
 }
 
-static void schedule_next_battery_poll(time_t *next_poll_time, time_t now)
-{
-	if (next_poll_time == NULL || now == (time_t)-1)
-		return;
-
-	*next_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
-}
-
-static bool battery_poll_is_due(time_t *next_poll_time, time_t now)
-{
-	if (next_poll_time == NULL || now == (time_t)-1)
-		return false;
-	if (*next_poll_time == 0)
-	{
-		schedule_next_battery_poll(next_poll_time, now);
-		return false;
-	}
-
-	return now >= *next_poll_time;
-}
-
 static void schedule_next_day_check(time_t *next_check_time, time_t now)
 {
 	if (next_check_time == NULL || now == (time_t)-1)
@@ -657,7 +635,7 @@ static bool app_sample_battery(struct app_state *app)
 		R_SUCCEEDED(PTMU_GetBatteryLevel(&level)) &&
 		R_SUCCEEDED(PTMU_GetBatteryChargeState(&charge_state));
 	charging = status_available && charge_state != 0;
-	low = status_available && !charging && level <= BATTERY_LOW_LEVEL;
+	low = status_available && !charging && level <= APP_POWER_BATTERY_LOW_LEVEL;
 	changed =
 		old_status_available != status_available ||
 		(
@@ -2050,7 +2028,7 @@ int main(int argc, char *argv[])
 	app_controls_repeat_init(&navigation_repeat);
 	app_init(&app);
 	now = time(NULL);
-	schedule_next_battery_poll(&next_battery_poll_time, now);
+	app_power_schedule_next_battery_poll(&next_battery_poll_time, now);
 	if (app.current_day != 0)
 		schedule_next_day_check(&next_day_check_time, now);
 	show_scan_then_scan_decks(&app);
@@ -2096,14 +2074,17 @@ int main(int argc, char *argv[])
 		}
 
 		now = time(NULL);
-		bool battery_poll_due = battery_poll_is_due(&next_battery_poll_time, now);
+		bool battery_poll_due = app_power_battery_poll_is_due(
+			&next_battery_poll_time,
+			now
+		);
 		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
 		bool day_check_due = day_check_is_due(&next_day_check_time, now);
 		bool day_changed = day_check_due ?
 			app_refresh_day_if_changed(&app, app_time_local_day_from_time(now)) :
 			false;
 		if (battery_poll_due)
-			schedule_next_battery_poll(&next_battery_poll_time, now);
+			app_power_schedule_next_battery_poll(&next_battery_poll_time, now);
 		if (day_check_due)
 			schedule_next_day_check(&next_day_check_time, now);
 
