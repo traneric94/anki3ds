@@ -19,12 +19,6 @@
 #include "scheduler.h"
 
 #define APP_VERSION "0.5.0-dev"
-#define IDLE_INPUT_WAIT_INITIAL_NS 100000000LL
-#define IDLE_INPUT_WAIT_MID_NS 250000000LL
-#define IDLE_INPUT_WAIT_MAX_NS 500000000LL
-#define IDLE_INPUT_FAST_WAIT_COUNT 10
-#define IDLE_INPUT_MID_WAIT_COUNT 30
-#define IDLE_INPUT_MAX_WAIT_COUNT 60
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET "\x1b[0m"
@@ -535,19 +529,9 @@ static const char *status_message_color(const char *message)
 	return APP_COLOR_BLUE;
 }
 
-static long long idle_input_wait_ns(unsigned int idle_wait_count)
-{
-	if (idle_wait_count < IDLE_INPUT_FAST_WAIT_COUNT)
-		return IDLE_INPUT_WAIT_INITIAL_NS;
-	if (idle_wait_count < IDLE_INPUT_MID_WAIT_COUNT)
-		return IDLE_INPUT_WAIT_MID_NS;
-
-	return IDLE_INPUT_WAIT_MAX_NS;
-}
-
 static void wait_for_idle_input(unsigned int idle_wait_count)
 {
-	hidWaitForAnyEvent(true, 0, idle_input_wait_ns(idle_wait_count));
+	hidWaitForAnyEvent(true, 0, app_power_idle_input_wait_ns(idle_wait_count));
 }
 
 static bool app_mode_uses_held_navigation_wait(
@@ -2708,8 +2692,8 @@ int main(int argc, char *argv[])
 		else
 		{
 			wait_for_idle_input(idle_wait_count);
-			if (idle_wait_count < IDLE_INPUT_MAX_WAIT_COUNT)
-				idle_wait_count++;
+			idle_wait_count =
+				app_power_next_idle_input_wait_count(idle_wait_count);
 		}
 
 		hidScanInput();

@@ -59,3 +59,21 @@ enum app_power_battery_display_state app_power_battery_display_state(
 
 	return APP_POWER_BATTERY_DISPLAY_NORMAL;
 }
+
+long long app_power_idle_input_wait_ns(unsigned int idle_wait_count)
+{
+	if (idle_wait_count < APP_POWER_IDLE_INPUT_FAST_WAIT_COUNT)
+		return APP_POWER_IDLE_INPUT_WAIT_INITIAL_NS;
+	if (idle_wait_count < APP_POWER_IDLE_INPUT_MID_WAIT_COUNT)
+		return APP_POWER_IDLE_INPUT_WAIT_MID_NS;
+
+	return APP_POWER_IDLE_INPUT_WAIT_MAX_NS;
+}
+
+unsigned int app_power_next_idle_input_wait_count(unsigned int idle_wait_count)
+{
+	if (idle_wait_count >= APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT)
+		return APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT;
+
+	return idle_wait_count + 1;
+}

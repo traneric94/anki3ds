@@ -204,8 +204,10 @@ Again/Hard/Good/Easy ratings. It also checks
 app-level input priority for controls, exit confirmation, deck-list return,
 actions, undo gating, suspend confirmation, review text scrolling, reveal, and
 rating dispatch. The input coverage also checks which screens accept held-D-pad
-repeat. That workflow checks per-deck review-log rows for rating, undo,
-suspend, and restore actions.
+repeat. The power coverage checks battery polling cadence and the adaptive idle
+input wait tiers used to avoid busy polling while the screen is unchanged. That
+workflow checks per-deck review-log rows for rating, undo, suspend, and restore
+actions.
 `make test-host` also compiles the app-controls module with a small host stub of
 libctru's `<3ds.h>` so the `KEY_A`/`KEY_B`/`KEY_X`/`KEY_Y`, D-pad,
 `SELECT`, and `START` translation branch is covered outside hardware builds.

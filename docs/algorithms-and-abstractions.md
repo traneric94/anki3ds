@@ -230,7 +230,9 @@ When the screen is unchanged, the app waits for HID input with an adaptive
 timeout before scanning controls again. The wait starts short for responsive
 input, then backs off while idle to avoid busy redraw/poll loops while still
 letting `aptMainLoop` run regularly. Any held, newly pressed, or repeated input
-resets the idle wait counter.
+resets the idle wait counter. The pure idle-backoff timing policy lives in
+`app_power` so host tests cover the fast, mid, and max wait tiers plus the
+capped wait counter.
 
 The app tracks the current local calendar day while it is open. The main loop
 checks for a local-day change at most once per minute, using the loop's existing
@@ -467,7 +469,7 @@ Keep the portable logic separate from the libctru shell:
 | `review_log` | append-only study transition rows | scheduler decisions, rollback policy, rendering |
 | `storage` | temp/backup save-file replacement and cleanup | TSV formatting, scheduler state, settings parsing |
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
-| `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
+| `app_power` | battery status thresholds, poll scheduling policy, idle input wait tiers | libctru PTMU calls, rendering |
 | `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
 | `app_controls` | abstract button bits, repeat timing, app command classification | scheduler mutation, file I/O, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |

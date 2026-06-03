@@ -372,6 +372,53 @@ static void test_app_power_battery_display_state(void)
 	);
 }
 
+static void test_app_power_idle_input_backoff(void)
+{
+	check(
+		app_power_idle_input_wait_ns(0) ==
+			APP_POWER_IDLE_INPUT_WAIT_INITIAL_NS,
+		"idle input starts with responsive wait"
+	);
+	check(
+		app_power_idle_input_wait_ns(
+			APP_POWER_IDLE_INPUT_FAST_WAIT_COUNT - 1
+		) == APP_POWER_IDLE_INPUT_WAIT_INITIAL_NS,
+		"idle input keeps initial wait through fast tier"
+	);
+	check(
+		app_power_idle_input_wait_ns(APP_POWER_IDLE_INPUT_FAST_WAIT_COUNT) ==
+			APP_POWER_IDLE_INPUT_WAIT_MID_NS,
+		"idle input backs off to mid wait"
+	);
+	check(
+		app_power_idle_input_wait_ns(
+			APP_POWER_IDLE_INPUT_MID_WAIT_COUNT - 1
+		) == APP_POWER_IDLE_INPUT_WAIT_MID_NS,
+		"idle input keeps mid wait through mid tier"
+	);
+	check(
+		app_power_idle_input_wait_ns(APP_POWER_IDLE_INPUT_MID_WAIT_COUNT) ==
+			APP_POWER_IDLE_INPUT_WAIT_MAX_NS,
+		"idle input backs off to max wait"
+	);
+	check(
+		app_power_next_idle_input_wait_count(0) == 1,
+		"idle input wait count increments"
+	);
+	check(
+		app_power_next_idle_input_wait_count(
+			APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT - 1
+		) == APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT,
+		"idle input wait count reaches cap"
+	);
+	check(
+		app_power_next_idle_input_wait_count(
+			APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT
+		) == APP_POWER_IDLE_INPUT_MAX_WAIT_COUNT,
+		"idle input wait count remains capped"
+	);
+}
+
 static void test_app_text_counts_utf8_columns(void)
 {
 	const char *text = "a" "\xc3" "\xa9" "\xf0" "\x9f" "\x99" "\x82" "b";
@@ -4790,6 +4837,7 @@ int main(void)
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
 	test_app_power_battery_display_state();
+	test_app_power_idle_input_backoff();
 	test_app_text_counts_utf8_columns();
 	test_app_text_counts_wrapped_rows();
 	test_app_time_local_calendar_day();
