@@ -255,9 +255,10 @@ show suspended-card counts so a hidden queue is visible before restoring cards.
 
 The actions screen can restore all suspended cards in the active deck. This is
 the default selected action so opening actions and pressing `A` does not reset
-progress. Daily limits can be edited from the same actions screen. Reset
-remains available by moving the action selection first, then confirming on a
-separate reset screen with `X`.
+progress during normal study. If a deck opens with malformed saved state, reset
+is selected by default so the recovery path is direct. Daily limits can be
+edited from the same actions screen. Reset remains available by moving the
+action selection first, then confirming on a separate reset screen with `X`.
 
 Cards may reference front/back `.a3i` media. The app keeps a two-slot media
 cache for the active deck, enough for the current card's front and back images.

@@ -51,7 +51,8 @@ returns to the controls screen.
 ## Actions Flow
 
 From review or summary, `SELECT` opens actions. The default selected action is
-restore suspended cards.
+restore suspended cards. If a deck opens with malformed saved state, reset is
+selected by default so the repair flow is immediately reachable.
 
 - Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
 - Press `A` to confirm the selected action.

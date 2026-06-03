@@ -810,7 +810,9 @@ static void app_load_selected_deck(struct app_state *app)
 static void app_open_actions(struct app_state *app)
 {
 	app->action_return_mode = app->mode;
-	app->selected_action = ACTION_ITEM_UNSUSPEND_ALL;
+	app->selected_action = app_state_allows_study(app) ?
+		ACTION_ITEM_UNSUSPEND_ALL :
+		ACTION_ITEM_RESET_PROGRESS;
 	app_set_status(app, "Actions");
 	app->mode = APP_MODE_ACTIONS;
 }
