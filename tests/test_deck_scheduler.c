@@ -357,8 +357,8 @@ static void test_app_power_battery_sample_policy(void)
 		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
 	);
 	check(
-		next_poll_time == 1600 + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS,
-		"closed shell sample schedules short retry interval"
+		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
+		"closed shell sample schedules normal poll interval"
 	);
 
 	next_poll_time = 1600;

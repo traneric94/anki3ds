@@ -304,11 +304,11 @@ Expected:
 - Azahar accepts the `.3dsx` and starts the app process.
 Result: pass for launch command only
 Notes:
-- Host tests now cover short retry scheduling for closed-shell or failed battery
-  samples and bad-settings deck summaries. Load-error paths are truncated, bad
-  settings are surfaced as ignored in deck stats, and `reset state` status text
-  uses the caution color. Full button/render acceptance is deferred to the final
-  manual pass.
+- Host tests now cover ten-minute closed-shell battery scheduling, short retry
+  scheduling for failed battery samples, and bad-settings deck summaries.
+  Load-error paths are truncated, bad settings are surfaced as ignored in deck
+  stats, and `reset state` status text uses the caution color. Full
+  button/render acceptance is deferred to the final manual pass.
 
 ## 2026-06-03 - Contextual Controls Launch Check
 

@@ -17,10 +17,7 @@ void app_power_schedule_next_battery_poll_after_sample(
 	if (next_poll_time == NULL || now == (time_t)-1)
 		return;
 
-	if (
-		result == APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED ||
-		result == APP_POWER_BATTERY_SAMPLE_READ_FAILED
-	)
+	if (result == APP_POWER_BATTERY_SAMPLE_READ_FAILED)
 	{
 		*next_poll_time = now + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS;
 		return;
