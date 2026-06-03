@@ -9,7 +9,7 @@ turns Anki-style tab-separated exports into a 3DS-friendly deck format.
 
 The first usable version is not a full Anki clone. It does:
 
-- review text cards and bounded `.a3i` images on a Nintendo 3DS
+- review text flash cards on a Nintendo 3DS
 - read decks from the SD card
 - save local review progress
 - use a simple Anki-like scheduler
@@ -20,7 +20,7 @@ The first version does not:
 - sync with AnkiWeb
 - parse arbitrary Anki templates on-device
 - run JavaScript or full card CSS on-device
-- support arbitrary media formats
+- treat image/media review as optional non-MVP work
 - modify a user's main Anki collection directly
 
 ## Components
@@ -35,7 +35,8 @@ anki3ds/
 
 ## Build
 
-The 3DS app currently builds a text and small-image multi-deck reviewer.
+The 3DS app currently builds a text-card multi-deck reviewer. Existing media
+helpers are optional fixtures, not part of the daily-use MVP.
 
 ```sh
 make
@@ -93,7 +94,6 @@ This also installs the tracked sample decks to:
 
 ```text
 local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
-local/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
@@ -113,7 +113,6 @@ By default this uses:
 
 ```text
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
-~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
@@ -194,7 +193,8 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --split-large-decks
 ```
 
-Optional media fields can be copied from existing `.a3i` images or converted
+Text cards are the supported daily-use scope. Optional media fields can be
+copied from existing `.a3i` images or converted
 from binary PPM `P6` images into the device-side `.a3i` format:
 
 ```sh
@@ -217,7 +217,7 @@ dropped.
 
 ## Current Status
 
-Multi-deck text and small-image review works at build level: the app scans
+Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
 shows the selected deck position plus new/learning/review due counts in the
 multi-deck selector, loads optional per-deck `settings.tsv` daily limits, can
@@ -228,8 +228,8 @@ that deck, and can undo the last rating or suspend action with `L`, suspend
 cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
-progress after opening the reset action and confirming with `X`. Cards may optionally reference
-bounded `.a3i` images under the deck's `media/` folder. The top screen shows
+progress after opening the reset action and confirming with `X`. Optional
+media references remain non-MVP. The top screen shows
 deck/card content with basic terminal-style color cues, while the bottom screen
 shows controls, review status, save feedback, and the last valid sampled
 battery level, including charging and low battery states. Successful ratings,

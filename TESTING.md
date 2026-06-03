@@ -57,9 +57,9 @@ Verification gates:
 - `make verify-ci` is the portable CI gate. It runs `make test` and
   `make verify-sample-decks`.
 - `make verify-sample-decks` checks the tracked sample decks for required
-  files, matching `deck.json` metadata, valid `settings.tsv`, present valid
-  `.a3i` media references, duplicate card IDs, and accidentally committed
-  progress files.
+  files, matching `deck.json` metadata, valid `settings.tsv`, duplicate card
+  IDs, and accidentally committed progress files. The default tracked sample
+  set is text-only.
 - `make verify-local` is the local pre-checkpoint gate. It runs tests and
   sample-deck verification, then builds the 3DS app and stages the local SD
   mirror with sample decks. It requires the local 3DS toolchain.
@@ -77,16 +77,10 @@ The tracked sample decks install to:
 ```text
 local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 local/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
-local/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
-local/sdmc/3ds/anki3ds/decks/media-demo/media/colors.a3i
-local/sdmc/3ds/anki3ds/decks/media-demo/settings.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/limits-demo/settings.tsv
-~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
-~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/media/colors.a3i
-~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/media-demo/settings.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ~/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks/sample/settings.tsv
 ```
@@ -102,10 +96,12 @@ to clear only tracked sample-deck progress files before a fresh manual pass.
 The `prepare-local-samples-fresh` and `prepare-azahar-samples-fresh` targets
 install the tracked sample decks first, then perform that progress reset.
 Sample install targets replace source-owned files such as `deck.json`,
-`cards.tsv`, `settings.tsv`, and `media/` while preserving `state.tsv` and
+`cards.tsv` and `settings.tsv` while preserving `state.tsv` and
 `review-log.tsv`; fresh targets clear those files plus `state.tsv.tmp`,
 `state.tsv.bak`, `review-log.tsv.tmp`, and `review-log.tsv.bak` so stale
-progress should not carry into a pass.
+progress should not carry into a pass. Default sample installs also remove the
+old optional `media-demo` fixture from the sample root so a text-only acceptance
+pass shows exactly the text decks.
 The singular `install-local-sample-deck` and `install-azahar-sample-deck`
 targets are compatibility aliases for the plural targets; the plural names
 describe the current multi-deck sample workflow more accurately.
@@ -227,7 +223,7 @@ Minimum converter tests:
 - preserves stable card IDs
 - handles tabs and line breaks
 - strips or simplifies simple HTML
-- converts optional media fields into bounded `.a3i` files
+- keeps the daily-use import path focused on text cards
 - writes expected deck folder layout
 - preserves existing review state on re-import
 - preserves card IDs across text edits when stable source ID fields are supplied
@@ -253,9 +249,8 @@ Run this checklist after the relevant automated gate passes:
 - hardware fresh sample pass: copy the current `.3dsx`, `.smdh`, and tracked
   sample decks to `sdmc:/3ds/anki3ds/`, with tracked sample progress cleared
 
-Use at least two decks. The tracked `sample` and `limits-demo` decks are enough
-for the daily-use path; `media-demo` can be included when checking image
-rendering at the same time.
+Use at least two text decks. The tracked `sample` and `limits-demo` decks define
+the daily-use path.
 
 Acceptance steps:
 

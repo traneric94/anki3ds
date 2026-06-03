@@ -6,7 +6,8 @@ HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3ds/include
 
 APP_SD_DIR := 3ds/anki3ds
-SAMPLE_DECKS := limits-demo media-demo sample
+SAMPLE_DECKS := limits-demo sample
+OPTIONAL_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 
 .PHONY: all app-3ds clean test test-host test-converter verify-ci verify-local verify-sample-decks check-package-sd-root package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
@@ -101,6 +102,9 @@ install-local-sample-deck: install-local-sample-decks
 
 install-local-sample-decks: verify-sample-decks
 	set -e; \
+	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+		rm -rf "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
@@ -122,6 +126,9 @@ install-azahar-sample-deck: install-azahar-sample-decks
 
 install-azahar-sample-decks: verify-sample-decks
 	set -e; \
+	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+		rm -rf "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \

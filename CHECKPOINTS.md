@@ -157,8 +157,8 @@ Before acceptance:
 
 Acceptance test:
 
-1. Copy two or more decks to the SD card with `make install-local-sd` or the
-   equivalent real SD copy. For tracked sample decks, use
+1. Copy two or more text decks to the SD card with `make install-local-sd` or
+   the equivalent real SD copy. For tracked sample decks, use
    `make prepare-local-samples-fresh` so stale sample progress does not carry
    into the pass.
 2. Review due cards from each deck.
@@ -175,7 +175,7 @@ Pass condition:
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result
 
-## M8: Media And Polish
+## M8: Optional Media And Polish
 
 Acceptance test:
 
@@ -186,4 +186,4 @@ Acceptance test:
 
 Pass condition:
 
-- image cards are useful on the original 3DS screen
+- optional image cards are useful on the original 3DS screen
