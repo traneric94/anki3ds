@@ -122,6 +122,9 @@ new_limit	20
 review_limit	200
 ```
 
+Each setting key must appear exactly once. Duplicate settings rows are
+malformed.
+
 The app may briefly create `settings.tsv.tmp` and `settings.tsv.bak` while
 saving daily limits from the actions screen. If `settings.tsv` is missing or
 malformed after an interrupted save, the app can load a valid

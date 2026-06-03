@@ -283,8 +283,9 @@ limits advance early in western time zones. The date conversion lives in
 Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use
 defaults of `new_limit=20` and `review_limit=200`. A value of `0` means
 unlimited. A present settings file must include both `new_limit` and
-`review_limit`; incomplete files are malformed so interrupted writes can fall
-back to temp or backup files. The app can write `settings.tsv` from the daily
+`review_limit` exactly once; incomplete or duplicate rows are malformed so
+interrupted writes can fall back to temp or backup files. The app can write
+`settings.tsv` from the daily
 limits screen using the same temp/backup save pattern as review state. If
 `settings.tsv` is missing on load, settings try `settings.tsv.tmp`, then
 `settings.tsv.bak`. If `settings.tsv` is malformed, backup is tried before temp

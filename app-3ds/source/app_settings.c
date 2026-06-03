@@ -123,12 +123,18 @@ static bool parse_settings_line(
 
 	if (strcmp(fields[0], "new_limit") == 0)
 	{
+		if (*read_new_limit)
+			return false;
+
 		settings->new_limit = value;
 		*read_new_limit = true;
 		return true;
 	}
 	if (strcmp(fields[0], "review_limit") == 0)
 	{
+		if (*read_review_limit)
+			return false;
+
 		settings->review_limit = value;
 		*read_review_limit = true;
 		return true;
