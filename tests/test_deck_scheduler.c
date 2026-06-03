@@ -1564,6 +1564,27 @@ static void test_review_state_round_trip_suspended_card(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_save_rejects_count_mismatch(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, 1, TEST_TODAY);
+
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_SAVE_FAILED,
+		"state save rejects deck/session count mismatch"
+	);
+	check(access(TEST_STATE_PATH, F_OK) != 0, "mismatch save leaves no primary");
+	check(access(TEST_STATE_TEMP_PATH, F_OK) != 0, "mismatch save leaves no temp");
+	check(access(TEST_STATE_BACKUP_PATH, F_OK) != 0, "mismatch save leaves no backup");
+}
+
 static void test_review_state_save_retains_backup_for_primary_recovery(void)
 {
 	struct deck deck;
@@ -3106,6 +3127,7 @@ int main(void)
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
+	test_review_state_save_rejects_count_mismatch();
 	test_review_state_save_retains_backup_for_primary_recovery();
 	test_review_state_loads_backup_when_primary_missing();
 	test_review_state_loads_backup_when_primary_is_bad();

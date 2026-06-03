@@ -513,6 +513,10 @@ enum review_state_save_result review_state_save(
 	FILE *file;
 	size_t row_count;
 
+	if (deck == NULL || session == NULL || path == NULL)
+		return REVIEW_STATE_SAVE_FAILED;
+	if (deck->card_count != session->card_count)
+		return REVIEW_STATE_SAVE_FAILED;
 	if (!storage_build_suffixed_path(
 		temp_path,
 		sizeof(temp_path),
@@ -527,9 +531,7 @@ enum review_state_save_result review_state_save(
 	if (file == NULL)
 		return REVIEW_STATE_SAVE_FAILED;
 
-	row_count = deck->card_count < session->card_count ?
-		deck->card_count :
-		session->card_count;
+	row_count = deck->card_count;
 	if (fprintf(file, "%s\t%u\n", STATE_FILE_HEADER, (unsigned int)row_count) < 0)
 	{
 		fclose(file);

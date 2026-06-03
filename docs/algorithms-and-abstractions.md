@@ -138,12 +138,13 @@ bad state file leaves the live session unchanged.
 
 Save algorithm:
 
-1. Build `state.tsv.tmp`.
-2. Write a state header with the row count.
-3. Write one state row per loaded card.
-4. Write a completion footer with the same row count.
-5. Close the temp file and check close errors.
-6. Ask `storage` to replace the primary file through the shared
+1. Reject mismatched deck/session card counts before opening a temp file.
+2. Build `state.tsv.tmp`.
+3. Write a state header with the row count.
+4. Write one state row per loaded card.
+5. Write a completion footer with the same row count.
+6. Close the temp file and check close errors.
+7. Ask `storage` to replace the primary file through the shared
    temp/backup transaction.
 
 When replacing an existing primary file, `storage` keeps that previous primary
