@@ -180,6 +180,14 @@ static void console_move(int row, int column)
 	printf("\x1b[%d;%dH", row, column);
 }
 
+static void draw_app_title(const char *section)
+{
+	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds");
+	if (section != NULL && section[0] != '\0')
+		printf(" %s", section);
+	printf(" %s" APP_COLOR_RESET, APP_VERSION);
+}
+
 static void draw_wrapped_text_columns(
 	const char *text,
 	int row,
@@ -847,7 +855,7 @@ static enum app_power_battery_sample_result app_init(struct app_state *app)
 
 static void draw_header(const struct app_state *app)
 {
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[2;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
@@ -881,7 +889,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 	size_t visible_deck_count;
 
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
+	draw_app_title(NULL);
 	printf("\x1b[3;1H" APP_COLOR_BLUE "Select deck" APP_COLOR_RESET);
 	if (app->deck_index.count > 0)
 	{
@@ -984,7 +992,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 static void draw_load_error_screen(const struct app_state *app)
 {
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
+	draw_app_title(NULL);
 	printf("\x1b[3;1H" APP_COLOR_RED "Could not load deck." APP_COLOR_RESET);
 	printf("\x1b[5;1H");
 	print_truncated(
@@ -1048,7 +1056,7 @@ static void draw_summary_screen(const struct app_state *app)
 	const struct scheduler_session *session = &app->session;
 
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	if (!app_state_allows_study(app))
 	{
 		printf("\x1b[3;1H" APP_COLOR_RED "Review state error" APP_COLOR_RESET);
@@ -1100,7 +1108,7 @@ static void draw_actions_screen(const struct app_state *app)
 		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? ">" : " ";
 
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_BLUE "Actions" APP_COLOR_RESET);
 	printf(
 		"\x1b[6;1H%s%s Restore suspended cards" APP_COLOR_RESET,
@@ -1165,7 +1173,7 @@ static void draw_settings_screen(const struct app_state *app)
 	);
 
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_BLUE "Daily limits" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
@@ -1192,7 +1200,7 @@ static void draw_settings_screen(const struct app_state *app)
 static void draw_reset_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_RED "Reset deck progress?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
@@ -1206,7 +1214,7 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 static void draw_restore_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_YELLOW "Restore suspended cards?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
@@ -1225,7 +1233,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 	const struct card *card = current_card(app);
 
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_YELLOW "Suspend current card?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
@@ -1243,7 +1251,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 static void draw_exit_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds Review" APP_COLOR_RESET);
+	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_YELLOW "Exit app?" APP_COLOR_RESET);
 	printf("\x1b[6;1HProgress is saved after");
 	printf("\x1b[7;1Heach review action.");
@@ -1260,7 +1268,7 @@ static void draw_controls_screen_footer(void)
 static void draw_controls_screen(const struct app_state *app)
 {
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
+	draw_app_title(NULL);
 
 	switch (app->controls_return_mode)
 	{
@@ -1448,7 +1456,7 @@ static void draw_scanning_progress_screen(
 {
 	select_top_screen();
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds" APP_COLOR_RESET);
+	draw_app_title(NULL);
 	printf("\x1b[3;1H" APP_COLOR_BLUE "Scanning decks..." APP_COLOR_RESET);
 	printf("\x1b[5;1H%s", DECK_INDEX_ROOT_PATH);
 	if (total_count > 0)
