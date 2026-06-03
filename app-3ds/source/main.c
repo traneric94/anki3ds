@@ -774,10 +774,7 @@ static void app_open_reset_confirmation(struct app_state *app)
 
 static void app_open_exit_confirmation(struct app_state *app)
 {
-	if (app->mode == APP_MODE_CONTROLS)
-		app->exit_return_mode = app->controls_return_mode;
-	else
-		app->exit_return_mode = app->mode;
+	app->exit_return_mode = app->mode;
 	app_set_status(app, "Exit requires A");
 	app->mode = APP_MODE_CONFIRM_EXIT;
 }

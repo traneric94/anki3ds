@@ -40,6 +40,8 @@ that the card did not advance.
 Press `Y` from deck select, load error, unrevealed review cards, summary,
 actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
 `SELECT` to return. On a revealed review card, `Y` is reserved for Again.
+If `START` opens exit confirmation from the controls screen, canceling exit
+returns to the controls screen.
 
 ## Actions Flow
 
