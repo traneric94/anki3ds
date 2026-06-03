@@ -362,8 +362,9 @@ review-state load still leaves the deck on the reset-needed summary; settings
 changes do not make an unsafe review queue visible.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
-daily limits survive relaunch. New-card limits apply to unstarted new cards.
-Review limits apply to unstarted normal review cards. Zero-day
+daily limits survive relaunch. New-card limits apply to unstarted new cards in
+deck order. Review limits apply to unstarted normal review cards by review
+priority: older due days first, then deck order as the tiebreaker. Zero-day
 learning/relearning cards remain due even when the review limit is full, and a
 card already started today is allowed to remain due. This lets same-day Again
 loops finish instead of hiding half-reviewed cards behind a limit.

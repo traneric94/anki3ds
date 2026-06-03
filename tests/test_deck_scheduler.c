@@ -1725,6 +1725,72 @@ static void test_scheduler_limits_review_cards(void)
 	check(session.due_count == 0, "review limit hides remaining review cards");
 }
 
+static void test_scheduler_review_limit_uses_due_priority(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 3, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 40,
+			TEST_TODAY - 10
+		),
+		"less-overdue review restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY - 7,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 40,
+			TEST_TODAY - 10
+		),
+		"most-overdue review restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			2,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY - 3,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 40,
+			TEST_TODAY - 10
+		),
+		"second-overdue review restores"
+	);
+	scheduler_set_daily_limits(&session, 0, 1);
+
+	check(!scheduler_card_is_due(&session, 0), "review limit hides less-overdue card");
+	check(scheduler_card_is_due(&session, 1), "review limit exposes oldest review");
+	check(!scheduler_card_is_due(&session, 2), "review limit hides second-overdue card");
+	check(session.due_count == 1, "review limit exposes one priority review");
+	check(scheduler_current_index(&session) == 1, "oldest review wins under limit");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.review_count_today == 1, "priority review counts against limit");
+	check(session.due_count == 0, "review limit is exhausted after priority review");
+}
+
 static void test_scheduler_restore_repositions_to_due_card(void)
 {
 	struct scheduler_session session;
@@ -4413,6 +4479,7 @@ int main(void)
 	test_scheduler_day_change_resets_new_limit();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
+	test_scheduler_review_limit_uses_due_priority();
 	test_scheduler_restore_repositions_to_due_card();
 	test_scheduler_day_change_resets_review_limit();
 	test_scheduler_prioritizes_learning_cards();

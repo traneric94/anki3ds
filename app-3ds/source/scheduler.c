@@ -153,21 +153,16 @@ static bool scheduler_card_is_unstarted_review(
 	);
 }
 
-static unsigned int scheduler_count_unstarted_due_before(
+static unsigned int scheduler_count_unstarted_new_before(
 	const struct scheduler_session *session,
-	size_t index,
-	bool count_new
+	size_t index
 )
 {
 	unsigned int count = 0;
 
 	for (size_t due_index = 0; due_index < index; due_index++)
 	{
-		bool due = count_new ?
-			scheduler_card_is_unstarted_new(session, due_index) :
-			scheduler_card_is_unstarted_review(session, due_index);
-
-		if (due)
+		if (scheduler_card_is_unstarted_new(session, due_index))
 			count++;
 	}
 
@@ -236,6 +231,36 @@ static bool scheduler_due_candidate_is_better(
 		return candidate->due_day < best->due_day;
 
 	return candidate_order < best_order;
+}
+
+static unsigned int scheduler_count_unstarted_due_reviews_before_priority(
+	const struct scheduler_session *session,
+	size_t index
+)
+{
+	unsigned int count = 0;
+
+	for (size_t due_index = 0; due_index < session->card_count; due_index++)
+	{
+		if (due_index == index)
+			continue;
+		if (!scheduler_card_is_unstarted_review(session, due_index))
+			continue;
+		if (
+			scheduler_due_candidate_is_better(
+				session,
+				due_index,
+				due_index,
+				index,
+				index
+			)
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
 }
 
 static bool scheduler_find_best_due(
@@ -396,7 +421,7 @@ bool scheduler_card_is_due(const struct scheduler_session *session, size_t index
 			session->new_count_today,
 			session->new_limit
 		);
-		return scheduler_count_unstarted_due_before(session, index, true) < remaining;
+		return scheduler_count_unstarted_new_before(session, index) < remaining;
 	}
 
 	if (scheduler_card_started_new_today(session, &session->cards[index]))
@@ -410,7 +435,10 @@ bool scheduler_card_is_due(const struct scheduler_session *session, size_t index
 		session->review_count_today,
 		session->review_limit
 	);
-	return scheduler_count_unstarted_due_before(session, index, false) < remaining;
+	return scheduler_count_unstarted_due_reviews_before_priority(
+		session,
+		index
+	) < remaining;
 }
 
 bool scheduler_restore_card(
