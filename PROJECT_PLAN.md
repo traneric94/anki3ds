@@ -35,7 +35,7 @@ Current stack:
 
 - language: Python
 - input: Anki-style plain-text export
-- later input: `.apkg` or AnkiConnect, if worthwhile
+- excluded input for this scope: `.apkg`, AnkiConnect, direct collection reads
 
 Responsibilities:
 
@@ -198,7 +198,8 @@ Do not attempt FSRS parity in the first version.
 
 ## Key Risks
 
-- Full Anki templates can be arbitrary HTML/CSS and sometimes JavaScript.
+- Full Anki templates, `.apkg` parsing, AnkiConnect sync, and media handling
+  are intentionally out of scope for this text-card project.
 - Unicode text and fonts matter for language-learning decks.
 - Original 3DS hardware has limited screen space and performance.
 - SD cards can fail, so save files need conservative writes.
