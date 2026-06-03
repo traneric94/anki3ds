@@ -448,6 +448,9 @@ Algorithm:
 13. When converter-generated split chunks become one single-folder output,
     combine matching `state.tsv` rows and copy daily-limit settings into the
     new single folder before deleting the obsolete chunk folders.
+14. When split output stays split but card boundaries move between numbered
+    chunks, rewrite matching `state.tsv` rows into the chunk that now owns each
+    card.
 
 During same-folder re-import, the converter deliberately does not open or
 rewrite existing `state.tsv`, `review-log.tsv`, or `settings.tsv`, so review

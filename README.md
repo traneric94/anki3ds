@@ -242,6 +242,9 @@ before the obsolete single folder is removed.
 When split chunks shrink back into a single deck, matching state rows from the
 obsolete chunks and daily-limit settings are copied into the new single folder
 before the chunks are removed.
+When split output remains split but card boundaries move between numbered
+chunks, matching state rows are rewritten into the chunk that now owns each
+card.
 
 ## Current Status
 

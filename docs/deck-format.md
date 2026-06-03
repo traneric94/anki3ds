@@ -91,6 +91,9 @@ Rules:
 - if converter-generated split chunks shrink back into one deck, matching saved
   state rows and daily-limit settings are copied into the new single folder
   before the obsolete chunks are removed
+- if split output remains split but card boundaries move between numbered
+  chunks, matching saved state rows are rewritten into the chunk that now owns
+  each card
 - text-only re-import removes a stale `media/` directory from the active output
   folder while preserving progress and settings files
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping

@@ -647,15 +647,42 @@ def collect_matching_state_rows(
     return matching_rows
 
 
+def collect_state_rows(source_dirs: list[Path], state_filename: str) -> list[str]:
+    rows: list[str] = []
+    seen_card_ids: set[str] = set()
+
+    for source_dir in source_dirs:
+        source_path = source_dir / state_filename
+
+        if not source_path.is_file():
+            continue
+
+        try:
+            parsed_state = parse_state_rows(source_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        if parsed_state is None:
+            continue
+
+        for row in parsed_state[1]:
+            card_id = state_row_card_id(row)
+
+            if card_id in seen_card_ids:
+                continue
+
+            seen_card_ids.add(card_id)
+            rows.append(row)
+
+    return rows
+
+
 def migrate_combined_review_state_file(
     source_dirs: list[Path],
     target_path: Path,
     state_filename: str,
     target_card_ids: set[str],
 ) -> None:
-    if target_path.exists():
-        return
-
     matching_rows = collect_matching_state_rows(
         source_dirs,
         state_filename,
@@ -703,6 +730,51 @@ def migrate_single_deck_progress_to_split_outputs(
                 chunk_output / settings_filename,
                 replace_default_settings,
             )
+
+
+def migrate_split_progress_to_split_outputs(
+    chunk_cards: dict[Path, list[ConvertedCard]],
+    source_dirs: list[Path],
+    existing_outputs: set[Path],
+) -> None:
+    if not source_dirs:
+        return
+
+    source_rows = {
+        state_filename: collect_state_rows(source_dirs, state_filename)
+        for state_filename in REVIEW_STATE_FILES
+    }
+
+    for chunk_output, cards in chunk_cards.items():
+        target_card_ids = {card.card_id for card in cards}
+        replace_default_settings = chunk_output not in existing_outputs
+
+        for state_filename in REVIEW_STATE_FILES:
+            matching_rows = [
+                row
+                for row in source_rows[state_filename]
+                if state_row_card_id(row) in target_card_ids
+            ]
+
+            if matching_rows:
+                (chunk_output / state_filename).write_text(
+                    format_state_rows(matching_rows, True),
+                    encoding="utf-8",
+                )
+
+        for settings_filename in SETTINGS_FILES:
+            for source_dir in source_dirs:
+                source_path = source_dir / settings_filename
+
+                if not source_path.is_file():
+                    continue
+
+                copy_settings_file(
+                    source_path,
+                    chunk_output / settings_filename,
+                    replace_default_settings,
+                )
+                break
 
 
 def migrate_split_progress_to_single_output(
@@ -766,6 +838,23 @@ def obsolete_converter_split_outputs(
     )
 
 
+def existing_converter_split_outputs(output_dir: Path, deck_id: str) -> list[Path]:
+    parent = output_dir.parent
+
+    if not parent.is_dir():
+        return []
+
+    return sorted(
+        (
+            entry
+            for entry in parent.iterdir()
+            if split_chunk_name_is_for_base(entry.name, deck_id)
+            and converter_deck_dir_is_removable(entry)
+        ),
+        key=lambda path: path.name,
+    )
+
+
 def remove_obsolete_split_outputs(
     output_dir: Path,
     deck_id: str,
@@ -803,6 +892,7 @@ def write_split_decks(
         remove_obsolete_split_outputs(output_dir, deck_id, {output_dir})
         return [output_dir]
 
+    old_split_outputs = existing_converter_split_outputs(output_dir, deck_id)
     if not deck_id_is_valid(output_dir.name):
         raise ValueError(
             "output deck folder name must use letters, numbers, '_' or '-'"
@@ -843,6 +933,11 @@ def write_split_decks(
         chunk_cards_by_path[chunk_output] = chunk_cards
         written_paths.append(chunk_output)
 
+    migrate_split_progress_to_split_outputs(
+        chunk_cards_by_path,
+        old_split_outputs,
+        existing_outputs,
+    )
     migrate_single_deck_progress_to_split_outputs(
         output_dir,
         chunk_cards_by_path,
