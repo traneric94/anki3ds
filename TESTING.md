@@ -38,6 +38,7 @@ make verify-ci
 make verify-sample-decks
 make verify-local
 make package-sd
+make verify-package-sd
 make install-local-sd
 make install-local-sample-deck
 make install-local-sample-decks
@@ -60,9 +61,13 @@ Verification gates:
   files, matching `deck.json` metadata, valid `settings.tsv`, five-field
   text-card rows, duplicate card IDs, and accidentally committed progress
   files. The default tracked sample set is text-only.
-- `make verify-local` is the local pre-checkpoint gate. It runs tests and
-  sample-deck verification, then builds the 3DS app and stages the local SD
-  mirror with sample decks. It requires the local 3DS toolchain.
+- `make verify-package-sd` builds the copy-ready `dist/sdmc/` payload and
+  verifies that it contains the app artifacts, the default text decks, valid
+  five-field text-card rows, valid settings, no optional media fixture, and no
+  generated progress files.
+- `make verify-local` is the local pre-checkpoint gate. It runs tests,
+  sample-deck verification, local SD staging, and package-payload verification.
+  It requires the local 3DS toolchain.
 - `make package-sd` builds a clean SD-card payload under `dist/sdmc/` with the
   app artifact and tracked sample decks, but without generated progress files.
 
@@ -287,8 +292,8 @@ Before any tagged checkpoint:
 - docs match the current artifact
 - sample decks are tiny and original
 - `make verify-sample-decks` passes
-- `make package-sd` stages the expected SD payload when preparing files for
-  manual copy or release
+- `make verify-package-sd` stages and verifies the expected SD payload when
+  preparing files for manual copy or release
 - no personal Anki data is committed
 - no copyrighted media is committed
 - build instructions are current

@@ -9,8 +9,9 @@ APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo sample
 OPTIONAL_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
+VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
-.PHONY: all app-3ds clean test test-host test-converter verify-ci verify-local verify-sample-decks check-package-sd-root package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds clean test test-host test-converter verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
 all: app-3ds
 
@@ -49,22 +50,12 @@ test-converter:
 
 verify-ci: test verify-sample-decks
 
-verify-local: test verify-sample-decks install-local-sd
+verify-local: test verify-sample-decks install-local-sd verify-package-sd
 
 verify-sample-decks:
 	@set -e; \
 	for deck in $(SAMPLE_DECKS); do \
-		deck_dir="sample-decks/$$deck"; \
-		test -d "$$deck_dir" || { echo "$$deck_dir missing"; exit 1; }; \
-		test -f "$$deck_dir/deck.json" || { echo "$$deck_dir/deck.json missing"; exit 1; }; \
-		test -f "$$deck_dir/cards.tsv" || { echo "$$deck_dir/cards.tsv missing"; exit 1; }; \
-		test -f "$$deck_dir/settings.tsv" || { echo "$$deck_dir/settings.tsv missing"; exit 1; }; \
-		python3 -c 'import json, pathlib, sys; deck = sys.argv[1]; root = pathlib.Path("sample-decks") / deck; data = json.loads((root / "deck.json").read_text(encoding="utf-8")); rows = (root / "cards.tsv").read_text(encoding="utf-8").splitlines(); errors = []; errors += [] if data.get("format_version") == 1 else [f"{root}/deck.json: format_version must be 1"]; errors += [] if data.get("deck_id") == deck else [f"{root}/deck.json: deck_id must match folder name"]; errors += [] if isinstance(data.get("name"), str) and data.get("name") else [f"{root}/deck.json: name is required"]; errors += [] if data.get("card_count") == len(rows) else [f"{root}/deck.json: card_count must match cards.tsv row count"]; sys.exit("\n".join(errors)) if errors else None' "$$deck"; \
-		awk -F '\t' 'NF != 5 { printf "%s:%d: expected 5 text-card fields, got %d\n", FILENAME, NR, NF; bad = 1 } $$1 == "" { printf "%s:%d: card_id is required\n", FILENAME, NR; bad = 1 } seen[$$1]++ { printf "%s:%d: duplicate card_id %s\n", FILENAME, NR, $$1; bad = 1 } END { exit bad }' "$$deck_dir/cards.tsv"; \
-		awk -F '\t' '$$1 == "new_limit" && $$2 ~ /^[0-9]+$$/ { new += 1; next } $$1 == "review_limit" && $$2 ~ /^[0-9]+$$/ { review += 1; next } { printf "%s:%d: expected new_limit or review_limit with a non-negative integer value\n", FILENAME, NR; bad = 1 } END { if (new != 1 || review != 1 || NR != 2) { printf "%s: expected exactly one new_limit row and one review_limit row\n", FILENAME; bad = 1 } exit bad }' "$$deck_dir/settings.tsv"; \
-		for progress_file in state.tsv state.tsv.tmp state.tsv.bak review-log.tsv review-log.tsv.tmp review-log.tsv.bak settings.tsv.tmp settings.tsv.bak; do \
-			test ! -e "$$deck_dir/$$progress_file" || { echo "$$deck_dir/$$progress_file must not be committed with tracked samples"; exit 1; }; \
-		done; \
+		$(VERIFY_TEXT_DECK) "sample-decks/$$deck"; \
 	done
 
 check-package-sd-root:
@@ -86,6 +77,18 @@ package-sd: check-package-sd-root verify-sample-decks app-3ds
 		deck_dir="$(PACKAGE_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \
+	done
+
+verify-package-sd: package-sd
+	@set -e; \
+	app_dir="$(PACKAGE_SDMC)/$(APP_SD_DIR)"; \
+	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
+	test -f "$$app_dir/anki3ds.smdh" || { echo "$$app_dir/anki3ds.smdh missing"; exit 1; }; \
+	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be packaged by default"; exit 1; }; \
+	done; \
+	for deck in $(SAMPLE_DECKS); do \
+		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \
 	done
 
 install-local-sd: app-3ds install-local-sample-decks

@@ -24,6 +24,15 @@ text-card rows, duplicate card IDs, and accidentally committed progress files
 for the default text-only sample set.
 GitHub Actions runs the same check through `make verify-ci`.
 
+The same text-deck rules are applied to the copy-ready SD payload by:
+
+```sh
+make verify-package-sd
+```
+
+That target also rejects the optional `media-demo` fixture from the default
+packaged payload.
+
 ## Install And Fresh Passes
 
 Local SD mirror:

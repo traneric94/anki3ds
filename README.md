@@ -78,6 +78,15 @@ make package-sd
 This includes `anki3ds.3dsx`, `anki3ds.smdh`, and the tracked sample decks
 without generated progress files. `PACKAGE_SDMC` must remain under `dist/`
 because this target cleans its packaged app directory before staging.
+To build and verify that copy-ready payload in one step, run:
+
+```sh
+make verify-package-sd
+```
+
+That check confirms the staged payload has the app artifacts, only the default
+text sample decks, valid five-field text-card rows, valid settings, and no
+generated progress files.
 
 For a fresh sample-deck pass, use:
 
@@ -125,8 +134,10 @@ To verify the tracked sample decks without building the 3DS app:
 make verify-sample-decks
 ```
 
-See [sample-decks/README.md](sample-decks/README.md) for the sample-deck
-workflow and what each tracked deck is meant to cover.
+Both `verify-sample-decks` and `verify-package-sd` use
+`tools/verify_text_deck.py` for the text-deck checks. See
+[sample-decks/README.md](sample-decks/README.md) for the sample-deck workflow
+and what each tracked deck is meant to cover.
 
 To launch the current `.3dsx` in Azahar from a normal macOS session:
 
