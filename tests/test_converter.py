@@ -191,8 +191,10 @@ class ConverterTests(unittest.TestCase):
             output = Path(temp_dir) / "sample"
             output.mkdir()
             state = output / "state.tsv"
+            review_log = output / "review-log.tsv"
             settings = output / "settings.tsv"
             state.write_text("existing-state\n", encoding="utf-8")
+            review_log.write_text("existing-log\n", encoding="utf-8")
             settings.write_text("new_limit\t1\nreview_limit\t2\n", encoding="utf-8")
 
             write_deck(output, "sample", "Sample", cards)
@@ -204,6 +206,10 @@ class ConverterTests(unittest.TestCase):
                 (output / "cards.tsv").read_text(encoding="utf-8").startswith("card-")
             )
             self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertEqual(
+                review_log.read_text(encoding="utf-8"),
+                "existing-log\n",
+            )
             self.assertEqual(
                 settings.read_text(encoding="utf-8"),
                 "new_limit\t1\nreview_limit\t2\n",
@@ -625,13 +631,19 @@ class ConverterTests(unittest.TestCase):
             first_chunk = root / "large-01"
             first_chunk.mkdir()
             state = first_chunk / "state.tsv"
+            review_log = first_chunk / "review-log.tsv"
             settings = first_chunk / "settings.tsv"
             state.write_text("existing-state\n", encoding="utf-8")
+            review_log.write_text("existing-log\n", encoding="utf-8")
             settings.write_text("new_limit\t3\nreview_limit\t4\n", encoding="utf-8")
 
             write_split_decks(root / "large", "large", "Large", cards)
 
             self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertEqual(
+                review_log.read_text(encoding="utf-8"),
+                "existing-log\n",
+            )
             self.assertEqual(
                 settings.read_text(encoding="utf-8"),
                 "new_limit\t3\nreview_limit\t4\n",
