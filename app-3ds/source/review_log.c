@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#define REVIEW_LOG_ROW_FORMAT \
+	"%ld\t%u\t%s\t%s\t%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n"
+
 static const char *review_log_rating_field(enum scheduler_rating rating)
 {
 	switch (rating)
@@ -69,11 +72,73 @@ const char *review_log_event_name(enum review_log_event event)
 	return NULL;
 }
 
+static int review_log_format_length(
+	const struct review_log_entry *entry,
+	const char *event_name,
+	const char *rating
+)
+{
+	return snprintf(
+		NULL,
+		0,
+		REVIEW_LOG_ROW_FORMAT,
+		(long)entry->timestamp,
+		entry->day,
+		event_name,
+		entry->card_id,
+		rating,
+		entry->before.review_count,
+		entry->before.due_day,
+		entry->before.interval_days,
+		entry->before.ease_permille,
+		entry->before.lapses,
+		entry->before.suspended ? 1u : 0u,
+		entry->after.review_count,
+		entry->after.due_day,
+		entry->after.interval_days,
+		entry->after.ease_permille,
+		entry->after.lapses,
+		entry->after.suspended ? 1u : 0u
+	);
+}
+
+static int review_log_write_entry(
+	FILE *file,
+	const struct review_log_entry *entry,
+	const char *event_name,
+	const char *rating
+)
+{
+	return fprintf(
+		file,
+		REVIEW_LOG_ROW_FORMAT,
+		(long)entry->timestamp,
+		entry->day,
+		event_name,
+		entry->card_id,
+		rating,
+		entry->before.review_count,
+		entry->before.due_day,
+		entry->before.interval_days,
+		entry->before.ease_permille,
+		entry->before.lapses,
+		entry->before.suspended ? 1u : 0u,
+		entry->after.review_count,
+		entry->after.due_day,
+		entry->after.interval_days,
+		entry->after.ease_permille,
+		entry->after.lapses,
+		entry->after.suspended ? 1u : 0u
+	);
+}
+
 bool review_log_append(const char *path, const struct review_log_entry *entry)
 {
 	FILE *file;
 	const char *event_name;
 	const char *rating;
+	long file_size;
+	int row_size;
 
 	if (path == NULL || entry == NULL)
 		return false;
@@ -93,31 +158,31 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 		rating = "-";
 	}
 
-	file = fopen(path, "a");
+	row_size = review_log_format_length(entry, event_name, rating);
+	if (row_size < 0 || row_size > REVIEW_LOG_MAX_BYTES)
+		return false;
+
+	file = fopen(path, "a+");
 	if (file == NULL)
 		return false;
 
-	if (fprintf(
-		file,
-		"%ld\t%u\t%s\t%s\t%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n",
-		(long)entry->timestamp,
-		entry->day,
-		event_name,
-		entry->card_id,
-		rating,
-		entry->before.review_count,
-		entry->before.due_day,
-		entry->before.interval_days,
-		entry->before.ease_permille,
-		entry->before.lapses,
-		entry->before.suspended ? 1u : 0u,
-		entry->after.review_count,
-		entry->after.due_day,
-		entry->after.interval_days,
-		entry->after.ease_permille,
-		entry->after.lapses,
-		entry->after.suspended ? 1u : 0u
-	) < 0)
+	if (fseek(file, 0, SEEK_END) != 0)
+	{
+		fclose(file);
+		return false;
+	}
+
+	file_size = ftell(file);
+	if (
+		file_size < 0 ||
+		file_size > REVIEW_LOG_MAX_BYTES - (long)row_size
+	)
+	{
+		fclose(file);
+		return false;
+	}
+
+	if (review_log_write_entry(file, entry, event_name, rating) < 0)
 	{
 		fclose(file);
 		return false;

@@ -42,7 +42,9 @@ static int failures;
 static void write_file(const char *path, const char *content);
 static void write_numbered_cards_file(const char *path, size_t card_count);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
+static void write_repeated_byte_file(const char *path, size_t size);
 static bool file_equals(const char *path, const char *content);
+static long file_size(const char *path);
 static void build_test_deck(struct deck *deck);
 
 static void check(bool condition, const char *message)
@@ -2182,6 +2184,35 @@ static void test_review_log_delete_removes_log_file(void)
 	check(!review_log_delete(NULL), "review log delete rejects null path");
 }
 
+static void test_review_log_rejects_full_log(void)
+{
+	struct review_log_entry entry;
+	struct scheduler_session session;
+
+	remove(TEST_REVIEW_LOG_PATH);
+	scheduler_init(&session, 1, TEST_TODAY);
+
+	memset(&entry, 0, sizeof(entry));
+	entry.timestamp = 12345;
+	entry.day = TEST_TODAY;
+	entry.event = REVIEW_LOG_EVENT_RATING;
+	entry.card_id = "card-1";
+	entry.rating = SCHEDULER_RATING_GOOD;
+	entry.before = session.cards[0];
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	entry.after = session.cards[0];
+
+	write_repeated_byte_file(TEST_REVIEW_LOG_PATH, (size_t)REVIEW_LOG_MAX_BYTES);
+
+	check(!review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log rejects full file");
+	check(
+		file_size(TEST_REVIEW_LOG_PATH) == REVIEW_LOG_MAX_BYTES,
+		"review log leaves full file unchanged"
+	);
+
+	remove(TEST_REVIEW_LOG_PATH);
+}
+
 static void test_review_state_bad_load_does_not_mutate_session(void)
 {
 	struct deck deck;
@@ -2531,6 +2562,28 @@ static void write_binary_file(const char *path, const unsigned char *content, si
 	fclose(file);
 }
 
+static void write_repeated_byte_file(const char *path, size_t size)
+{
+	FILE *file = fopen(path, "wb");
+	bool failed = false;
+
+	check(file != NULL, "test repeated byte file opens");
+	if (file == NULL)
+		return;
+
+	for (size_t index = 0; index < size; index++)
+	{
+		if (fputc('x', file) == EOF)
+		{
+			failed = true;
+			break;
+		}
+	}
+
+	check(!failed, "test repeated byte file writes");
+	fclose(file);
+}
+
 static bool file_equals(const char *path, const char *content)
 {
 	char buffer[512];
@@ -2552,6 +2605,24 @@ static bool file_equals(const char *path, const char *content)
 	matches = strcmp(buffer, content) == 0 && fgetc(file) == EOF;
 	fclose(file);
 	return matches;
+}
+
+static long file_size(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+	long size;
+
+	if (file == NULL)
+		return -1;
+	if (fseek(file, 0, SEEK_END) != 0)
+	{
+		fclose(file);
+		return -1;
+	}
+
+	size = ftell(file);
+	fclose(file);
+	return size;
 }
 
 static void load_entry_deck(
@@ -3317,6 +3388,7 @@ int main(void)
 	test_storage_delete_save_files_removes_related_files();
 	test_review_log_appends_study_events();
 	test_review_log_delete_removes_log_file();
+	test_review_log_rejects_full_log();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();

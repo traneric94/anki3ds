@@ -6,6 +6,8 @@
 
 #include "scheduler.h"
 
+#define REVIEW_LOG_MAX_BYTES 262144L
+
 enum review_log_event
 {
 	REVIEW_LOG_EVENT_RATING,
