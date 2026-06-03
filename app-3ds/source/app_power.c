@@ -14,14 +14,24 @@ void app_power_schedule_next_battery_poll_after_sample(
 	enum app_power_battery_sample_result result
 )
 {
-	if (next_poll_time == NULL || now == (time_t)-1)
+	if (next_poll_time == NULL)
 		return;
 
 	if (result == APP_POWER_BATTERY_SAMPLE_READ_FAILED)
 	{
+		if (now == (time_t)-1)
+		{
+			/* Retry as soon as a real clock reading appears. */
+			*next_poll_time = APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS;
+			return;
+		}
+
 		*next_poll_time = now + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS;
 		return;
 	}
+
+	if (now == (time_t)-1)
+		return;
 
 	app_power_schedule_next_battery_poll(next_poll_time, now);
 }
