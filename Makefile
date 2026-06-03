@@ -37,8 +37,8 @@ test-host:
 		app-3ds/source/review_state.c \
 		app-3ds/source/scheduler.c \
 		app-3ds/source/storage.c \
-		-o /private/tmp/anki3ds-test-deck-scheduler
-	/private/tmp/anki3ds-test-deck-scheduler
+		-o /tmp/anki3ds-test-deck-scheduler
+	/tmp/anki3ds-test-deck-scheduler
 
 test-converter:
 	python3 -m unittest tests/test_converter.py

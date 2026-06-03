@@ -23,19 +23,19 @@
 #include "scheduler.h"
 #include "storage.h"
 
-#define TEST_STATE_PATH "/private/tmp/anki3ds-review-state-test.tsv"
+#define TEST_STATE_PATH "/tmp/anki3ds-review-state-test.tsv"
 #define TEST_STATE_TEMP_PATH TEST_STATE_PATH ".tmp"
 #define TEST_STATE_BACKUP_PATH TEST_STATE_PATH ".bak"
-#define TEST_SETTINGS_PATH "/private/tmp/anki3ds-settings-test.tsv"
+#define TEST_SETTINGS_PATH "/tmp/anki3ds-settings-test.tsv"
 #define TEST_SETTINGS_TEMP_PATH TEST_SETTINGS_PATH ".tmp"
 #define TEST_SETTINGS_BACKUP_PATH TEST_SETTINGS_PATH ".bak"
-#define TEST_STORAGE_PATH "/private/tmp/anki3ds-storage-test.tsv"
+#define TEST_STORAGE_PATH "/tmp/anki3ds-storage-test.tsv"
 #define TEST_STORAGE_TEMP_PATH TEST_STORAGE_PATH ".tmp"
 #define TEST_STORAGE_BACKUP_PATH TEST_STORAGE_PATH ".bak"
-#define TEST_CARDS_PATH "/private/tmp/anki3ds-cards-test.tsv"
-#define TEST_MEDIA_PATH "/private/tmp/anki3ds-media-test.a3i"
-#define TEST_REVIEW_LOG_PATH "/private/tmp/anki3ds-review-log-test.tsv"
-#define TEST_DECK_ROOT "/private/tmp/anki3ds-deck-index-test"
+#define TEST_CARDS_PATH "/tmp/anki3ds-cards-test.tsv"
+#define TEST_MEDIA_PATH "/tmp/anki3ds-media-test.a3i"
+#define TEST_REVIEW_LOG_PATH "/tmp/anki3ds-review-log-test.tsv"
+#define TEST_DECK_ROOT "/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 #define TEST_SECONDS_PER_DAY 86400
 

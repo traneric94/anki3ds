@@ -152,6 +152,10 @@ malformed review state blocks normal saves and suppresses selector due counts
 until deck progress is reset. Opening a deck with malformed state should land
 on a reset-needed summary instead of the normal review queue.
 
+GitHub Actions runs `make test` on pushes and pull requests. That covers the
+portable C host suite plus converter tests; emulator and hardware checks remain
+manual checkpoint steps.
+
 Run converter tests with:
 
 ```sh
