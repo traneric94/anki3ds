@@ -97,8 +97,10 @@ make prepare-local-samples-fresh
 
 That installs the build and tracked sample decks, then removes only sample-deck
 `state.tsv` files plus `review-log.tsv` recovery files from the local SD
-mirror. It does not remove progress for personal decks outside the tracked
-sample ids.
+mirror. During sample installation, stale tracked-sample `settings.tsv.tmp` and
+`settings.tsv.bak` recovery files are also removed so the installed
+`settings.tsv` is the only daily-limit source. It does not remove progress for
+personal decks outside the tracked sample ids.
 
 This also installs the tracked sample decks to:
 

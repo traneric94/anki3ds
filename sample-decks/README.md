@@ -64,8 +64,9 @@ review-log.tsv.bak
 
 They do not clear progress for personal decks outside the tracked sample ids.
 The install targets replace source-owned files such as `deck.json`,
-`cards.tsv`, and `settings.tsv`, while preserving `state.tsv` and
-`review-log.tsv` unless a fresh target is used.
+`cards.tsv`, and `settings.tsv`, remove stale `settings.tsv.tmp` and
+`settings.tsv.bak`, and preserve `state.tsv` and `review-log.tsv` unless a
+fresh target is used.
 They also remove the old optional `media-demo` fixture from the installed
 sample root so the default pass remains text-only.
 The singular install targets remain compatibility aliases, but the plural
