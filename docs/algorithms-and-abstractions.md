@@ -443,17 +443,23 @@ Algorithm:
 11. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
     final files with rollback if either commit step fails.
 12. Write default `settings.tsv` if it does not already exist.
+13. For `--split-large-decks`, remove obsolete converter-generated sibling
+    chunk folders after the current single-folder or split-folder output has
+    been written.
 
 The converter deliberately does not open or rewrite existing `state.tsv`,
 `review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,
-and deck-specific daily limits survive re-imports into the same deck folder. To
-keep progress attached to edited card text, pass stable source ID fields during
-conversion; otherwise content-derived fallback IDs change when the normalized
-front/back/tags content changes. The folder id is the runtime deck id on the
-3DS, so the converter defaults `deck_id` from the output folder name and
-rejects mismatches. Current converter media support is deliberately narrow: PPM
-`P6` in, `.a3i` out. Rich HTML/template rendering and Anki collection parsing
-still belong on the desktop side rather than on the 3DS.
+and deck-specific daily limits survive re-imports into the same deck folder.
+Obsolete split chunks are different: once the current import no longer writes a
+converter-generated chunk, that stale folder is removed so it does not remain
+studiable on the 3DS. To keep progress attached to edited card text, pass
+stable source ID fields during conversion; otherwise content-derived fallback
+IDs change when the normalized front/back/tags content changes. The folder id
+is the runtime deck id on the 3DS, so the converter defaults `deck_id` from the
+output folder name and rejects mismatches. Current converter media support is
+deliberately narrow: PPM `P6` in, `.a3i` out. Rich HTML/template rendering and
+Anki collection parsing still belong on the desktop side rather than on the
+3DS.
 
 ## C Boundaries We Want
 

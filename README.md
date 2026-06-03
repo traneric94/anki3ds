@@ -227,6 +227,11 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --split-large-decks
 ```
 
+On re-import with `--split-large-decks`, the converter removes stale
+converter-generated split siblings for that deck after the current output is
+written, so old chunks do not remain visible on the 3DS after a deck shrinks or
+changes between single-folder and split-folder output.
+
 Text cards are the supported daily-use scope. Optional media fields can be
 copied from existing `.a3i` images or converted from binary PPM `P6` images
 into the device-side `.a3i` format only when `--text-only` is omitted:

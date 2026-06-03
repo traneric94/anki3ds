@@ -254,6 +254,7 @@ Minimum converter tests:
 - keeps the daily-use import path focused on text cards
 - writes expected deck folder layout
 - preserves existing review state on re-import
+- removes stale converter-generated split chunks on re-import
 - preserves card IDs across text edits when stable source ID fields are supplied
 - reports conversion errors without Python tracebacks
 

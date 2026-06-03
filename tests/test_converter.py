@@ -1065,6 +1065,139 @@ class ConverterTests(unittest.TestCase):
                 "new_limit\t3\nreview_limit\t4\n",
             )
 
+    def test_write_split_decks_removes_stale_converter_chunks_after_shrink(self):
+        old_cards = convert_lines(
+            [
+                f"old front {index}\told back {index}"
+                for index in range(DECK_MAX_CARDS * 2 + 1)
+            ],
+            0,
+            1,
+            None,
+        )
+        new_cards = convert_lines(
+            [
+                f"new front {index}\tnew back {index}"
+                for index in range(DECK_MAX_CARDS + 1)
+            ],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            write_split_decks(output, "large", "Large", old_cards)
+            state = root / "large-02" / "state.tsv"
+            state.write_text("existing-state\n", encoding="utf-8")
+            self.assertTrue((root / "large-03").exists())
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            self.assertEqual(written_paths, [root / "large-01", root / "large-02"])
+            self.assertTrue((root / "large-01").exists())
+            self.assertTrue((root / "large-02").exists())
+            self.assertFalse((root / "large-03").exists())
+            self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+
+    def test_write_split_decks_removes_stale_chunks_when_deck_becomes_single(self):
+        old_cards = convert_lines(
+            [
+                f"old front {index}\told back {index}"
+                for index in range(DECK_MAX_CARDS + 1)
+            ],
+            0,
+            1,
+            None,
+        )
+        new_cards = convert_lines(
+            [f"new front {index}\tnew back {index}" for index in range(10)],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            write_split_decks(output, "large", "Large", old_cards)
+            self.assertTrue((root / "large-01").exists())
+            self.assertTrue((root / "large-02").exists())
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            self.assertEqual(written_paths, [output])
+            self.assertTrue(output.exists())
+            self.assertFalse((root / "large-01").exists())
+            self.assertFalse((root / "large-02").exists())
+
+            deck_json = json.loads((output / "deck.json").read_text(encoding="utf-8"))
+            self.assertEqual(deck_json["deck_id"], "large")
+            self.assertEqual(deck_json["card_count"], 10)
+
+    def test_write_split_decks_removes_stale_single_when_deck_becomes_split(self):
+        old_cards = convert_lines(
+            [f"old front {index}\told back {index}" for index in range(10)],
+            0,
+            1,
+            None,
+        )
+        new_cards = convert_lines(
+            [
+                f"new front {index}\tnew back {index}"
+                for index in range(DECK_MAX_CARDS + 1)
+            ],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            write_split_decks(output, "large", "Large", old_cards)
+            self.assertTrue(output.exists())
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            self.assertEqual(written_paths, [root / "large-01", root / "large-02"])
+            self.assertFalse(output.exists())
+            self.assertTrue((root / "large-01").exists())
+            self.assertTrue((root / "large-02").exists())
+
+    def test_write_split_decks_keeps_non_converter_matching_sibling(self):
+        cards = convert_lines(
+            [f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)],
+            0,
+            1,
+            None,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sibling = root / "large-99"
+            sibling.mkdir()
+            (sibling / "deck.json").write_text(
+                json.dumps(
+                    {
+                        "format_version": 1,
+                        "deck_id": "large-99",
+                        "created_by": "someone-else",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (sibling / "cards.tsv").write_text("custom\n", encoding="utf-8")
+
+            write_split_decks(root / "large", "large", "Large", cards)
+
+            self.assertTrue(sibling.exists())
+            self.assertEqual(
+                (sibling / "cards.tsv").read_text(encoding="utf-8"),
+                "custom\n",
+            )
+
     def test_write_split_decks_rejects_too_long_chunk_ids(self):
         cards = convert_lines(
             [f"front {index}\tback {index}" for index in range(DECK_MAX_CARDS + 1)],

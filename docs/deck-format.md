@@ -82,6 +82,8 @@ Rules:
 - current 3DS builds support at most 256 cards per deck
 - converter `--split-large-decks` writes oversized exports as up to 64 numbered
   sibling deck folders within this limit
+- split re-import removes stale converter-generated sibling chunks after the
+  current output is written
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
 - `tags` may use at most 127 UTF-8 bytes after unescaping
 - converter-generated `card_id` and `note_id` values are short stable hashes

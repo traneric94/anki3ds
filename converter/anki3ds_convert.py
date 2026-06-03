@@ -844,6 +844,56 @@ def split_deck_name(deck_name: str, chunk_index: int, chunk_count: int) -> str:
     return f"{deck_name} {chunk_index}/{chunk_count}"
 
 
+def split_chunk_name_is_for_base(name: str, base_deck_id: str) -> bool:
+    prefix = f"{base_deck_id}-"
+
+    if not name.startswith(prefix):
+        return False
+
+    suffix = name[len(prefix):]
+    return suffix != "" and suffix.isdigit()
+
+
+def converter_deck_dir_is_removable(deck_dir: Path) -> bool:
+    deck_json_path = deck_dir / "deck.json"
+
+    if not deck_dir.is_dir() or not deck_json_path.is_file():
+        return False
+
+    try:
+        deck_json = json.loads(deck_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    return (
+        isinstance(deck_json, dict)
+        and deck_json.get("created_by") == "anki3ds-converter"
+        and deck_json.get("deck_id") == deck_dir.name
+    )
+
+
+def remove_obsolete_split_outputs(
+    output_dir: Path,
+    deck_id: str,
+    current_outputs: set[Path],
+) -> None:
+    parent = output_dir.parent
+    candidates: list[Path] = []
+
+    if output_dir not in current_outputs:
+        candidates.append(output_dir)
+    if parent.is_dir():
+        for entry in parent.iterdir():
+            if entry in current_outputs:
+                continue
+            if split_chunk_name_is_for_base(entry.name, deck_id):
+                candidates.append(entry)
+
+    for candidate in candidates:
+        if converter_deck_dir_is_removable(candidate):
+            shutil.rmtree(candidate)
+
+
 def write_split_decks(
     output_dir: Path,
     deck_id: str,
@@ -853,6 +903,7 @@ def write_split_decks(
 ) -> list[Path]:
     if len(cards) <= DECK_MAX_CARDS:
         write_deck(output_dir, deck_id, deck_name, cards, media_root)
+        remove_obsolete_split_outputs(output_dir, deck_id, {output_dir})
         return [output_dir]
 
     if not deck_id_is_valid(output_dir.name):
@@ -889,6 +940,8 @@ def write_split_decks(
             media_root,
         )
         written_paths.append(chunk_output)
+
+    remove_obsolete_split_outputs(output_dir, deck_id, set(written_paths))
 
     return written_paths
 
