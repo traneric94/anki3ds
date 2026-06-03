@@ -72,7 +72,10 @@ counts, and suspended-card count for the selector. This keeps the deck list
 useful for daily study while preserving the fixed `DECK_INDEX_MAX_DECKS` and
 `DECK_MAX_CARDS` limits. The summary loader allocates its temporary deck and
 scheduler on the heap so larger supported decks do not consume a large 3DS stack
-frame during deck scanning.
+frame during deck scanning. If the deck loads but every available state file is
+malformed, the selector keeps the card count but suppresses due and suspended
+counts and shows a state error instead of presenting bad progress as a fresh
+review queue.
 
 ## Deck Loading
 

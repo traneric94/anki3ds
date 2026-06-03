@@ -2909,6 +2909,7 @@ static void remove_test_deck_dir(const char *deck_id)
 static void cleanup_deck_index_test_root(void)
 {
 	remove_test_deck_dir("alpha");
+	remove_test_deck_dir("bad-state");
 	remove_test_deck_dir("beta");
 	remove_test_deck_dir("broken");
 	remove_test_deck_dir("empty");
@@ -3096,6 +3097,45 @@ static void test_deck_summary_counts_due_cards(void)
 	cleanup_deck_index_test_root();
 }
 
+static void test_deck_summary_suppresses_bad_state_counts(void)
+{
+	struct deck_entry entry;
+	struct deck_summary summary;
+	char path[256];
+
+	cleanup_deck_index_test_root();
+	mkdir(TEST_DECK_ROOT, 0700);
+	snprintf(path, sizeof(path), "%s/bad-state", TEST_DECK_ROOT);
+	mkdir(path, 0700);
+
+	check(
+		deck_index_build_entry(&entry, TEST_DECK_ROOT, "bad-state"),
+		"bad state summary deck entry builds"
+	);
+	write_file(
+		entry.cards_path,
+		"card-1\tnote-1\tfront 1\tback 1\ttag\n"
+		"card-2\tnote-2\tfront 2\tback 2\ttag\n"
+	);
+	write_file(entry.state_path, "bad\n");
+
+	deck_summary_load(&summary, &entry, TEST_TODAY);
+
+	check(summary.deck_load_result == DECK_LOAD_OK, "bad state summary deck loads");
+	check(
+		summary.state_load_result == REVIEW_STATE_LOAD_BAD_FORMAT,
+		"bad state summary reports bad state"
+	);
+	check(summary.card_count == 2, "bad state summary keeps card count");
+	check(summary.due_count == 0, "bad state summary hides due count");
+	check(summary.new_due_count == 0, "bad state summary hides new count");
+	check(summary.learning_due_count == 0, "bad state summary hides learning count");
+	check(summary.review_due_count == 0, "bad state summary hides review count");
+	check(summary.suspended_count == 0, "bad state summary hides suspended count");
+
+	cleanup_deck_index_test_root();
+}
+
 static void test_deck_summary_from_session_counts_due_cards(void)
 {
 	struct scheduler_session session;
@@ -3164,6 +3204,18 @@ static void test_deck_summary_from_session_counts_due_cards(void)
 	);
 	check(summary.card_count == 0, "bad session summary clears card count");
 	check(summary.due_count == 0, "bad session summary clears due count");
+
+	deck_summary_from_session(
+		&summary,
+		DECK_LOAD_OK,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_BAD_FORMAT,
+		&session
+	);
+	check(summary.card_count == 4, "bad state session summary keeps card count");
+	check(summary.due_count == 0, "bad state session summary clears due count");
+	check(summary.new_due_count == 0, "bad state session summary clears new count");
+	check(summary.suspended_count == 0, "bad state session summary clears suspended count");
 }
 
 static void test_deck_summary_reports_load_error(void)
@@ -3477,6 +3529,7 @@ int main(void)
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
 	test_deck_summary_counts_due_cards();
+	test_deck_summary_suppresses_bad_state_counts();
 	test_deck_summary_from_session_counts_due_cards();
 	test_deck_summary_reports_load_error();
 	test_daily_use_workflow_persists_two_decks();

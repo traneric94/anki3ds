@@ -416,6 +416,11 @@ static bool app_command_pressed(unsigned int buttons, unsigned int command_butto
 	return app_controls_command_pressed(buttons, command_button);
 }
 
+static bool deck_summary_state_allows_study(const struct deck_summary *summary)
+{
+	return review_state_load_result_allows_save(summary->state_load_result);
+}
+
 static const struct card *current_card(const struct app_state *app)
 {
 	if (!scheduler_has_current(&app->session))
@@ -905,7 +910,10 @@ static void draw_deck_select_screen(const struct app_state *app)
 				app->deck_index.entries[index].display_name,
 				APP_LAYOUT_DECK_NAME_SELECTOR_WIDTH
 			);
-			if (summary->deck_load_result == DECK_LOAD_OK)
+			if (
+				summary->deck_load_result == DECK_LOAD_OK &&
+				deck_summary_state_allows_study(summary)
+			)
 			{
 				printf(
 					" N:%lu L:%lu R:%lu S:%lu",
@@ -914,6 +922,10 @@ static void draw_deck_select_screen(const struct app_state *app)
 					(unsigned long)summary->review_due_count,
 					(unsigned long)summary->suspended_count
 				);
+			}
+			else if (summary->deck_load_result == DECK_LOAD_OK)
+			{
+				printf(" state error");
 			}
 			else
 			{
@@ -1385,7 +1397,10 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[7;1HSELECT: rescan decks");
 			printf("\x1b[9;1HSTART: confirm exit");
 			printf("\x1b[11;1HY: controls");
-			if (summary->deck_load_result == DECK_LOAD_OK)
+			if (
+				summary->deck_load_result == DECK_LOAD_OK &&
+				deck_summary_state_allows_study(summary)
+			)
 			{
 				printf(
 					"\x1b[12;1HDue: N %lu  L %lu  R %lu",
@@ -1403,6 +1418,18 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					(unsigned long)summary->suspended_count
 				);
 				draw_due_legend(18, true);
+			}
+			else if (summary->deck_load_result == DECK_LOAD_OK)
+			{
+				printf(
+					"\x1b[12;1HState: %s",
+					review_state_load_result_name(summary->state_load_result)
+				);
+				printf("\x1b[14;1HOpen deck, then reset progress.");
+				printf(
+					"\x1b[16;1HCards: %lu",
+					(unsigned long)summary->card_count
+				);
 			}
 			else
 			{

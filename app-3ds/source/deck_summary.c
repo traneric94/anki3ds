@@ -55,6 +55,9 @@ void deck_summary_from_session(
 		return;
 
 	summary->card_count = session->card_count;
+	if (!review_state_load_result_allows_save(state_load_result))
+		return;
+
 	summary->due_count = session->due_count;
 	count_due_card_types(summary, session);
 	summary->suspended_count = scheduler_suspended_count(session);
