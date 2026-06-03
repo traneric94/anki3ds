@@ -244,6 +244,44 @@ static size_t scheduler_new_due_count(const struct scheduler_session *session)
 	return count;
 }
 
+static size_t scheduler_learning_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_due(session, index) &&
+			session->cards[index].review_count > 0 &&
+			session->cards[index].interval_days == 0
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+static size_t scheduler_review_due_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (
+			scheduler_card_is_due(session, index) &&
+			session->cards[index].review_count > 0 &&
+			session->cards[index].interval_days > 0
+		)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
 static void format_daily_limit(char *destination, size_t destination_size, unsigned int limit)
 {
 	if (limit == 0)
@@ -644,13 +682,13 @@ static void draw_header(const struct app_state *app)
 	printf("\x1b[2;1HDeck: ");
 	print_truncated(app->deck.name, DECK_NAME_HEADER_WIDTH);
 	printf(
-		"\x1b[3;1HDue: %lu  New: %lu  Reviewed: %u",
+		"\x1b[3;1HDue %lu  New %lu  Done %u",
 		(unsigned long)app->session.due_count,
 		(unsigned long)scheduler_new_due_count(&app->session),
 		app->session.reviewed_count
 	);
 	printf(
-		"\x1b[4;1HState: %s  Day: %u",
+		"\x1b[4;1HState: %s  Day %u",
 		app->state_message,
 		app->session.today
 	);
@@ -659,10 +697,9 @@ static void draw_header(const struct app_state *app)
 static void draw_card_status(const struct app_state *app, const struct scheduler_card *state)
 {
 	printf(
-		"\x1b[5;1H%lu/%lu  Due:%lu  Int:%ud  Ease:%u.%02u",
+		"\x1b[5;1HCard %lu/%lu  Int %ud  Ease %u.%02u",
 		(unsigned long)(scheduler_current_index(&app->session) + 1),
 		(unsigned long)app->session.card_count,
-		(unsigned long)app->session.due_count,
 		state->interval_days,
 		state->ease_permille / 1000,
 		(state->ease_permille % 1000) / 10
@@ -810,14 +847,14 @@ static void draw_summary_screen(const struct app_state *app)
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds Review");
 	printf("\x1b[3;1HNo cards due now");
-	printf("\x1b[5;1HCards:    %lu", (unsigned long)session->card_count);
-	printf("\x1b[6;1HReviewed: %u", session->reviewed_count);
-	printf("\x1b[7;1HTotal rev:%u", review_count_total(session));
+	printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
+	printf("\x1b[6;1HStudied today: %u", session->reviewed_count);
+	printf("\x1b[7;1HTotal reviews: %u", review_count_total(session));
 	printf(
-		"\x1b[8;1HSuspended:%lu",
+		"\x1b[8;1HSuspended:     %lu",
 		(unsigned long)scheduler_suspended_count(session)
 	);
-	printf("\x1b[9;1HState:    %s", app->state_message);
+	printf("\x1b[9;1HState:         %s", app->state_message);
 	printf(
 		"\x1b[11;1HY Again: %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
@@ -1039,12 +1076,13 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
 		printf("\x1b[1;1HReview");
 		printf(
-			"\x1b[3;1HDue %lu   New %lu",
-			(unsigned long)app->session.due_count,
-			(unsigned long)scheduler_new_due_count(&app->session)
+			"\x1b[3;1HDue: N %lu  L %lu  R %lu",
+			(unsigned long)scheduler_new_due_count(&app->session),
+			(unsigned long)scheduler_learning_due_count(&app->session),
+			(unsigned long)scheduler_review_due_count(&app->session)
 		);
 		printf(
-			"\x1b[4;1HNew %u/%s  Review %u/%s",
+			"\x1b[4;1HStarted: N %u/%s  R %u/%s",
 			app->session.new_count_today,
 			new_limit,
 			app->session.review_count_today,
@@ -1088,7 +1126,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[7;1HSELECT: actions");
 		printf("\x1b[9;1HSTART: confirm exit");
 		printf(
-			"\x1b[11;1HNew %u/%s  Review %u/%s",
+			"\x1b[11;1HStarted: N %u/%s  R %u/%s",
 			app->session.new_count_today,
 			new_limit,
 			app->session.review_count_today,
