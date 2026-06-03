@@ -193,22 +193,6 @@ static bool app_mode_is_review_surface(enum app_mode mode)
 	);
 }
 
-static u32 keys_for_repeat_buttons(unsigned int buttons)
-{
-	u32 keys = 0;
-
-	if (buttons & APP_CONTROL_BUTTON_UP)
-		keys |= KEY_DUP;
-	if (buttons & APP_CONTROL_BUTTON_DOWN)
-		keys |= KEY_DDOWN;
-	if (buttons & APP_CONTROL_BUTTON_LEFT)
-		keys |= KEY_DLEFT;
-	if (buttons & APP_CONTROL_BUTTON_RIGHT)
-		keys |= KEY_DRIGHT;
-
-	return keys;
-}
-
 static void console_move(int row, int column)
 {
 	printf("\x1b[%d;%dH", row, column);
@@ -2669,12 +2653,10 @@ static bool app_handle_settings_input(
 
 static bool app_handle_input(
 	struct app_state *app,
-	u32 keys_down,
-	u32 keys_active
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
-	unsigned int buttons_down = app_controls_buttons_from_3ds_keys(keys_down);
-	unsigned int buttons_active = app_controls_buttons_from_3ds_keys(keys_active);
 	enum scheduler_rating rating;
 	enum app_control_action action = app_controls_classify_action(
 		app_control_mode_for_app_mode(app->mode),
@@ -2803,6 +2785,7 @@ int main(int argc, char *argv[])
 		u32 keys_held = hidKeysHeld();
 		unsigned int buttons_down = app_controls_buttons_from_3ds_keys(keys_down);
 		unsigned int buttons_held = app_controls_buttons_from_3ds_keys(keys_held);
+		unsigned int buttons_active;
 		unsigned int repeat_buttons = 0;
 		if (app_mode_uses_navigation_repeat(app.mode))
 		{
@@ -2821,8 +2804,8 @@ int main(int argc, char *argv[])
 			app.mode,
 			buttons_held
 		);
-		keys_down |= keys_for_repeat_buttons(repeat_buttons);
-		u32 keys_active = keys_down | keys_held;
+		buttons_down |= repeat_buttons;
+		buttons_active = buttons_down | buttons_held;
 		if (app_controls_input_is_active(buttons_down, buttons_held, repeat_buttons))
 		{
 			idle_wait_count = 0;
@@ -2865,7 +2848,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (app_handle_input(&app, keys_down, keys_active))
+		if (app_handle_input(&app, buttons_down, buttons_active))
 		{
 			if (app.exit_requested)
 				break;
