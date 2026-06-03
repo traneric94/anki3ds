@@ -620,7 +620,10 @@ static void draw_card_media(
 
 	if (!build_media_file_path(path, sizeof(path), app, media_name))
 	{
-		printf("\x1b[%d;1HMedia path too long", status_row);
+		printf(
+			"\x1b[%d;1H" APP_COLOR_RED "Media path too long" APP_COLOR_RESET,
+			status_row
+		);
 		return;
 	}
 
@@ -631,9 +634,12 @@ static void draw_card_media(
 		return;
 	}
 
-	printf("\x1b[%d;1HMedia ", status_row);
+	printf("\x1b[%d;1H" APP_COLOR_RED "Media " APP_COLOR_RESET, status_row);
 	print_truncated(media_name, 24);
-	printf(": %s", media_image_load_result_name(slot->result));
+	printf(
+		": " APP_COLOR_RED "%s" APP_COLOR_RESET,
+		media_image_load_result_name(slot->result)
+	);
 }
 
 static void app_scan_decks(struct app_state *app)
@@ -1064,16 +1070,16 @@ static void draw_review_screen(const struct app_state *app)
 	{
 		draw_wrapped_text_columns(
 			card->front,
-			9,
-			5,
+			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
+			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS,
 			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
 		printf("\x1b[15;1H" APP_COLOR_BLUE "Back" APP_COLOR_RESET);
 		printf("\x1b[16;1H" APP_COLOR_BLUE "------------------------------------------------" APP_COLOR_RESET);
 		draw_wrapped_text_columns(
 			card->back,
-			17,
-			6,
+			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
+			APP_LAYOUT_REVIEW_BACK_TEXT_ROWS,
 			back_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
 		draw_card_media(
@@ -1081,22 +1087,24 @@ static void draw_review_screen(const struct app_state *app)
 			card->front_media,
 			APP_LAYOUT_MEDIA_IMAGE_X,
 			APP_LAYOUT_MEDIA_FRONT_Y,
-			14
+			APP_LAYOUT_REVIEW_REVEALED_FRONT_MEDIA_STATUS_ROW
 		);
 		draw_card_media(
 			app,
 			card->back_media,
 			APP_LAYOUT_MEDIA_IMAGE_X,
 			APP_LAYOUT_MEDIA_BACK_Y,
-			23
+			APP_LAYOUT_REVIEW_BACK_MEDIA_STATUS_ROW
 		);
 	}
 	else
 	{
 		draw_wrapped_text_columns(
 			card->front,
-			9,
-			15,
+			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
+			front_has_media ?
+				APP_LAYOUT_REVIEW_FRONT_MEDIA_TEXT_ROWS :
+				APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS,
 			front_has_media ? APP_LAYOUT_MEDIA_TEXT_WIDTH : APP_LAYOUT_TEXT_WIDTH
 		);
 		draw_card_media(
@@ -1104,7 +1112,7 @@ static void draw_review_screen(const struct app_state *app)
 			card->front_media,
 			APP_LAYOUT_MEDIA_IMAGE_X,
 			APP_LAYOUT_MEDIA_FRONT_Y,
-			21
+			APP_LAYOUT_REVIEW_FRONT_MEDIA_STATUS_ROW
 		);
 	}
 }

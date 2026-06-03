@@ -209,6 +209,8 @@ Limits:
 - maximum height: 72 pixels
 - zero dimensions are invalid
 - extra or missing pixel data is invalid
+- if a referenced image is missing or invalid, the app shows a compact media
+  error line while keeping card text readable
 
 The converter can convert binary PPM `P6` images into `.a3i` files when
 `--media-root` is provided. It can also validate and copy existing `.a3i` files

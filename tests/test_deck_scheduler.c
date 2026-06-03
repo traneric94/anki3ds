@@ -2831,6 +2831,23 @@ static void test_app_layout_media_images_fit_top_screen(void)
 		!app_layout_rect_fits_top_screen(0, 0, 0, MEDIA_IMAGE_MAX_HEIGHT),
 		"layout rejects zero width"
 	);
+	check(
+		APP_LAYOUT_REVIEW_FRONT_TEXT_ROW +
+			APP_LAYOUT_REVIEW_FRONT_MEDIA_TEXT_ROWS <=
+			APP_LAYOUT_REVIEW_FRONT_MEDIA_STATUS_ROW,
+		"unrevealed front media status row stays below text"
+	);
+	check(
+		APP_LAYOUT_REVIEW_FRONT_TEXT_ROW +
+			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS <=
+			APP_LAYOUT_REVIEW_REVEALED_FRONT_MEDIA_STATUS_ROW,
+		"revealed front media status row stays below text"
+	);
+	check(
+		APP_LAYOUT_REVIEW_BACK_TEXT_ROW + APP_LAYOUT_REVIEW_BACK_TEXT_ROWS <=
+			APP_LAYOUT_REVIEW_BACK_MEDIA_STATUS_ROW,
+		"back media status row stays below text"
+	);
 }
 
 static void test_media_image_rejects_bad_files(void)

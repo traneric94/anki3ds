@@ -269,8 +269,9 @@ Cards may reference front/back `.a3i` media. The app keeps a two-slot media
 cache for the active deck, enough for the current card's front and back images.
 This avoids repeated SD reads on redraws while keeping memory bounded. The
 review-screen image positions live in `app_layout`, and host tests check that
-maximum-size front and back images fit within the top screen. Loading a deck
-clears the cache.
+maximum-size front and back images fit within the top screen. Media cards also
+reserve status rows for missing or bad image files so load errors do not
+overwrite wrapped card text. Loading a deck clears the cache.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
