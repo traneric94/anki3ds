@@ -298,6 +298,9 @@ def verify_settings(
     setting_counts = {"new_limit": 0, "review_limit": 0}
 
     for line_number, row in enumerate(settings_rows, start=1):
+        if row == "" or row.startswith("#"):
+            continue
+
         fields = row.split("\t")
         if len(fields) != 2:
             append_file_error(
@@ -335,7 +338,6 @@ def verify_settings(
     if (
         setting_counts["new_limit"] != 1
         or setting_counts["review_limit"] != 1
-        or len(settings_rows) != 2
     ):
         append_file_error(
             errors,

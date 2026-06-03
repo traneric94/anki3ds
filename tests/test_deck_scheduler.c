@@ -3375,7 +3375,7 @@ static void test_app_settings_loads_limits(void)
 {
 	struct app_settings settings;
 
-	write_file(TEST_SETTINGS_PATH, "# limits\nnew_limit\t1\nreview_limit\t2\n");
+	write_file(TEST_SETTINGS_PATH, "# limits\n\nnew_limit\t1\nreview_limit\t2\n");
 
 	check(
 		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_OK,

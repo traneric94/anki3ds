@@ -62,6 +62,16 @@ class VerifyTextDeckTests(unittest.TestCase):
 
             self.assertEqual(self.verify(deck_dir), [])
 
+    def test_accepts_settings_comments_and_blank_lines(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "settings.tsv").write_text(
+                "# daily limits\n\nnew_limit\t20\nreview_limit\t200\n# end\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(self.verify(deck_dir), [])
+
     def test_rejects_empty_deck(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             deck_dir = self.write_deck(Path(temp_dir), cards="", card_count=0)
