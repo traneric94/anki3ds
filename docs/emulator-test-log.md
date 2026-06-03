@@ -160,3 +160,20 @@ Result: pass for launch command only
 Notes:
 - Summary labels and reviewed-today counts are covered by host-side scheduler
   tests, but rendered spacing still needs a visual emulator or hardware pass.
+
+## 2026-06-03 - Suspend Confirmation Launch Check
+
+Build: `2392290`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- `R` now opens suspend confirmation and `X` performs suspend. Host tests cover
+  the new modal controls rule; full button acceptance is deferred to the final
+  manual emulator or hardware pass.
