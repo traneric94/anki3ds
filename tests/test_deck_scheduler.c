@@ -3937,6 +3937,7 @@ static void cleanup_deck_index_test_root(void)
 	remove_test_deck_dir("beta");
 	remove_test_deck_dir("broken");
 	remove_test_deck_dir("empty");
+	remove_test_deck_dir("gamma");
 	remove_test_deck_dir("reset");
 	remove_test_deck_dir("summary");
 	remove_test_deck_dir("zeta");
@@ -4025,16 +4026,21 @@ static void test_deck_index_loads_display_names(void)
 		"{\n  \"format_version\": 1,\n  \"name\": \"Alpha Deck\"\n}\n"
 	);
 	create_test_deck_dir_with_name("beta", true, "{ \"name\": \"bad\\u0020name\" }\n");
+	create_test_deck_dir_with_name("gamma", true, "{ \"name\": \"bad\\nname\" }\n");
 	create_test_deck_dir_with_name("zeta", true, "{ \"name\": null, \"created_by\": \"x\" }\n");
 
 	deck_index_scan(&index, TEST_DECK_ROOT);
 
-	check(index.count == 3, "deck index scans named decks");
-	check(index.total_count == 3, "deck index counts named decks");
+	check(index.count == 4, "deck index scans named decks");
+	check(index.total_count == 4, "deck index counts named decks");
 	check(strcmp(index.entries[0].id, "alpha") == 0, "named deck id remains folder id");
 	check(strcmp(index.entries[0].display_name, "Alpha Deck") == 0, "deck name loads");
 	check(strcmp(index.entries[1].display_name, "beta") == 0, "bad deck name falls back");
-	check(strcmp(index.entries[2].display_name, "zeta") == 0, "non-string deck name falls back");
+	check(
+		strcmp(index.entries[2].display_name, "gamma") == 0,
+		"escaped control deck name falls back"
+	);
+	check(strcmp(index.entries[3].display_name, "zeta") == 0, "non-string deck name falls back");
 
 	cleanup_deck_index_test_root();
 }

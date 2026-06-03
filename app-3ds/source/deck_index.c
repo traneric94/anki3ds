@@ -118,8 +118,7 @@ static bool copy_json_string(char *destination, size_t destination_size, const c
 			case 'n':
 			case 'r':
 			case 't':
-				value = ' ';
-				break;
+				return false;
 			default:
 				return false;
 			}

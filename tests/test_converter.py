@@ -312,6 +312,8 @@ class ConverterTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "deck name is required"):
                 write_deck(output, "sample", "", cards)
+            with self.assertRaisesRegex(ValueError, "control characters"):
+                write_deck(output, "sample", "Bad\nName", cards)
             with self.assertRaisesRegex(ValueError, "deck name exceeds"):
                 write_deck(output, "sample", "a" * DECK_MAX_NAME_LENGTH, cards)
 

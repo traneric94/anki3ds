@@ -57,8 +57,9 @@ Folder ids are limited to 63 ASCII letters, numbers, `_`, or `-` characters,
 which leaves space for the C string terminator in the 3DS app's fixed buffers.
 The 3DS app reads the optional `name` string for deck-list and review-screen
 display, falling back to the folder id when metadata is missing or malformed.
-Converter and package verification require this name to be non-empty and no
-longer than 63 UTF-8 bytes so it fits the app's fixed display buffer.
+Converter and package verification require this name to be non-empty, free of
+control characters, and no longer than 63 UTF-8 bytes so it fits the app's fixed
+display buffer.
 
 ## cards.tsv
 

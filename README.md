@@ -1,13 +1,14 @@
 # anki3ds
 
-A small Nintendo 3DS flashcard reviewer for Anki-derived decks.
+A small Nintendo 3DS text flash-card reviewer for Anki-derived plain-text decks.
 
 This repo contains a simple 3DS homebrew reviewer plus a desktop converter that
 turns Anki-style tab-separated exports into a 3DS-friendly deck format.
 
 ## Scope
 
-The first usable version is not a full Anki clone. It does:
+The first usable version is not a full Anki clone. Its product scope is text
+flash cards only. It does:
 
 - review text flash cards on a Nintendo 3DS
 - read decks from the SD card

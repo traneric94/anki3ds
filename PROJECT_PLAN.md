@@ -2,10 +2,13 @@
 
 ## Goal
 
-Build a practical Nintendo 3DS flashcard reviewer for Anki-derived decks.
+Build a practical Nintendo 3DS text flash-card reviewer for Anki-derived
+plain-text decks.
 
 The 3DS app should stay small and predictable. Complex Anki parsing should
 happen on the desktop before files are copied to the SD card.
+Image, audio, sync, and rich template support are explicitly outside this
+project's first usable scope.
 
 ## Architecture
 

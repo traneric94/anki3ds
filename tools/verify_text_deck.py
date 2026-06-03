@@ -140,6 +140,12 @@ def verify_deck_json(
         append_file_error(errors, deck_json_path, "deck_id must match folder name")
     if not isinstance(deck_name, str) or deck_name == "":
         append_file_error(errors, deck_json_path, "name is required")
+    elif any(ord(character) < 32 or ord(character) == 127 for character in deck_name):
+        append_file_error(
+            errors,
+            deck_json_path,
+            "name cannot contain control characters",
+        )
     elif utf8_length(deck_name) >= DECK_MAX_NAME_LENGTH:
         append_file_error(
             errors,

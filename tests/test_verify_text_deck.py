@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -129,6 +130,21 @@ class VerifyTextDeckTests(unittest.TestCase):
             errors = self.verify(deck_dir)
 
             self.assert_error_contains(errors, "name exceeds 63 UTF-8 bytes")
+
+            (deck_dir / "deck.json").write_text(
+                json.dumps(
+                    {
+                        "format_version": 1,
+                        "deck_id": "Bad Deck",
+                        "name": "Bad\nName",
+                        "card_count": 1,
+                    }
+                ) + "\n",
+                encoding="utf-8",
+            )
+            errors = self.verify(deck_dir)
+
+            self.assert_error_contains(errors, "name cannot contain control characters")
 
     def test_rejects_progress_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:

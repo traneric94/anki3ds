@@ -197,6 +197,8 @@ def validate_device_field(
 def validate_deck_name(deck_name: str) -> None:
     if not deck_name:
         raise ValueError("deck name is required")
+    if any(ord(character) < 32 or ord(character) == 127 for character in deck_name):
+        raise ValueError("deck name cannot contain control characters")
     if len(deck_name.encode("utf-8")) >= DECK_MAX_NAME_LENGTH:
         raise ValueError(
             f"deck name exceeds {DECK_MAX_NAME_LENGTH - 1} UTF-8 bytes"
