@@ -11,5 +11,5 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Run host and converter tests
-        run: make test
+      - name: Run CI verification
+        run: make verify-ci

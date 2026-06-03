@@ -548,8 +548,13 @@ def convert_media_file(media_root: Path, source_name: str, output_media_dir: Pat
     if not media_name_is_valid(output_name):
         raise ValueError(f"{source_name}: converted media name is invalid")
 
-    if Path(source_name).suffix.lower() == ".a3i":
+    suffix = Path(source_name).suffix.lower()
+    if suffix == ".a3i":
         return copy_a3i_media_file(media_root, source_name, output_media_dir)
+    if suffix != ".ppm":
+        raise ValueError(
+            f"{source_name}: media must be .ppm or .a3i when --media-root is used"
+        )
 
     source_path = media_root / source_name
     output_path = output_media_dir / output_name
@@ -637,7 +642,98 @@ def convert_media_files(
     return media_names
 
 
-def validate_passthrough_media(cards: list[ConvertedCard]) -> None:
+def commit_deck_payload_files(
+    output_dir: Path,
+    deck_json: dict[str, object],
+    cards: list[ConvertedCard],
+    media_names: dict[str, str],
+    has_media: bool,
+) -> None:
+    deck_path = output_dir / "deck.json"
+    cards_path = output_dir / "cards.tsv"
+    temp_paths = {
+        deck_path: output_dir / "deck.json.tmp",
+        cards_path: output_dir / "cards.tsv.tmp",
+    }
+    backup_paths = {
+        deck_path: output_dir / "deck.json.bak",
+        cards_path: output_dir / "cards.tsv.bak",
+    }
+    committed_paths: list[Path] = []
+    backed_up_paths: list[Path] = []
+    cleanup_backups = True
+
+    for path in list(temp_paths.values()) + list(backup_paths.values()):
+        remove_path_if_present(path)
+
+    try:
+        temp_paths[deck_path].write_text(
+            json.dumps(deck_json, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+        with temp_paths[cards_path].open(
+            "w",
+            encoding="utf-8",
+            newline="\n",
+        ) as file:
+            for card in cards:
+                fields = card_output_fields(card, media_names, has_media)
+                file.write("\t".join(fields))
+                file.write("\n")
+
+        for final_path in (deck_path, cards_path):
+            temp_path = temp_paths[final_path]
+            backup_path = backup_paths[final_path]
+
+            if final_path.exists():
+                final_path.replace(backup_path)
+                backed_up_paths.append(final_path)
+
+            temp_path.replace(final_path)
+            committed_paths.append(final_path)
+    except OSError:
+        rollback_failed = False
+        cleanup_backups = False
+
+        for final_path in reversed(committed_paths):
+            try:
+                remove_path_if_present(final_path)
+            except OSError:
+                rollback_failed = True
+        for final_path in reversed(backed_up_paths):
+            backup_path = backup_paths[final_path]
+            if backup_path.exists():
+                try:
+                    backup_path.replace(final_path)
+                except OSError:
+                    rollback_failed = True
+        cleanup_backups = not rollback_failed
+        raise
+    finally:
+        for path in temp_paths.values():
+            remove_path_if_present(path)
+        if cleanup_backups:
+            for path in backup_paths.values():
+                remove_path_if_present(path)
+
+
+def referenced_media_names(cards: list[ConvertedCard]) -> set[str]:
+    media_names: set[str] = set()
+
+    for card in cards:
+        if card.front_media:
+            media_names.add(card.front_media)
+        if card.back_media:
+            media_names.add(card.back_media)
+
+    return media_names
+
+
+def validate_passthrough_media(
+    cards: list[ConvertedCard],
+    output_media_dir: Path,
+) -> None:
     for card_number, card in enumerate(cards, start=1):
         for label, media_name in (
             ("front_media", card.front_media),
@@ -647,6 +743,15 @@ def validate_passthrough_media(cards: list[ConvertedCard]) -> None:
                 raise ValueError(
                     f"card {card_number}: {label} must be .a3i unless --media-root is used"
                 )
+
+    for media_name in sorted(referenced_media_names(cards)):
+        media_path = output_media_dir / media_name
+        if not media_path.is_file():
+            raise ValueError(
+                f"{media_name}: passthrough media is missing; use --media-root "
+                "to copy or convert media"
+            )
+        validate_a3i_content(media_path, media_path.read_bytes())
 
 
 def write_deck(
@@ -673,8 +778,10 @@ def write_deck(
     media_outputs: dict[str, str] = {}
     media_sources: set[str] = set()
     if media_root is None:
-        validate_passthrough_media(cards)
+        validate_passthrough_media(cards, output_dir / "media")
     else:
+        if not media_root.is_dir():
+            raise ValueError(f"{media_root}: media root must be an existing directory")
         for card in cards:
             for source_name in (card.front_media, card.back_media):
                 if source_name and source_name not in media_sources:
@@ -708,16 +815,7 @@ def write_deck(
         "card_count": len(cards),
     }
 
-    (output_dir / "deck.json").write_text(
-        json.dumps(deck_json, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-
-    with (output_dir / "cards.tsv").open("w", encoding="utf-8", newline="\n") as file:
-        for card in cards:
-            fields = card_output_fields(card, media_names, has_media)
-            file.write("\t".join(fields))
-            file.write("\n")
+    commit_deck_payload_files(output_dir, deck_json, cards, media_names, has_media)
 
     settings_path = output_dir / "settings.tsv"
     if not settings_path.exists():

@@ -311,6 +311,46 @@ class ConverterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "at least one card"):
                 write_deck(output, "sample", "Sample", [])
 
+    def test_write_deck_payload_commit_failure_rolls_back_existing_files(self):
+        cards = convert_lines(["front\tback\ttag"], 0, 1, 2)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+            output.mkdir()
+            old_deck_json = '{"format_version":1,"deck_id":"sample","card_count":9}\n'
+            old_cards = "old-card\told-note\told front\told back\told\n"
+            old_settings = "new_limit\t3\nreview_limit\t4\n"
+            (output / "deck.json").write_text(old_deck_json, encoding="utf-8")
+            (output / "cards.tsv").write_text(old_cards, encoding="utf-8")
+            (output / "settings.tsv").write_text(old_settings, encoding="utf-8")
+            original_replace = Path.replace
+
+            def fail_cards_replace(source: Path, target: Path) -> Path:
+                if source.name == "cards.tsv.tmp":
+                    raise OSError("simulated cards replace failure")
+                return original_replace(source, target)
+
+            with self.assertRaisesRegex(OSError, "simulated cards replace failure"):
+                with mock.patch.object(Path, "replace", fail_cards_replace):
+                    write_deck(output, "sample", "Sample", cards)
+
+            self.assertEqual(
+                (output / "deck.json").read_text(encoding="utf-8"),
+                old_deck_json,
+            )
+            self.assertEqual(
+                (output / "cards.tsv").read_text(encoding="utf-8"),
+                old_cards,
+            )
+            self.assertEqual(
+                (output / "settings.tsv").read_text(encoding="utf-8"),
+                old_settings,
+            )
+            self.assertFalse((output / "deck.json.tmp").exists())
+            self.assertFalse((output / "cards.tsv.tmp").exists())
+            self.assertFalse((output / "deck.json.bak").exists())
+            self.assertFalse((output / "cards.tsv.bak").exists())
+
     def test_write_deck_rejects_text_beyond_device_limit(self):
         cards = convert_lines(
             ["a" * DECK_MAX_TEXT_LENGTH + "\tback\ttag"],
@@ -385,6 +425,10 @@ class ConverterTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "sample"
+            media_dir = output / "media"
+            media_content = b"A3I1\x01\x00\x01\x00\x00\xf8"
+            media_dir.mkdir(parents=True)
+            (media_dir / "front.a3i").write_bytes(media_content)
 
             write_deck(output, "sample", "Sample", cards)
 
@@ -393,6 +437,47 @@ class ConverterTests(unittest.TestCase):
             self.assertEqual(len(fields), 7)
             self.assertEqual(fields[5], "front.a3i")
             self.assertEqual(fields[6], "")
+            self.assertEqual((media_dir / "front.a3i").read_bytes(), media_content)
+
+    def test_write_deck_rejects_missing_passthrough_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.a3i\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+
+            with self.assertRaisesRegex(ValueError, "passthrough media is missing"):
+                write_deck(output, "sample", "Sample", cards)
+
+            self.assertFalse((output / "deck.json").exists())
+            self.assertFalse((output / "cards.tsv").exists())
+
+    def test_write_deck_rejects_invalid_passthrough_media(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.a3i\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sample"
+            media_dir = output / "media"
+            media_dir.mkdir(parents=True)
+            (media_dir / "front.a3i").write_bytes(b"A3I1\x02\x00\x01\x00\x00\xf8")
+
+            with self.assertRaisesRegex(ValueError, "A3I pixel data"):
+                write_deck(output, "sample", "Sample", cards)
+
+            self.assertFalse((output / "deck.json").exists())
 
     def test_write_deck_rejects_unconverted_media_names(self):
         cards = convert_lines(
@@ -409,6 +494,49 @@ class ConverterTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "must be .a3i"):
                 write_deck(output, "sample", "Sample", cards)
+
+    def test_write_deck_rejects_missing_media_root(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.ppm\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            with self.assertRaisesRegex(ValueError, "media root must be"):
+                write_deck(
+                    root / "sample",
+                    "sample",
+                    "Sample",
+                    cards,
+                    media_root=root / "missing-media",
+                )
+
+    def test_write_deck_rejects_unsupported_media_extension(self):
+        cards = convert_lines(
+            ["front\tback\ttag\tfront.png\t"],
+            0,
+            1,
+            2,
+            front_media_field=3,
+            back_media_field=4,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            media_root = root / "source-media"
+            output = root / "sample"
+            media_root.mkdir()
+
+            with self.assertRaisesRegex(ValueError, "media must be .ppm or .a3i"):
+                write_deck(output, "sample", "Sample", cards, media_root)
+
+            self.assertFalse((output / "deck.json").exists())
 
     def test_write_deck_converts_ppm_media(self):
         cards = convert_lines(
