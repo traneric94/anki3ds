@@ -2,21 +2,20 @@
 
 A small Nintendo 3DS flashcard reviewer for Anki-derived decks.
 
-This repo starts as a project plan and feedback loop. The intended shape is a
-simple 3DS homebrew app plus a desktop converter that turns Anki exports into a
-3DS-friendly deck format.
+This repo contains a simple 3DS homebrew reviewer plus a desktop converter that
+turns Anki-style tab-separated exports into a 3DS-friendly deck format.
 
 ## Scope
 
-The first usable version will not be a full Anki clone. It will:
+The first usable version is not a full Anki clone. It does:
 
-- review text-only cards on a Nintendo 3DS
+- review text cards and bounded `.a3i` images on a Nintendo 3DS
 - read decks from the SD card
 - save local review progress
 - use a simple Anki-like scheduler
 - import decks through a desktop converter
 
-The first version will not:
+The first version does not:
 
 - sync with AnkiWeb
 - parse arbitrary Anki templates on-device
@@ -24,12 +23,12 @@ The first version will not:
 - support arbitrary media formats
 - modify a user's main Anki collection directly
 
-## Planned Components
+## Components
 
 ```text
 anki3ds/
-  app-3ds/          3DS homebrew app, planned for C/libctru
-  converter/        desktop converter, planned for Python
+  app-3ds/          3DS homebrew app in C/libctru
+  converter/        desktop converter in Python
   docs/             design notes and test logs
   sample-decks/     tiny non-copyrighted sample decks
   tools/            helper scripts
@@ -62,10 +61,11 @@ To copy the build and tracked sample decks into the gitignored local SD mirror:
 make install-local-sd
 ```
 
-This also installs the tracked sample text decks to:
+This also installs the tracked sample decks to:
 
 ```text
 local/sdmc/3ds/anki3ds/decks/limits-demo/cards.tsv
+local/sdmc/3ds/anki3ds/decks/media-demo/cards.tsv
 local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 ```
 
@@ -145,8 +145,8 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --split-large-decks
 ```
 
-Optional media fields can be converted from binary PPM `P6` images into the
-device-side `.a3i` format:
+Optional media fields can be copied from existing `.a3i` images or converted
+from binary PPM `P6` images into the device-side `.a3i` format:
 
 ```sh
 python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
