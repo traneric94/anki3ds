@@ -181,10 +181,11 @@ timeout before scanning controls again. The wait starts short for responsive
 input, then backs off while idle to avoid busy redraw/poll loops while still
 letting `aptMainLoop` run regularly.
 
-The app samples PTMU battery state at startup, after input, and periodically
-while idle. When the system reports level `1/5` or lower and it is not charging,
-the bottom screen shows a low-battery warning. Battery status changes redraw the
-screen only when the visible warning state changes.
+The app samples PTMU battery state at startup and periodically while idle. It
+does not call the battery service on every button press. When the system reports
+level `1/5` or lower and it is not charging, the bottom screen shows a
+low-battery warning. Battery status changes redraw the screen only when the
+visible warning state changes.
 
 Review algorithm:
 

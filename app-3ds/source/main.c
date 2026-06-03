@@ -1832,7 +1832,6 @@ int main(int argc, char *argv[])
 		if (keys_down != 0)
 		{
 			idle_wait_count = 0;
-			battery_poll_count = 0;
 		}
 		else if (battery_poll_count < BATTERY_POLL_INTERVAL_LOOPS)
 		{
@@ -1840,7 +1839,7 @@ int main(int argc, char *argv[])
 		}
 
 		bool battery_changed =
-			keys_down != 0 || battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS ?
+			battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS ?
 			app_sample_battery(&app) :
 			false;
 		if (battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS)
