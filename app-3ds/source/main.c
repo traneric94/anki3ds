@@ -498,7 +498,9 @@ static const char *status_message_color(const char *message)
 	}
 	if (
 		strstr(message, "requires") != NULL ||
-		strstr(message, "Nothing") != NULL
+		strstr(message, "Nothing") != NULL ||
+		strstr(message, "skipped") != NULL ||
+		strstr(message, "kept") != NULL
 	)
 	{
 		return APP_COLOR_YELLOW;

@@ -147,10 +147,11 @@ make test-host
 
 The host C suite includes an M7-shaped daily-use workflow covering two decks,
 rating undo, suspension restore, daily limits, relaunch persistence, and the
-review key map for reveal and Again/Hard/Good/Easy ratings. It also checks that
-malformed review state blocks normal saves and suppresses selector due counts
-until deck progress is reset. Opening a deck with malformed state should land
-on a reset-needed summary instead of the normal review queue.
+review key map for reveal and Again/Hard/Good/Easy ratings. That workflow also
+checks per-deck review-log rows for rating, undo, suspend, and restore actions.
+It also checks that malformed review state blocks normal saves and suppresses
+selector due counts until deck progress is reset. Opening a deck with malformed
+state should land on a reset-needed summary instead of the normal review queue.
 
 GitHub Actions runs `make test` on pushes and pull requests. That covers the
 portable C host suite plus converter tests; emulator and hardware checks remain

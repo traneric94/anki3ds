@@ -48,8 +48,20 @@ static void write_repeated_byte_file(const char *path, size_t size);
 static void write_newline_terminated_filler_file(const char *path, size_t size);
 static bool file_equals(const char *path, const char *content);
 static long file_size(const char *path);
+static long file_line_count(const char *path);
 static void build_test_deck(struct deck *deck);
 static void build_review_log_entry(struct review_log_entry *entry);
+static void append_review_log_transition(
+	const char *path,
+	time_t timestamp,
+	unsigned int day,
+	enum review_log_event event,
+	const char *card_id,
+	enum scheduler_rating rating,
+	const struct scheduler_card *before,
+	const struct scheduler_card *after,
+	const char *message
+);
 
 static void check(bool condition, const char *message)
 {
@@ -1759,6 +1771,32 @@ static void build_review_log_entry(struct review_log_entry *entry)
 	entry->after = session.cards[0];
 }
 
+static void append_review_log_transition(
+	const char *path,
+	time_t timestamp,
+	unsigned int day,
+	enum review_log_event event,
+	const char *card_id,
+	enum scheduler_rating rating,
+	const struct scheduler_card *before,
+	const struct scheduler_card *after,
+	const char *message
+)
+{
+	struct review_log_entry entry;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.timestamp = timestamp;
+	entry.day = day;
+	entry.event = event;
+	entry.card_id = card_id;
+	entry.rating = rating;
+	entry.before = *before;
+	entry.after = *after;
+
+	check(review_log_append(path, &entry), message);
+}
+
 static void test_review_state_missing_file(void)
 {
 	struct deck deck;
@@ -2414,6 +2452,21 @@ static void test_storage_delete_save_files_removes_related_files(void)
 	check(access(TEST_STORAGE_PATH, F_OK) != 0, "storage delete removes primary");
 	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage delete removes temp");
 	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage delete removes backup");
+}
+
+static void test_storage_delete_save_files_removes_orphaned_artifacts(void)
+{
+	remove(TEST_STORAGE_PATH);
+	write_file(TEST_STORAGE_TEMP_PATH, "temp\n");
+	write_file(TEST_STORAGE_BACKUP_PATH, "backup\n");
+
+	check(
+		storage_delete_save_files(TEST_STORAGE_PATH),
+		"storage delete orphaned artifacts succeeds"
+	);
+	check(access(TEST_STORAGE_PATH, F_OK) != 0, "storage orphan delete leaves no primary");
+	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage orphan delete removes temp");
+	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage orphan delete removes backup");
 }
 
 static void test_review_log_appends_study_events(void)
@@ -3075,6 +3128,31 @@ static long file_size(const char *path)
 	return size;
 }
 
+static long file_line_count(const char *path)
+{
+	FILE *file = fopen(path, "r");
+	long count = 0;
+	int value;
+
+	if (file == NULL)
+		return -1;
+
+	while ((value = fgetc(file)) != EOF)
+	{
+		if (value == '\n')
+			count++;
+	}
+
+	if (ferror(file))
+	{
+		fclose(file);
+		return -1;
+	}
+
+	fclose(file);
+	return count;
+}
+
 static void load_entry_deck(
 	struct deck *deck,
 	const struct deck_entry *entry,
@@ -3339,6 +3417,8 @@ static void remove_test_deck_dir(const char *deck_id)
 	snprintf(path, sizeof(path), "%s/%s/cards.tsv", TEST_DECK_ROOT, deck_id);
 	remove(path);
 	snprintf(path, sizeof(path), "%s/%s/deck.json", TEST_DECK_ROOT, deck_id);
+	remove(path);
+	snprintf(path, sizeof(path), "%s/%s/review-log.tsv", TEST_DECK_ROOT, deck_id);
 	remove(path);
 	snprintf(path, sizeof(path), "%s/%s/settings.tsv", TEST_DECK_ROOT, deck_id);
 	remove(path);
@@ -3726,6 +3806,8 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	struct deck_summary summary;
 	size_t alpha_index = 0;
 	size_t beta_index = 0;
+	size_t card_index;
+	struct scheduler_card before;
 	char path[256];
 
 	cleanup_deck_index_test_root();
@@ -3775,24 +3857,62 @@ static void test_daily_use_workflow_persists_two_decks(void)
 		"daily workflow alpha starts without state"
 	);
 
+	card_index = scheduler_current_index(&alpha_session);
+	before = alpha_session.cards[card_index];
 	scheduler_rate_current(&alpha_session, SCHEDULER_RATING_GOOD);
 	check(alpha_session.due_count == 2, "daily workflow alpha rating applies");
+	append_review_log_transition(
+		index.entries[alpha_index].review_log_path,
+		12345,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_RATING,
+		alpha_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_GOOD,
+		&before,
+		&alpha_session.cards[card_index],
+		"daily workflow alpha rating logs"
+	);
 	save_entry_state(
 		&alpha_deck,
 		&alpha_session,
 		&index.entries[alpha_index],
 		"daily workflow alpha rating saves"
 	);
+	before = alpha_session.cards[card_index];
 	check(scheduler_undo_last(&alpha_session), "daily workflow alpha rating undo works");
 	check(alpha_session.due_count == 3, "daily workflow alpha undo restores due count");
+	append_review_log_transition(
+		index.entries[alpha_index].review_log_path,
+		12346,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_UNDO,
+		alpha_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_COUNT,
+		&before,
+		&alpha_session.cards[card_index],
+		"daily workflow alpha undo logs"
+	);
 	save_entry_state(
 		&alpha_deck,
 		&alpha_session,
 		&index.entries[alpha_index],
 		"daily workflow alpha undo saves"
 	);
+	card_index = scheduler_current_index(&alpha_session);
+	before = alpha_session.cards[card_index];
 	scheduler_rate_current(&alpha_session, SCHEDULER_RATING_EASY);
 	check(alpha_session.cards[0].due_day == TEST_TODAY + 4, "daily workflow alpha rerates");
+	append_review_log_transition(
+		index.entries[alpha_index].review_log_path,
+		12347,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_RATING,
+		alpha_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_EASY,
+		&before,
+		&alpha_session.cards[card_index],
+		"daily workflow alpha rerating logs"
+	);
 	save_entry_state(
 		&alpha_deck,
 		&alpha_session,
@@ -3816,8 +3936,21 @@ static void test_daily_use_workflow_persists_two_decks(void)
 		"daily workflow beta deck loads"
 	);
 	scheduler_init(&beta_session, beta_deck.card_count, TEST_TODAY);
+	card_index = scheduler_current_index(&beta_session);
+	before = beta_session.cards[card_index];
 	check(scheduler_suspend_current(&beta_session), "daily workflow beta suspends card");
 	check(scheduler_suspended_count(&beta_session) == 1, "daily workflow beta count suspends");
+	append_review_log_transition(
+		index.entries[beta_index].review_log_path,
+		12348,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_SUSPEND,
+		beta_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_COUNT,
+		&before,
+		&beta_session.cards[card_index],
+		"daily workflow beta suspend logs"
+	);
 	save_entry_state(
 		&beta_deck,
 		&beta_session,
@@ -3827,20 +3960,53 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	deck_summary_load(&summary, &index.entries[beta_index], TEST_TODAY);
 	check(summary.suspended_count == 1, "daily workflow beta summary shows suspension");
 
+	before = beta_session.cards[card_index];
 	check(scheduler_unsuspend_all(&beta_session) == 1, "daily workflow beta restores card");
 	check(scheduler_suspended_count(&beta_session) == 0, "daily workflow beta count restores");
+	append_review_log_transition(
+		index.entries[beta_index].review_log_path,
+		12349,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_RESTORE,
+		beta_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_COUNT,
+		&before,
+		&beta_session.cards[card_index],
+		"daily workflow beta restore logs"
+	);
 	save_entry_state(
 		&beta_deck,
 		&beta_session,
 		&index.entries[beta_index],
 		"daily workflow beta restore saves"
 	);
+	card_index = scheduler_current_index(&beta_session);
+	before = beta_session.cards[card_index];
 	scheduler_rate_current(&beta_session, SCHEDULER_RATING_GOOD);
+	append_review_log_transition(
+		index.entries[beta_index].review_log_path,
+		12350,
+		TEST_TODAY,
+		REVIEW_LOG_EVENT_RATING,
+		beta_deck.cards[card_index].card_id,
+		SCHEDULER_RATING_GOOD,
+		&before,
+		&beta_session.cards[card_index],
+		"daily workflow beta review logs"
+	);
 	save_entry_state(
 		&beta_deck,
 		&beta_session,
 		&index.entries[beta_index],
 		"daily workflow beta review saves"
+	);
+	check(
+		file_line_count(index.entries[alpha_index].review_log_path) == 3,
+		"daily workflow alpha keeps three log rows"
+	);
+	check(
+		file_line_count(index.entries[beta_index].review_log_path) == 3,
+		"daily workflow beta keeps three log rows"
 	);
 
 	check(
@@ -3906,6 +4072,14 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	check(
 		scheduler_reviewed_today_count(&beta_reloaded) == 1,
 		"daily workflow beta today card count reloads"
+	);
+	check(
+		file_line_count(index.entries[alpha_index].review_log_path) == 3,
+		"daily workflow alpha log persists after reload"
+	);
+	check(
+		file_line_count(index.entries[beta_index].review_log_path) == 3,
+		"daily workflow beta log persists after reload"
 	);
 
 	cleanup_deck_index_test_root();
@@ -3981,6 +4155,7 @@ int main(void)
 	test_storage_replace_file_commits_temp_file();
 	test_storage_replace_file_commits_first_save();
 	test_storage_delete_save_files_removes_related_files();
+	test_storage_delete_save_files_removes_orphaned_artifacts();
 	test_review_log_appends_study_events();
 	test_review_log_delete_removes_log_file();
 	test_review_log_rejects_full_log();
