@@ -30,5 +30,6 @@ enum review_state_save_result review_state_save(
 bool review_state_delete(const char *path);
 const char *review_state_load_result_name(enum review_state_load_result result);
 const char *review_state_save_result_name(enum review_state_save_result result);
+bool review_state_load_result_allows_save(enum review_state_load_result result);
 
 #endif

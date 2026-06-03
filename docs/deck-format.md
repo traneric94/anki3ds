@@ -180,7 +180,9 @@ preserve them when updating card content.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can
-load a valid `state.tsv.tmp` or `state.tsv.bak`.
+load a valid `state.tsv.tmp` or `state.tsv.bak`. If all available state copies
+are malformed, normal review-state saves are blocked until deck progress is
+reset.
 
 This is an early day-level spaced repetition format. Minute-level learning
 steps, single-card unsuspend UI, burying, and filtered decks are planned later.

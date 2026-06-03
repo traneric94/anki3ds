@@ -2233,6 +2233,22 @@ static void test_review_state_bad_load_does_not_mutate_session(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_save_policy_rejects_bad_load(void)
+{
+	check(
+		review_state_load_result_allows_save(REVIEW_STATE_LOAD_OK),
+		"state save policy accepts loaded state"
+	);
+	check(
+		review_state_load_result_allows_save(REVIEW_STATE_LOAD_NOT_FOUND),
+		"state save policy accepts missing state"
+	);
+	check(
+		!review_state_load_result_allows_save(REVIEW_STATE_LOAD_BAD_FORMAT),
+		"state save policy rejects bad state"
+	);
+}
+
 static void test_app_settings_missing_file_uses_defaults(void)
 {
 	struct app_settings settings;
@@ -3431,6 +3447,7 @@ int main(void)
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
+	test_review_state_save_policy_rejects_bad_load();
 	test_review_state_delete_removes_save_artifacts();
 	test_storage_replace_file_commits_temp_file();
 	test_storage_replace_file_commits_first_save();

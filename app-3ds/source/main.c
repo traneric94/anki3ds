@@ -1602,6 +1602,13 @@ static void restore_session_rollback(struct app_state *app)
 
 static bool save_review_state(struct app_state *app)
 {
+	if (!review_state_load_result_allows_save(app->state_load_result))
+	{
+		app->state_save_result = REVIEW_STATE_SAVE_FAILED;
+		app->state_message = review_state_load_result_name(app->state_load_result);
+		return false;
+	}
+
 	app->state_save_result = review_state_save(
 		&app->deck,
 		&app->session,
@@ -1609,6 +1616,21 @@ static bool save_review_state(struct app_state *app)
 	);
 	app->state_message = review_state_save_result_name(app->state_save_result);
 	return app->state_save_result == REVIEW_STATE_SAVE_OK;
+}
+
+static void app_set_review_save_failed_status(
+	struct app_state *app,
+	const char *fallback_message
+)
+{
+	if (!review_state_load_result_allows_save(app->state_load_result))
+	{
+		app->state_message = review_state_load_result_name(app->state_load_result);
+		app_set_status(app, "Reset bad state first");
+		return;
+	}
+
+	app_set_status(app, fallback_message);
 }
 
 static void append_review_log_entry(
@@ -1661,7 +1683,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
-		app_set_status(app, "Save failed; card not advanced");
+		app_set_review_save_failed_status(app, "Save failed; card not advanced");
 		app->mode = APP_MODE_REVIEW;
 		return true;
 	}
@@ -1728,7 +1750,7 @@ static bool undo_last_action(struct app_state *app)
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
-		app_set_status(app, "Save failed; undo not kept");
+		app_set_review_save_failed_status(app, "Save failed; undo not kept");
 		return true;
 	}
 
@@ -1776,7 +1798,7 @@ static bool suspend_current_card(struct app_state *app)
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
-		app_set_status(app, "Save failed; card not suspended");
+		app_set_review_save_failed_status(app, "Save failed; card not suspended");
 		return true;
 	}
 
@@ -1854,7 +1876,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 	if (!save_review_state(app))
 	{
 		restore_session_rollback(app);
-		app_set_status(app, "Save failed; restore undone");
+		app_set_review_save_failed_status(app, "Save failed; restore undone");
 		return true;
 	}
 

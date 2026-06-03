@@ -617,3 +617,11 @@ const char *review_state_save_result_name(enum review_state_save_result result)
 
 	return "unknown";
 }
+
+bool review_state_load_result_allows_save(enum review_state_load_result result)
+{
+	return (
+		result == REVIEW_STATE_LOAD_OK ||
+		result == REVIEW_STATE_LOAD_NOT_FOUND
+	);
+}

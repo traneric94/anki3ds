@@ -75,7 +75,9 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
 
 During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
-On load, a valid temp state file can recover an interrupted first save.
+On load, a valid temp state file can recover an interrupted first save. If all
+available state copies are malformed, normal review-state saves are blocked
+until deck progress is reset.
 
 The app also appends diagnostic study transitions beside the selected deck:
 

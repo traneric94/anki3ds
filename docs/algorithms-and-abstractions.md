@@ -159,11 +159,13 @@ temp file was fully written but not yet renamed into place. If the main state
 file is malformed, the app tries the backup before temp so a stale temp file
 does not outrank a known previous save. Empty state files and files with no rows
 matching the current deck are treated as malformed, so a truncated save cannot
-silently reset all progress and then be overwritten as fresh state. Reset
-removes `state.tsv`, `state.tsv.tmp`, and `state.tsv.bak` for the active deck.
-The shared `storage` module owns the remove/rename order for both review state
-and settings. This remains simple to inspect on the SD card while avoiding the
-known remove-before-rename data-loss window.
+silently reset all progress and then be overwritten as fresh state. If every
+available state copy is malformed, review-state saves are blocked until the
+user resets deck progress. Reset removes `state.tsv`, `state.tsv.tmp`, and
+`state.tsv.bak` for the active deck. The shared `storage` module owns the
+remove/rename order for both review state and settings. This remains simple to
+inspect on the SD card while avoiding the known remove-before-rename data-loss
+window.
 
 The storage transaction checks whether the primary or backup file exists before
 removing or renaming it. Azahar/libctru SD-card operations do not behave exactly
