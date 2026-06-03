@@ -430,9 +430,11 @@ Keep the portable logic separate from the libctru shell:
 | converter | desktop import, stable IDs, deck folder writes | local 3DS progress mutation |
 
 Battery sampling is intentionally coarse. The main loop samples PTMU at startup
-and then at most every ten minutes while the shell is open. A closed-shell skip
-does not move the next real sample time forward, and transient PTMU read
-failures keep the last valid battery display instead of clearing it.
+and then performs at most one shell-state check every ten minutes. Battery
+level and charging state are read only when the shell reports open. A
+closed-shell skip schedules the next ten-minute check instead of staying
+immediately due, and transient PTMU read failures keep the last valid battery
+display instead of clearing it.
 
 The console renderer still uses a simple one-column-per-character model, but
 `app_text` keeps valid UTF-8 byte sequences together during wrapping and
