@@ -1329,7 +1329,7 @@ static void draw_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1HD-pad/Circle U/D: field/hold");
 		printf("\x1b[7;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[9;1HA: save limits");
-		printf("\x1b[11;1HB or SELECT: cancel");
+		printf("\x1b[11;1HB or SELECT: actions");
 		printf("\x1b[13;1HY: controls");
 		break;
 	case APP_MODE_REVIEW:
@@ -1817,7 +1817,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1HD-pad/Circle U/D: field/hold");
 		printf("\x1b[5;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[7;1HA: save limits");
-		printf("\x1b[9;1HB or SELECT: cancel");
+		printf("\x1b[9;1HB or SELECT: actions");
 		printf("\x1b[11;1HSTART: confirm exit");
 		printf("\x1b[13;1HY: controls");
 		break;
