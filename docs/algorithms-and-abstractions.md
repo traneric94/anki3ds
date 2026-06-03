@@ -450,7 +450,8 @@ Algorithm:
     new single folder before deleting the obsolete chunk folders.
 14. When split output stays split but card boundaries move between numbered
     chunks, rewrite matching `state.tsv` rows into the chunk that now owns each
-    card.
+    card. If a rewritten chunk has no matching rows, remove stale state files so
+    the chunk starts fresh.
 
 During same-folder re-import, the converter deliberately does not open or
 rewrite existing `state.tsv`, `review-log.tsv`, or `settings.tsv`, so review

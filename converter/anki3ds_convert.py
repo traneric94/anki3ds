@@ -750,6 +750,7 @@ def migrate_split_progress_to_split_outputs(
         replace_default_settings = chunk_output not in existing_outputs
 
         for state_filename in REVIEW_STATE_FILES:
+            target_path = chunk_output / state_filename
             matching_rows = [
                 row
                 for row in source_rows[state_filename]
@@ -757,10 +758,12 @@ def migrate_split_progress_to_split_outputs(
             ]
 
             if matching_rows:
-                (chunk_output / state_filename).write_text(
+                target_path.write_text(
                     format_state_rows(matching_rows, True),
                     encoding="utf-8",
                 )
+            else:
+                remove_path_if_present(target_path)
 
         for settings_filename in SETTINGS_FILES:
             for source_dir in source_dirs:
