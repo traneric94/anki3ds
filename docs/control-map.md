@@ -21,7 +21,8 @@ letters do not match the 3DS button label.
 
 Holding a D-pad direction repeats movement or daily-limit value changes after a
 short delay. Face-button actions such as reveal, rating, save, reset, and exit
-remain single-press actions.
+remain single-press actions. After reveal, pressing more than one rating button
+at the same time does not save a rating.
 
 ## Review Flow
 

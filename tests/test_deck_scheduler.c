@@ -371,6 +371,25 @@ static void test_app_controls_review_rating_keys(void)
 	check(rating == SCHEDULER_RATING_EASY, "A maps to Easy");
 }
 
+static void test_app_controls_rejects_ambiguous_ratings(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_GOOD;
+
+	check(
+		!app_controls_rating_for_buttons(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_Y,
+			true,
+			&rating
+		),
+		"two rating buttons are ignored"
+	);
+	check(rating == SCHEDULER_RATING_GOOD, "ambiguous rating leaves output unchanged");
+	check(
+		!app_controls_rating_for_buttons(APP_CONTROL_BUTTON_A, true, NULL),
+		"rating output is required"
+	);
+}
+
 static void test_app_controls_modal_controls(void)
 {
 	check(
@@ -2376,6 +2395,7 @@ int main(void)
 	test_scheduler_schedules_due_days();
 	test_app_controls_review_front_actions();
 	test_app_controls_review_rating_keys();
+	test_app_controls_rejects_ambiguous_ratings();
 	test_app_controls_modal_controls();
 	test_app_controls_navigation_repeat();
 	test_scheduler_rejects_invalid_rating();

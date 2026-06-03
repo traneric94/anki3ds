@@ -124,25 +124,38 @@ bool app_controls_rating_for_buttons(
 	enum scheduler_rating *rating
 )
 {
+	unsigned int rating_buttons =
+		buttons &
+		(
+			APP_CONTROL_BUTTON_A |
+			APP_CONTROL_BUTTON_B |
+			APP_CONTROL_BUTTON_X |
+			APP_CONTROL_BUTTON_Y
+		);
+
 	if (!review_answer_revealed)
 		return false;
+	if (rating == NULL)
+		return false;
+	if (rating_buttons == 0 || (rating_buttons & (rating_buttons - 1)) != 0)
+		return false;
 
-	if (buttons & APP_CONTROL_BUTTON_Y)
+	if (rating_buttons & APP_CONTROL_BUTTON_Y)
 	{
 		*rating = SCHEDULER_RATING_AGAIN;
 		return true;
 	}
-	if (buttons & APP_CONTROL_BUTTON_X)
+	if (rating_buttons & APP_CONTROL_BUTTON_X)
 	{
 		*rating = SCHEDULER_RATING_HARD;
 		return true;
 	}
-	if (buttons & APP_CONTROL_BUTTON_B)
+	if (rating_buttons & APP_CONTROL_BUTTON_B)
 	{
 		*rating = SCHEDULER_RATING_GOOD;
 		return true;
 	}
-	if (buttons & APP_CONTROL_BUTTON_A)
+	if (rating_buttons & APP_CONTROL_BUTTON_A)
 	{
 		*rating = SCHEDULER_RATING_EASY;
 		return true;

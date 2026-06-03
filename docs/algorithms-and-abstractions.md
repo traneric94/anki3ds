@@ -180,6 +180,8 @@ The review button map lives in the small `app_controls` module so the
 reveal/rating rules can be host-tested without libctru. `main.c` still owns
 state transitions and side effects, but the stable review mapping is: front
 side `A` reveals; after reveal, `Y/X/B/A` choose Again/Hard/Good/Easy.
+Ambiguous post-reveal face-button combinations are ignored so a fat-fingered
+rating does not save the wrong answer.
 D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
 deck select, actions, and settings modes, so ratings and destructive actions
 stay single-press.
