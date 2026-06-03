@@ -120,7 +120,8 @@ review_limit	200
 
 The app may briefly create `settings.tsv.tmp` and `settings.tsv.bak` while
 saving daily limits from the actions screen. If `settings.tsv` is missing or
-malformed after an interrupted save, the app can load `settings.tsv.bak`.
+malformed after an interrupted save, the app can load a valid
+`settings.tsv.tmp` or `settings.tsv.bak`.
 
 ## state.tsv
 

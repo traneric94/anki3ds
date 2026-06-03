@@ -85,6 +85,7 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/settings.tsv
 
 During settings saves, the app may also use `settings.tsv.tmp` and
 `settings.tsv.bak`.
+On load, a valid temp settings file can recover an interrupted first save.
 
 Default Azahar keyboard controls are documented in
 `docs/control-map.md`. The app displays Nintendo 3DS button names on screen;

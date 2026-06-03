@@ -177,10 +177,16 @@ static enum app_settings_load_result app_settings_load_file(
 
 enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
 {
+	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	bool loaded_file = false;
+	bool has_temp_path;
+	bool has_backup_path;
+	bool primary_missing;
 	enum app_settings_load_result result;
 
+	if (settings == NULL)
+		return APP_SETTINGS_LOAD_BAD_FORMAT;
 	if (path == NULL)
 	{
 		app_settings_default(settings);
@@ -190,20 +196,40 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 	result = app_settings_load_file(settings, path, &loaded_file);
 	if (result == APP_SETTINGS_LOAD_OK)
 		return APP_SETTINGS_LOAD_OK;
-	if (!storage_build_suffixed_path(
+	primary_missing = result == APP_SETTINGS_LOAD_NOT_FOUND;
+	has_temp_path = storage_build_suffixed_path(
+		temp_path,
+		sizeof(temp_path),
+		path,
+		STORAGE_TEMP_SUFFIX
+	);
+	has_backup_path = storage_build_suffixed_path(
 		backup_path,
 		sizeof(backup_path),
 		path,
 		STORAGE_BACKUP_SUFFIX
-	))
+	);
+
+	if (primary_missing && has_temp_path)
 	{
-		app_settings_default(settings);
-		return loaded_file ? APP_SETTINGS_LOAD_BAD_FORMAT : APP_SETTINGS_LOAD_NOT_FOUND;
+		result = app_settings_load_file(settings, temp_path, &loaded_file);
+		if (result == APP_SETTINGS_LOAD_OK)
+			return APP_SETTINGS_LOAD_OK;
 	}
 
-	result = app_settings_load_file(settings, backup_path, &loaded_file);
-	if (result == APP_SETTINGS_LOAD_OK)
-		return APP_SETTINGS_LOAD_OK;
+	if (has_backup_path)
+	{
+		result = app_settings_load_file(settings, backup_path, &loaded_file);
+		if (result == APP_SETTINGS_LOAD_OK)
+			return APP_SETTINGS_LOAD_OK;
+	}
+
+	if (!primary_missing && has_temp_path)
+	{
+		result = app_settings_load_file(settings, temp_path, &loaded_file);
+		if (result == APP_SETTINGS_LOAD_OK)
+			return APP_SETTINGS_LOAD_OK;
+	}
 
 	app_settings_default(settings);
 	if (!loaded_file)
