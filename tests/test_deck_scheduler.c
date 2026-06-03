@@ -88,6 +88,16 @@ static void test_reject_bad_card_line(void)
 		"bad escape rejected"
 	);
 	check(
+		deck_parse_card_line(&card, "card\\t1\tnote\tfront\tback\ttag") ==
+			DECK_PARSE_BAD_CARD_ID,
+		"card id escaped tab rejected"
+	);
+	check(
+		deck_parse_card_line(&card, "card\\n1\tnote\tfront\tback\ttag") ==
+			DECK_PARSE_BAD_CARD_ID,
+		"card id escaped newline rejected"
+	);
+	check(
 		deck_parse_card_line(&card, "card\tnote\tfront\tback\ttag\tbad/name\t") ==
 			DECK_PARSE_BAD_MEDIA_NAME,
 		"media path separators rejected"

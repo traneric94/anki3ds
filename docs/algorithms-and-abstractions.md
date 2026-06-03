@@ -92,6 +92,8 @@ Algorithm:
 
 The parser currently accepts `\n`, `\t`, and `\\` escapes. The deck owns card
 text in fixed-size buffers, with `DECK_MAX_CARDS` as the current hard limit.
+Card IDs reject control characters after unescaping so `state.tsv` can store
+raw IDs without ambiguity.
 Load errors are returned as small enums so the app can show concise on-device
 messages. The staged deck is heap allocated so the supported card limit does
 not create a large stack frame while loading a deck.

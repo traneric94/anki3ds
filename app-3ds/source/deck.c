@@ -138,6 +138,19 @@ static bool media_name_character_is_valid(char value)
 	return value == '-' || value == '_' || value == '.';
 }
 
+static bool card_id_is_valid(const char *card_id)
+{
+	for (size_t index = 0; card_id[index] != '\0'; index++)
+	{
+		unsigned char value = (unsigned char)card_id[index];
+
+		if (value < 32 || value == 127)
+			return false;
+	}
+
+	return true;
+}
+
 static bool media_name_is_valid(const char *name)
 {
 	if (name[0] == '\0')
@@ -218,6 +231,8 @@ enum deck_parse_result deck_parse_card_line(struct card *card, const char *line)
 
 	if (card->card_id[0] == '\0' || card->front[0] == '\0' || card->back[0] == '\0')
 		return DECK_PARSE_MISSING_REQUIRED_FIELD;
+	if (!card_id_is_valid(card->card_id))
+		return DECK_PARSE_BAD_CARD_ID;
 	if (!media_name_is_valid(card->front_media) || !media_name_is_valid(card->back_media))
 		return DECK_PARSE_BAD_MEDIA_NAME;
 
@@ -311,6 +326,8 @@ const char *deck_parse_result_name(enum deck_parse_result result)
 		return "missing required field";
 	case DECK_PARSE_BAD_ESCAPE:
 		return "bad escape";
+	case DECK_PARSE_BAD_CARD_ID:
+		return "bad card id";
 	case DECK_PARSE_BAD_MEDIA_NAME:
 		return "bad media name";
 	}

@@ -72,6 +72,8 @@ Rules:
 - one card per line
 - tabs separate fields
 - `card_id` values must be unique within the deck
+- `card_id` values may not contain control characters after unescaping; this
+  includes tabs and newlines because `state.tsv` stores raw card IDs
 - current 3DS builds support at most 256 cards per deck
 - converter `--split-large-decks` writes oversized exports as up to 64 numbered
   sibling deck folders within this limit
