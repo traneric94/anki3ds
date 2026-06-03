@@ -194,3 +194,20 @@ Notes:
 - Restoring suspended cards now requires `X` confirmation when suspended cards
   exist. Host tests cover the new modal controls rule; full button acceptance is
   deferred to the final manual emulator or hardware pass.
+
+## 2026-06-03 - Restore Modal Day-Change Launch Check
+
+Build: `7798acb`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Restore confirmation is now treated as a review-surface modal during local
+  day changes, matching suspend confirmation. Automated tests and build passed;
+  full button acceptance is deferred to the final manual pass.
