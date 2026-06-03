@@ -8,7 +8,7 @@ APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo media-demo sample
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 
-.PHONY: all app-3ds clean test test-host test-converter verify-local install-local-sd install-local-sample-deck install-local-sample-decks install-azahar-sample-deck install-azahar-sample-decks check-emulator run-emulator run-emulator-samples
+.PHONY: all app-3ds clean test test-host test-converter verify-local install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples
 
 all: app-3ds
 
@@ -61,6 +61,15 @@ install-local-sample-decks:
 		cp -R "sample-decks/$$deck/." "$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck/"; \
 	done
 
+reset-local-sample-progress:
+	set -e; \
+	for deck in $(SAMPLE_DECKS); do \
+		deck_dir="$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+		rm -f "$$deck_dir/state.tsv" "$$deck_dir/state.tsv.tmp" "$$deck_dir/state.tsv.bak" "$$deck_dir/review-log.tsv"; \
+	done
+
+prepare-local-samples-fresh: install-local-sd reset-local-sample-progress
+
 install-azahar-sample-deck: install-azahar-sample-decks
 
 install-azahar-sample-decks:
@@ -69,6 +78,15 @@ install-azahar-sample-decks:
 		mkdir -p "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		cp -R "sample-decks/$$deck/." "$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck/"; \
 	done
+
+reset-azahar-sample-progress:
+	set -e; \
+	for deck in $(SAMPLE_DECKS); do \
+		deck_dir="$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
+		rm -f "$$deck_dir/state.tsv" "$$deck_dir/state.tsv.tmp" "$$deck_dir/state.tsv.bak" "$$deck_dir/review-log.tsv"; \
+	done
+
+prepare-azahar-samples-fresh: install-azahar-sample-decks reset-azahar-sample-progress
 
 check-emulator:
 	@test -d "$(AZAHAR_APP)" || \

@@ -41,6 +41,12 @@ Install the tracked sample decks into the local mirror with:
 make install-local-sample-decks
 ```
 
+For a clean sample-deck pass in the local mirror:
+
+```sh
+make prepare-local-samples-fresh
+```
+
 Azahar's macOS SD card data directory is:
 
 ```text
@@ -51,6 +57,12 @@ Install the sample decks there with:
 
 ```sh
 make install-azahar-sample-decks
+```
+
+For a clean sample-deck pass in Azahar:
+
+```sh
+make prepare-azahar-samples-fresh
 ```
 
 Or install the sample decks and launch the current build in one command:

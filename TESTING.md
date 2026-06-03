@@ -38,8 +38,12 @@ make verify-local
 make install-local-sd
 make install-local-sample-deck
 make install-local-sample-decks
+make reset-local-sample-progress
+make prepare-local-samples-fresh
 make install-azahar-sample-deck
 make install-azahar-sample-decks
+make reset-azahar-sample-progress
+make prepare-azahar-samples-fresh
 make run-emulator
 make run-emulator-samples
 ```
@@ -74,6 +78,11 @@ The app writes review progress beside the selected deck:
 ```text
 sdmc:/3ds/anki3ds/decks/<deck-id>/state.tsv
 ```
+
+Use `make reset-local-sample-progress` or `make reset-azahar-sample-progress`
+to clear only tracked sample-deck progress files before a fresh manual pass.
+The `prepare-local-samples-fresh` and `prepare-azahar-samples-fresh` targets
+install the tracked sample decks first, then perform that progress reset.
 
 During saves, the app may also use `state.tsv.tmp` and `state.tsv.bak`.
 On load, a valid temp state file can recover an interrupted first save. If all

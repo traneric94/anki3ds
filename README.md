@@ -60,6 +60,15 @@ To copy the build and tracked sample decks into the gitignored local SD mirror:
 make install-local-sd
 ```
 
+For a fresh sample-deck pass, use:
+
+```sh
+make prepare-local-samples-fresh
+```
+
+That installs the build and tracked sample decks, then removes only sample-deck
+`state.tsv` recovery files and `review-log.tsv` from the local SD mirror.
+
 This also installs the tracked sample decks to:
 
 ```text
@@ -72,6 +81,12 @@ To install the sample decks into Azahar's SD card data directory:
 
 ```sh
 make install-azahar-sample-deck
+```
+
+For a fresh Azahar sample-deck pass, use:
+
+```sh
+make prepare-azahar-samples-fresh
 ```
 
 By default this uses:
