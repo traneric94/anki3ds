@@ -263,33 +263,22 @@ static size_t find_card_index(const struct deck *deck, const char *card_id)
 	return deck->card_count;
 }
 
-enum review_state_load_result review_state_load(
+static enum review_state_load_result review_state_load_file(
 	const struct deck *deck,
 	struct scheduler_session *session,
-	const char *path
+	const char *path,
+	bool *loaded_file
 )
 {
-	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	FILE *file = fopen(path, "r");
 	char line[STATE_MAX_LINE_LENGTH];
 	struct scheduler_session staged = *session;
+	size_t matched_row_count = 0;
 
 	if (file == NULL)
-	{
-		if (!storage_build_suffixed_path(
-			backup_path,
-			sizeof(backup_path),
-			path,
-			STORAGE_BACKUP_SUFFIX
-		))
-		{
-			return REVIEW_STATE_LOAD_NOT_FOUND;
-		}
+		return REVIEW_STATE_LOAD_NOT_FOUND;
 
-		file = fopen(backup_path, "r");
-		if (file == NULL)
-			return REVIEW_STATE_LOAD_NOT_FOUND;
-	}
+	*loaded_file = true;
 
 	staged.undo.available = false;
 	staged.undo.kind = SCHEDULER_UNDO_NONE;
@@ -315,6 +304,7 @@ enum review_state_load_result review_state_load(
 		card_index = find_card_index(deck, state.card_id);
 		if (card_index == deck->card_count)
 			continue;
+		matched_row_count++;
 
 		if (
 			!scheduler_restore_card(
@@ -342,11 +332,48 @@ enum review_state_load_result review_state_load(
 		fclose(file);
 		return REVIEW_STATE_LOAD_BAD_FORMAT;
 	}
+	if (matched_row_count == 0 && deck->card_count > 0)
+	{
+		fclose(file);
+		return REVIEW_STATE_LOAD_BAD_FORMAT;
+	}
 
 	fclose(file);
 	*session = staged;
 	scheduler_reposition(session);
 	return REVIEW_STATE_LOAD_OK;
+}
+
+enum review_state_load_result review_state_load(
+	const struct deck *deck,
+	struct scheduler_session *session,
+	const char *path
+)
+{
+	char backup_path[STORAGE_MAX_PATH_LENGTH];
+	bool loaded_file = false;
+	enum review_state_load_result result;
+
+	result = review_state_load_file(deck, session, path, &loaded_file);
+	if (result == REVIEW_STATE_LOAD_OK)
+		return REVIEW_STATE_LOAD_OK;
+	if (!storage_build_suffixed_path(
+		backup_path,
+		sizeof(backup_path),
+		path,
+		STORAGE_BACKUP_SUFFIX
+	))
+	{
+		return result;
+	}
+
+	result = review_state_load_file(deck, session, backup_path, &loaded_file);
+	if (result == REVIEW_STATE_LOAD_OK)
+		return REVIEW_STATE_LOAD_OK;
+	if (!loaded_file)
+		return REVIEW_STATE_LOAD_NOT_FOUND;
+
+	return REVIEW_STATE_LOAD_BAD_FORMAT;
 }
 
 enum review_state_save_result review_state_save(

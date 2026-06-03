@@ -686,7 +686,10 @@ static void app_open_reset_confirmation(struct app_state *app)
 
 static void app_open_exit_confirmation(struct app_state *app)
 {
-	app->exit_return_mode = app->mode;
+	if (app->mode == APP_MODE_CONTROLS)
+		app->exit_return_mode = app->controls_return_mode;
+	else
+		app->exit_return_mode = app->mode;
 	app_set_status(app, "Exit requires A");
 	app->mode = APP_MODE_CONFIRM_EXIT;
 }
@@ -1013,10 +1016,10 @@ static void draw_controls_screen(const struct app_state *app)
 	consoleClear();
 	printf("\x1b[1;1Hanki3ds");
 	printf("\x1b[3;1HControls");
-	printf("\x1b[5;1HA: open / show / easy / confirm");
-	printf("\x1b[7;1HB: good / back / cancel");
-	printf("\x1b[9;1HX: hard / confirm reset");
-	printf("\x1b[11;1HY: again / controls");
+	printf("\x1b[5;1HReview front: A shows answer");
+	printf("\x1b[7;1HAfter reveal ratings:");
+	printf("\x1b[9;1HY Again      X Hard");
+	printf("\x1b[11;1HB Good       A Easy");
 	printf("\x1b[13;1HL: undo last action");
 	printf("\x1b[15;1HR: suspend current card");
 	printf("\x1b[17;1HD-pad: move / daily limits");

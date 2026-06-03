@@ -135,11 +135,14 @@ Save algorithm:
 4. Ask `storage` to replace the primary file through the shared
    temp/backup transaction.
 
-If the main state file is missing on load, the app tries `state.tsv.bak`. Reset
-removes `state.tsv`, `state.tsv.tmp`, and `state.tsv.bak` for the active deck.
-The shared `storage` module owns the remove/rename order for both review state
-and settings. This remains simple to inspect on the SD card while avoiding the
-known remove-before-rename data-loss window.
+If the main state file is missing or malformed on load, the app tries
+`state.tsv.bak`. Empty state files and files with no rows matching the current
+deck are treated as malformed, so a truncated save cannot silently reset all
+progress and then be overwritten as fresh state. Reset removes `state.tsv`,
+`state.tsv.tmp`, and `state.tsv.bak` for the active deck. The shared `storage`
+module owns the remove/rename order for both review state and settings. This
+remains simple to inspect on the SD card while avoiding the known
+remove-before-rename data-loss window.
 
 The storage transaction checks whether the primary or backup file exists before
 removing or renaming it. Azahar/libctru SD-card operations do not behave exactly

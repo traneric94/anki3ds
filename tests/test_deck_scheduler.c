@@ -808,6 +808,73 @@ static void test_review_state_loads_backup_when_primary_missing(void)
 	remove(TEST_STATE_BACKUP_PATH);
 }
 
+static void test_review_state_loads_backup_when_primary_is_bad(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "bad\n");
+	write_file(
+		TEST_STATE_BACKUP_PATH,
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"backup state loads when primary is bad"
+	);
+	check(session.cards[0].review_count == 1, "backup after bad primary restores card");
+	check(!scheduler_card_is_due(&session, 0), "backup after bad primary restores due day");
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
+static void test_review_state_empty_file_is_bad_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"empty state file is bad format"
+	);
+	check(session.due_count == deck.card_count, "empty state file leaves session unchanged");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_unknown_only_file_is_bad_format(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_PATH,
+		"missing-card\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"unknown-only state file is bad format"
+	);
+	check(session.due_count == deck.card_count, "unknown-only state leaves session unchanged");
+
+	remove(TEST_STATE_PATH);
+}
+
 static void test_review_state_loads_previous_current_format(void)
 {
 	struct deck deck;
@@ -1851,6 +1918,9 @@ int main(void)
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
 	test_review_state_loads_backup_when_primary_missing();
+	test_review_state_loads_backup_when_primary_is_bad();
+	test_review_state_empty_file_is_bad_format();
+	test_review_state_unknown_only_file_is_bad_format();
 	test_review_state_loads_previous_current_format();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
