@@ -443,6 +443,7 @@ static void test_scheduler_schedules_due_days(void)
 	scheduler_init(&session, 3, TEST_TODAY);
 	check(scheduler_current_index(&session) == 0, "scheduler starts at first card");
 	check(session.due_count == 3, "new cards start due");
+	check(scheduler_reviewed_today_count(&session) == 0, "no cards reviewed today");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
 	check(session.due_count == 3, "again keeps card due today");
@@ -450,17 +451,23 @@ static void test_scheduler_schedules_due_days(void)
 	check(session.cards[0].interval_days == 0, "again keeps zero-day interval");
 	check(session.cards[0].ease_permille == 2300, "again lowers ease");
 	check(scheduler_current_index(&session) == 1, "again advances to next card");
+	check(scheduler_reviewed_today_count(&session) == 1, "again touches one card today");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
 	check(session.due_count == 2, "good schedules one card out");
 	check(session.cards[1].due_day == TEST_TODAY + 1, "good schedules tomorrow");
 	check(session.cards[1].interval_days == 1, "good starts one-day interval");
 	check(scheduler_current_index(&session) == 0, "learning card is revisited before new card");
+	check(scheduler_reviewed_today_count(&session) == 2, "good touches second card today");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_HARD);
 	check(session.due_count == 1, "hard schedules learning card out");
 	check(session.cards[0].due_day == TEST_TODAY + 1, "hard schedules tomorrow");
 	check(scheduler_current_index(&session) == 2, "new card follows learning card");
+	check(
+		scheduler_reviewed_today_count(&session) == 2,
+		"rerating same card keeps today card count unique"
+	);
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_EASY);
 	check(session.due_count == 0, "easy schedules final due card out");
@@ -471,6 +478,7 @@ static void test_scheduler_schedules_due_days(void)
 	check(session.rating_counts[SCHEDULER_RATING_GOOD] == 1, "good count tracked");
 	check(session.rating_counts[SCHEDULER_RATING_EASY] == 1, "easy count tracked");
 	check(session.reviewed_count == 4, "reviewed count tracks ratings");
+	check(scheduler_reviewed_today_count(&session) == 3, "today count tracks cards");
 }
 
 static void test_app_controls_review_front_actions(void)
@@ -3493,6 +3501,10 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	);
 	check(!scheduler_card_is_due(&alpha_reloaded, 0), "daily workflow alpha reviewed card hidden");
 	check(alpha_reloaded.due_count == 1, "daily workflow alpha new limit applies after reload");
+	check(
+		scheduler_reviewed_today_count(&alpha_reloaded) == 1,
+		"daily workflow alpha today card count reloads"
+	);
 
 	load_entry_deck(
 		&beta_reloaded_deck,
@@ -3510,6 +3522,10 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	);
 	check(scheduler_suspended_count(&beta_reloaded) == 0, "daily workflow beta restore persists");
 	check(beta_reloaded.cards[0].review_count == 1, "daily workflow beta review persists");
+	check(
+		scheduler_reviewed_today_count(&beta_reloaded) == 1,
+		"daily workflow beta today card count reloads"
+	);
 
 	cleanup_deck_index_test_root();
 }

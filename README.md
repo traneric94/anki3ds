@@ -175,8 +175,9 @@ shows controls, review status, save feedback, and the last valid sampled
 battery level, including charging and low battery states. Successful ratings,
 suspend actions, undo actions, and
 restore-suspended actions append best-effort `review-log.tsv` rows for
-debugging. An in-app controls screen is available with `Y` from non-rating
-screens and unrevealed review cards.
+debugging. The no-due summary separates current-session rating counts from the
+persisted count of cards reviewed today. An in-app controls screen is available
+with `Y` from non-rating screens and unrevealed review cards.
 
 See:
 

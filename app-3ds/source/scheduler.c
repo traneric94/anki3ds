@@ -370,6 +370,19 @@ size_t scheduler_suspended_count(const struct scheduler_session *session)
 	return count;
 }
 
+size_t scheduler_reviewed_today_count(const struct scheduler_session *session)
+{
+	size_t count = 0;
+
+	for (size_t index = 0; index < session->card_count; index++)
+	{
+		if (session->cards[index].last_review_day == session->today)
+			count++;
+	}
+
+	return count;
+}
+
 bool scheduler_card_is_due(const struct scheduler_session *session, size_t index)
 {
 	unsigned int remaining;

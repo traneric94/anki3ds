@@ -312,8 +312,11 @@ app leaves the current session in place and shows `reset failed`.
 keeps the Homebrew-style exit path available while avoiding accidental exits
 during review or settings edits.
 
-`rating_counts` are live session counters. Restored state contributes to
-per-card `review_count`, but not to the current session's rating-count totals.
+`reviewed_count` and `rating_counts` are live session counters. Restored state
+contributes to per-card `review_count`, but not to the current session's
+rating-count totals. The summary screen separately derives a persisted cards
+reviewed-today count from each card's `last_review_day`, so relaunching the app
+does not make today's hidden cards look untouched.
 
 The scheduler's day number is derived from the device's local calendar date.
 It is not `time() / 86400`, because UTC rollover can make due cards and daily

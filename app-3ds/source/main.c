@@ -1146,27 +1146,31 @@ static void draw_summary_screen(const struct app_state *app)
 
 	printf("\x1b[3;1H" APP_COLOR_GREEN "No cards due now" APP_COLOR_RESET);
 	printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
-	printf("\x1b[6;1HStudied today: %u", session->reviewed_count);
-	printf("\x1b[7;1HTotal reviews: %u", review_count_total(session));
+	printf("\x1b[6;1HRated session: %u", session->reviewed_count);
 	printf(
-		"\x1b[8;1HSuspended:     %lu",
+		"\x1b[7;1HCards today:   %lu",
+		(unsigned long)scheduler_reviewed_today_count(session)
+	);
+	printf("\x1b[8;1HTotal reviews: %u", review_count_total(session));
+	printf(
+		"\x1b[9;1HSuspended:     %lu",
 		(unsigned long)scheduler_suspended_count(session)
 	);
-	printf("\x1b[9;1HState:         %s", app->state_message);
+	printf("\x1b[10;1HState:         %s", app->state_message);
 	printf(
-		"\x1b[11;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET ": %u",
+		"\x1b[12;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET ": %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[12;1H" APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET ":  %u",
+		"\x1b[13;1H" APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[13;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET ":  %u",
+		"\x1b[14;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[14;1H" APP_COLOR_BLUE "A Easy" APP_COLOR_RESET ":  %u",
+		"\x1b[15;1H" APP_COLOR_BLUE "A Easy" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 }
