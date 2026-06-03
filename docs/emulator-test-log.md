@@ -128,3 +128,19 @@ Result: pass for launch command only
 Notes:
 - D-pad hold repeat now stays on a one-VBlank wait while held, but selector
   feel still needs a manual emulator or hardware pass.
+
+## 2026-06-03 - D-pad Repeat Timing Launch Check
+
+Build: `abd9344`
+Command: `make run-emulator`
+Steps:
+- Reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- D-pad repeat now starts after about 300 ms and repeats about every 80 ms.
+- Quick-tap selector behavior still needs a manual emulator or hardware pass.
