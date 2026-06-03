@@ -37,7 +37,7 @@
 #define STATUS_MESSAGE_SIZE 64
 #define STATUS_MESSAGE_WIDTH 31
 #define BATTERY_LOW_LEVEL 1
-#define BATTERY_POLL_INTERVAL_LOOPS 120
+#define BATTERY_POLL_INTERVAL_SECONDS 600
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -553,6 +553,7 @@ static void app_scan_decks(struct app_state *app)
 
 static bool app_sample_battery(struct app_state *app)
 {
+	u8 shell_state;
 	u8 level;
 	u8 charge_state;
 	bool status_available;
@@ -564,6 +565,14 @@ static bool app_sample_battery(struct app_state *app)
 
 	if (!app->battery_service_available)
 		return false;
+
+	if (R_FAILED(PTMU_GetShellState(&shell_state)) || shell_state == 0)
+	{
+		old_visible = app->battery_status_available && app->battery_low;
+		app->battery_status_available = false;
+		app->battery_low = false;
+		return old_visible;
+	}
 
 	status_available =
 		R_SUCCEEDED(PTMU_GetBatteryLevel(&level)) &&
@@ -1801,13 +1810,17 @@ int main(int argc, char *argv[])
 	static struct app_state app;
 	bool frame_dirty = true;
 	unsigned int idle_wait_count = 0;
-	unsigned int battery_poll_count = 0;
+	time_t next_battery_poll_time = 0;
+	time_t now;
 
 	gfxInitDefault();
 	consoleInit(GFX_TOP, &top_screen);
 	consoleInit(GFX_BOTTOM, &bottom_screen);
 
 	app_init(&app);
+	now = time(NULL);
+	if (now != (time_t)-1)
+		next_battery_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
 	show_scan_then_scan_decks(&app);
 	draw_app(&app);
 
@@ -1833,17 +1846,15 @@ int main(int argc, char *argv[])
 		{
 			idle_wait_count = 0;
 		}
-		else if (battery_poll_count < BATTERY_POLL_INTERVAL_LOOPS)
-		{
-			battery_poll_count++;
-		}
 
-		bool battery_changed =
-			battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS ?
-			app_sample_battery(&app) :
-			false;
-		if (battery_poll_count >= BATTERY_POLL_INTERVAL_LOOPS)
-			battery_poll_count = 0;
+		now = time(NULL);
+		bool battery_poll_due =
+			next_battery_poll_time != 0 &&
+			now != (time_t)-1 &&
+			now >= next_battery_poll_time;
+		bool battery_changed = battery_poll_due ? app_sample_battery(&app) : false;
+		if (battery_poll_due)
+			next_battery_poll_time = now + BATTERY_POLL_INTERVAL_SECONDS;
 
 		if (app_handle_input(&app, keys_down))
 		{
