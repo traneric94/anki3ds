@@ -40,6 +40,7 @@ static void write_file(const char *path, const char *content);
 static void write_numbered_cards_file(const char *path, size_t card_count);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
 static bool file_equals(const char *path, const char *content);
+static void build_test_deck(struct deck *deck);
 
 static void check(bool condition, const char *message)
 {
@@ -862,6 +863,67 @@ static void test_scheduler_scales_review_intervals(void)
 	check(session.cards[0].due_day == TEST_TODAY + 1, "lapsed good schedules tomorrow");
 	check(session.cards[0].lapses == 1, "lapsed good preserves lapse count");
 	check(session.due_count == 0, "lapsed good clears due queue");
+}
+
+static void test_scheduler_caps_loaded_state_counters(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			SCHEDULER_MAX_REVIEW_COUNT,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			SCHEDULER_MAX_LAPSES,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"max counter card restores"
+	);
+	scheduler_reposition(&session);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+	check(
+		session.cards[0].review_count == SCHEDULER_MAX_REVIEW_COUNT,
+		"review count caps at maximum"
+	);
+	check(
+		session.cards[0].lapses == SCHEDULER_MAX_LAPSES,
+		"lapses cap at maximum"
+	);
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"max counter state saves"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"max counter state reloads"
+	);
+	check(
+		loaded.cards[0].review_count == SCHEDULER_MAX_REVIEW_COUNT,
+		"max counter review count reloads"
+	);
+	check(
+		loaded.cards[0].lapses == SCHEDULER_MAX_LAPSES,
+		"max counter lapses reload"
+	);
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
 }
 
 static void test_scheduler_undo_last_rating(void)
@@ -1705,6 +1767,58 @@ static void test_review_state_marked_file_requires_complete_footer(void)
 	);
 	check(session.cards[0].review_count == 0, "wrong row count leaves card unchanged");
 	check(session.due_count == deck.card_count, "wrong row count leaves queue unchanged");
+
+	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_rejects_inconsistent_current_rows(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_PATH,
+		"#anki3ds-state-v1\t1\n"
+		"card-1\t0\t2\t20000\t0\t2500\t0\t0\t20000\t20000\n"
+		"#anki3ds-state-complete\t1\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"unreviewed current row with review days is bad format"
+	);
+	check(session.cards[0].review_count == 0, "inconsistent row leaves card unchanged");
+	check(session.due_count == deck.card_count, "inconsistent row leaves queue unchanged");
+
+	write_file(
+		TEST_STATE_PATH,
+		"#anki3ds-state-v1\t1\n"
+		"card-1\t1\t2\t20000\t1\t2500\t2\t0\t19999\t20000\n"
+		"#anki3ds-state-complete\t1\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"current row with too many lapses is bad format"
+	);
+
+	write_file(
+		TEST_STATE_PATH,
+		"#anki3ds-state-v1\t1\n"
+		"card-1\t1\t2\t20000\t1\t2500\t0\t0\t20000\t19999\n"
+		"#anki3ds-state-complete\t1\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"current row with reversed review days is bad format"
+	);
 
 	remove(TEST_STATE_PATH);
 }
@@ -2914,6 +3028,7 @@ int main(void)
 	test_scheduler_rejects_invalid_rating();
 	test_scheduler_new_again_stays_in_initial_learning();
 	test_scheduler_scales_review_intervals();
+	test_scheduler_caps_loaded_state_counters();
 	test_scheduler_undo_last_rating();
 	test_scheduler_suspend_current();
 	test_scheduler_suspend_last_due_card();
@@ -2942,6 +3057,7 @@ int main(void)
 	test_review_state_unknown_only_file_is_bad_format();
 	test_review_state_duplicate_card_row_is_bad_format();
 	test_review_state_marked_file_requires_complete_footer();
+	test_review_state_rejects_inconsistent_current_rows();
 	test_review_state_loads_previous_current_format();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();

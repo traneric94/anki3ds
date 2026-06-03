@@ -144,7 +144,7 @@ static bool parse_legacy_state_fields(
 		return false;
 	if (!parse_unsigned_field(fields[1], 1, &done_value))
 		return false;
-	if (!parse_unsigned_field(fields[2], 1000000, &state->review_count))
+	if (!parse_unsigned_field(fields[2], SCHEDULER_MAX_REVIEW_COUNT, &state->review_count))
 		return false;
 	if (!parse_unsigned_field(fields[3], SCHEDULER_RATING_COUNT - 1, &rating_value))
 		return false;
@@ -174,7 +174,7 @@ static bool parse_current_state_fields(
 
 	if (fields[0][0] == '\0')
 		return false;
-	if (!parse_unsigned_field(fields[1], 1000000, &state->review_count))
+	if (!parse_unsigned_field(fields[1], SCHEDULER_MAX_REVIEW_COUNT, &state->review_count))
 		return false;
 	if (!parse_unsigned_field(fields[2], SCHEDULER_RATING_COUNT - 1, &rating_value))
 		return false;
@@ -194,7 +194,7 @@ static bool parse_current_state_fields(
 	}
 	if (state->ease_permille < SCHEDULER_MIN_EASE_PERMILLE)
 		return false;
-	if (!parse_unsigned_field(fields[6], 1000000, &state->lapses))
+	if (!parse_unsigned_field(fields[6], SCHEDULER_MAX_LAPSES, &state->lapses))
 		return false;
 	if (
 		(field_count == STATE_SUSPENDED_FIELD_COUNT || field_count == STATE_CURRENT_FIELD_COUNT) &&

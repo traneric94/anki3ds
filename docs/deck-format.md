@@ -149,16 +149,21 @@ card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_
 
 Rules:
 
-- `review_count` is a non-negative integer
+- `review_count` is a non-negative integer, maximum `1000000`
 - `last_rating` is numeric: `0` Again, `1` Hard, `2` Good, `3` Easy
 - `due_day` is local calendar days since 1970-01-01
 - `interval_days` is the current review interval
 - `ease_permille` is the ease factor scaled by 1000, such as `2500` for 2.5
-- `lapses` counts review-card Again ratings
+- `lapses` counts review-card Again ratings, maximum `1000000`
 - `suspended` is `0` for active cards and `1` for cards skipped by review
 - `first_review_day` is the first day this card was reviewed, or `0` if unknown
 - `last_review_day` is the most recent review day, or `0` if unknown
 - marked files must include matching header/footer row counts
+- `lapses` must be less than or equal to `review_count`
+- unreviewed cards must have `interval_days=0`, `lapses=0`, and no
+  first/last review day
+- if first/last review days are known, `first_review_day` must be less than or
+  equal to `last_review_day`
 - unknown card IDs are ignored when loading state
 - duplicate rows for the same current deck `card_id` are malformed
 - footerless ten-column state rows still load as migration data

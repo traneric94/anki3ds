@@ -122,7 +122,9 @@ Load algorithm:
 4. Parse the current ten-field row, previous eight- or seven-field row, or old
    four-field row.
 5. Validate review count, numeric rating, due day, interval, ease, lapses, and
-   suspended/review-day fields.
+   suspended/review-day fields. Restore rejects impossible scheduler states
+   such as lapses greater than review count, unreviewed rows with review-day
+   state, or first review day after last review day.
 6. Find the matching card by `card_id`.
 7. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
@@ -339,6 +341,8 @@ Rating behavior:
 First successful reviews are special-cased so new cards become usable quickly:
 `Hard` and `Good` start at one day, while `Easy` starts at four days. Ease is
 clamped between `1300` and `3500`, and intervals are clamped to 100 years.
+Review and lapse counters are capped at `1000000` so a card at the file-format
+boundary can still be reviewed, saved, and loaded again.
 
 Due selection prefers cards that are already in progress before introducing new
 cards. The priority order is learning/relearning cards, then review cards by

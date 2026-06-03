@@ -87,6 +87,12 @@ static unsigned int scheduler_remaining_limit(unsigned int count, unsigned int l
 	return limit - count;
 }
 
+static void increment_capped(unsigned int *value, unsigned int maximum)
+{
+	if (*value < maximum)
+		(*value)++;
+}
+
 static bool scheduler_card_calendar_due(const struct scheduler_session *session, size_t index)
 {
 	if (index >= session->card_count)
@@ -416,11 +422,28 @@ bool scheduler_restore_card(
 		return false;
 	if (due_day > SCHEDULER_MAX_DAY)
 		return false;
+	if (review_count > SCHEDULER_MAX_REVIEW_COUNT)
+		return false;
+	if (lapses > SCHEDULER_MAX_LAPSES)
+		return false;
+	if (lapses > review_count)
+		return false;
 	if (first_review_day > SCHEDULER_MAX_DAY)
 		return false;
 	if (last_review_day > SCHEDULER_MAX_DAY)
 		return false;
 	if (interval_days > SCHEDULER_MAX_INTERVAL_DAYS)
+		return false;
+	if (
+		review_count == 0 &&
+		(interval_days != 0 || lapses != 0 || first_review_day != 0 || last_review_day != 0)
+	)
+	{
+		return false;
+	}
+	if ((first_review_day == 0) != (last_review_day == 0))
+		return false;
+	if (first_review_day != 0 && first_review_day > last_review_day)
 		return false;
 	if (
 		ease_permille < SCHEDULER_MIN_EASE_PERMILLE ||
@@ -527,7 +550,7 @@ static void schedule_review_card(
 		card->interval_days = 0;
 		card->due_day = session->today;
 		card->ease_permille = adjusted_ease(card->ease_permille, -200);
-		card->lapses++;
+		increment_capped(&card->lapses, SCHEDULER_MAX_LAPSES);
 		break;
 	case SCHEDULER_RATING_HARD:
 		card->interval_days = multiply_interval(card->interval_days, 1200);
@@ -560,7 +583,7 @@ static void schedule_relearning_card(
 		card->interval_days = 0;
 		card->due_day = session->today;
 		card->ease_permille = adjusted_ease(card->ease_permille, -200);
-		card->lapses++;
+		increment_capped(&card->lapses, SCHEDULER_MAX_LAPSES);
 		break;
 	case SCHEDULER_RATING_HARD:
 		card->interval_days = 1;
@@ -641,7 +664,7 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 	else
 		schedule_review_card(session, card, rating);
 
-	card->review_count++;
+	increment_capped(&card->review_count, SCHEDULER_MAX_REVIEW_COUNT);
 	card->ease_permille = clamp_ease(card->ease_permille);
 	scheduler_recount(session);
 
