@@ -13,6 +13,8 @@
 #define STATE_SUSPENDED_FIELD_COUNT 8
 #define STATE_CURRENT_FIELD_COUNT 10
 #define STATE_MAX_LINE_LENGTH 192
+#define STATE_FILE_HEADER "#anki3ds-state-v1"
+#define STATE_FILE_FOOTER "#anki3ds-state-complete"
 
 struct parsed_state
 {
@@ -252,6 +254,49 @@ static bool parse_state_line(
 	return false;
 }
 
+static bool parse_state_metadata_line(
+	char *line,
+	bool *saw_header,
+	bool *saw_footer,
+	unsigned int *header_row_count,
+	unsigned int *footer_row_count
+)
+{
+	char *fields[STATE_CURRENT_FIELD_COUNT];
+	size_t field_count;
+	unsigned int row_count;
+
+	trim_line_end(line);
+
+	if (!split_state_line(line, fields, &field_count))
+		return false;
+	if (field_count != 2)
+		return false;
+	if (!parse_unsigned_field(fields[1], DECK_MAX_CARDS, &row_count))
+		return false;
+
+	if (strcmp(fields[0], STATE_FILE_HEADER) == 0)
+	{
+		if (*saw_header || *saw_footer)
+			return false;
+
+		*saw_header = true;
+		*header_row_count = row_count;
+		return true;
+	}
+	if (strcmp(fields[0], STATE_FILE_FOOTER) == 0)
+	{
+		if (!*saw_header || *saw_footer)
+			return false;
+
+		*saw_footer = true;
+		*footer_row_count = row_count;
+		return true;
+	}
+
+	return false;
+}
+
 static size_t find_card_index(const struct deck *deck, const char *card_id)
 {
 	for (size_t index = 0; index < deck->card_count; index++)
@@ -275,6 +320,11 @@ static enum review_state_load_result review_state_load_file(
 	struct scheduler_session staged = *session;
 	bool matched_cards[DECK_MAX_CARDS];
 	size_t matched_row_count = 0;
+	unsigned int parsed_row_count = 0;
+	unsigned int header_row_count = 0;
+	unsigned int footer_row_count = 0;
+	bool saw_header = false;
+	bool saw_footer = false;
 
 	if (file == NULL)
 		return REVIEW_STATE_LOAD_NOT_FOUND;
@@ -297,12 +347,41 @@ static enum review_state_load_result review_state_load_file(
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
 
+		if (line[0] == '#')
+		{
+			if (!saw_header && parsed_row_count > 0)
+			{
+				fclose(file);
+				return REVIEW_STATE_LOAD_BAD_FORMAT;
+			}
+			if (
+				!parse_state_metadata_line(
+					line,
+					&saw_header,
+					&saw_footer,
+					&header_row_count,
+					&footer_row_count
+				)
+			)
+			{
+				fclose(file);
+				return REVIEW_STATE_LOAD_BAD_FORMAT;
+			}
+
+			continue;
+		}
+		if (saw_footer)
+		{
+			fclose(file);
+			return REVIEW_STATE_LOAD_BAD_FORMAT;
+		}
 		if (!parse_state_line(line, &state, session->today))
 		{
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
 
+		parsed_row_count++;
 		card_index = find_card_index(deck, state.card_id);
 		if (card_index == deck->card_count)
 			continue;
@@ -337,6 +416,20 @@ static enum review_state_load_result review_state_load_file(
 	}
 
 	if (ferror(file))
+	{
+		fclose(file);
+		return REVIEW_STATE_LOAD_BAD_FORMAT;
+	}
+	if (
+		saw_header != saw_footer ||
+		(
+			saw_header &&
+			(
+				header_row_count != parsed_row_count ||
+				footer_row_count != parsed_row_count
+			)
+		)
+	)
 	{
 		fclose(file);
 		return REVIEW_STATE_LOAD_BAD_FORMAT;
@@ -418,6 +511,7 @@ enum review_state_save_result review_state_save(
 {
 	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	FILE *file;
+	size_t row_count;
 
 	if (!storage_build_suffixed_path(
 		temp_path,
@@ -433,7 +527,17 @@ enum review_state_save_result review_state_save(
 	if (file == NULL)
 		return REVIEW_STATE_SAVE_FAILED;
 
-	for (size_t index = 0; index < deck->card_count && index < session->card_count; index++)
+	row_count = deck->card_count < session->card_count ?
+		deck->card_count :
+		session->card_count;
+	if (fprintf(file, "%s\t%u\n", STATE_FILE_HEADER, (unsigned int)row_count) < 0)
+	{
+		fclose(file);
+		remove(temp_path);
+		return REVIEW_STATE_SAVE_FAILED;
+	}
+
+	for (size_t index = 0; index < row_count; index++)
 	{
 		const struct scheduler_card *state = &session->cards[index];
 
@@ -456,6 +560,12 @@ enum review_state_save_result review_state_save(
 			remove(temp_path);
 			return REVIEW_STATE_SAVE_FAILED;
 		}
+	}
+	if (fprintf(file, "%s\t%u\n", STATE_FILE_FOOTER, (unsigned int)row_count) < 0)
+	{
+		fclose(file);
+		remove(temp_path);
+		return REVIEW_STATE_SAVE_FAILED;
 	}
 
 	if (fclose(file) != 0)

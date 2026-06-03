@@ -1670,6 +1670,45 @@ static void test_review_state_duplicate_card_row_is_bad_format(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_marked_file_requires_complete_footer(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(
+		TEST_STATE_PATH,
+		"#anki3ds-state-v1\t2\n"
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"marked state without footer is bad format"
+	);
+	check(session.cards[0].review_count == 0, "missing footer leaves card unchanged");
+	check(session.due_count == deck.card_count, "missing footer leaves queue unchanged");
+
+	write_file(
+		TEST_STATE_PATH,
+		"#anki3ds-state-v1\t2\n"
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n"
+		"#anki3ds-state-complete\t2\n"
+	);
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) ==
+			REVIEW_STATE_LOAD_BAD_FORMAT,
+		"marked state with wrong row count is bad format"
+	);
+	check(session.cards[0].review_count == 0, "wrong row count leaves card unchanged");
+	check(session.due_count == deck.card_count, "wrong row count leaves queue unchanged");
+
+	remove(TEST_STATE_PATH);
+}
+
 static void test_review_state_loads_previous_current_format(void)
 {
 	struct deck deck;
@@ -2902,6 +2941,7 @@ int main(void)
 	test_review_state_empty_file_is_bad_format();
 	test_review_state_unknown_only_file_is_bad_format();
 	test_review_state_duplicate_card_row_is_bad_format();
+	test_review_state_marked_file_requires_complete_footer();
 	test_review_state_loads_previous_current_format();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();

@@ -117,16 +117,18 @@ Load algorithm:
 
 1. Treat a missing file as normal new-deck state.
 2. Read bounded lines.
-3. Parse the current ten-field row, previous eight- or seven-field row, or old
+3. If a state header is present, require the matching completion footer and row
+   count before committing the staged scheduler.
+4. Parse the current ten-field row, previous eight- or seven-field row, or old
    four-field row.
-4. Validate review count, numeric rating, due day, interval, ease, lapses, and
+5. Validate review count, numeric rating, due day, interval, ease, lapses, and
    suspended/review-day fields.
-5. Find the matching card by `card_id`.
-6. Ignore unknown card IDs so re-imported decks can drop cards without breaking
+6. Find the matching card by `card_id`.
+7. Ignore unknown card IDs so re-imported decks can drop cards without breaking
    the saved state.
-7. Reject duplicate rows for the same current deck card.
-8. Restore matching per-card scheduler state into a staged scheduler.
-9. Reposition the scheduler to the first due card.
+8. Reject duplicate rows for the same current deck card.
+9. Restore matching per-card scheduler state into a staged scheduler.
+10. Reposition the scheduler to the first due card.
 
 Old rows migrate `done=0` to due today and `done=1` to tomorrow with a one-day
 interval. Bad rows are rejected before the staged scheduler is committed, so a
@@ -135,9 +137,11 @@ bad state file leaves the live session unchanged.
 Save algorithm:
 
 1. Build `state.tsv.tmp`.
-2. Write one state row per loaded card.
-3. Close the temp file and check close errors.
-4. Ask `storage` to replace the primary file through the shared
+2. Write a state header with the row count.
+3. Write one state row per loaded card.
+4. Write a completion footer with the same row count.
+5. Close the temp file and check close errors.
+6. Ask `storage` to replace the primary file through the shared
    temp/backup transaction.
 
 When replacing an existing primary file, `storage` keeps that previous primary

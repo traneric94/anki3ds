@@ -132,7 +132,16 @@ malformed after an interrupted save, the app can load a valid
 
 ## state.tsv
 
-Current columns:
+Current files are framed by a header and footer. The number is the count of
+state rows written between them:
+
+```text
+#anki3ds-state-v1<TAB>row_count
+...
+#anki3ds-state-complete<TAB>row_count
+```
+
+Current row columns:
 
 ```text
 card_id<TAB>review_count<TAB>last_rating<TAB>due_day<TAB>interval_days<TAB>ease_permille<TAB>lapses<TAB>suspended<TAB>first_review_day<TAB>last_review_day
@@ -149,8 +158,10 @@ Rules:
 - `suspended` is `0` for active cards and `1` for cards skipped by review
 - `first_review_day` is the first day this card was reviewed, or `0` if unknown
 - `last_review_day` is the most recent review day, or `0` if unknown
+- marked files must include matching header/footer row counts
 - unknown card IDs are ignored when loading state
 - duplicate rows for the same current deck `card_id` are malformed
+- footerless ten-column state rows still load as migration data
 - previous eight-column state rows still load with first/last review day as `0`
 - previous seven-column state rows still load with `suspended=0`
 - old four-column state rows, `card_id done review_count last_rating`, still load
@@ -166,8 +177,8 @@ load a valid `state.tsv.tmp` or `state.tsv.bak`.
 This is an early day-level spaced repetition format. Minute-level learning
 steps, single-card unsuspend UI, burying, filtered decks, and review logs are
 planned later.
-Older app builds that only accept seven- or eight-column rows will reject state
-saved by this version.
+Older app builds that only accept unframed seven- or eight-column rows will
+reject state saved by this version.
 
 ## media/*.a3i
 
