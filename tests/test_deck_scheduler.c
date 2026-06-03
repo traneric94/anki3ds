@@ -1444,6 +1444,40 @@ static void test_review_state_round_trip_suspended_card(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_save_retains_backup_for_primary_recovery(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+	const char *old_state =
+		"card-1\t1\t2\t20001\t1\t2500\t0\t0\t100\t19999\n";
+
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	write_file(TEST_STATE_PATH, old_state);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"state save with previous primary succeeds"
+	);
+	check(file_equals(TEST_STATE_BACKUP_PATH, old_state), "state save retains backup");
+
+	write_file(TEST_STATE_PATH, "bad\n");
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"retained backup recovers bad primary state"
+	);
+	check(loaded.cards[0].review_count == 1, "retained backup review count loads");
+	check(loaded.cards[0].interval_days == 1, "retained backup interval loads");
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
 static void test_review_state_loads_backup_when_primary_missing(void)
 {
 	struct deck deck;
@@ -1721,9 +1755,10 @@ static void test_storage_replace_file_commits_temp_file(void)
 	check(storage_replace_file(TEST_STORAGE_PATH), "storage replace succeeds");
 	check(file_equals(TEST_STORAGE_PATH, "new\n"), "storage replace commits temp");
 	check(access(TEST_STORAGE_TEMP_PATH, F_OK) != 0, "storage replace removes temp");
-	check(access(TEST_STORAGE_BACKUP_PATH, F_OK) != 0, "storage replace removes backup");
+	check(file_equals(TEST_STORAGE_BACKUP_PATH, "old\n"), "storage replace retains backup");
 
 	remove(TEST_STORAGE_PATH);
+	remove(TEST_STORAGE_BACKUP_PATH);
 }
 
 static void test_storage_replace_file_commits_first_save(void)
@@ -2045,9 +2080,13 @@ static void test_app_settings_save_replaces_existing_file(void)
 	);
 	check(loaded.new_limit == 0, "replaced settings new limit loads");
 	check(loaded.review_limit == 50, "replaced settings review limit loads");
-	check(access(TEST_SETTINGS_BACKUP_PATH, F_OK) != 0, "settings save removes old backup");
+	check(
+		file_equals(TEST_SETTINGS_BACKUP_PATH, "new_limit\t1\nreview_limit\t2\n"),
+		"settings save retains previous primary backup"
+	);
 
 	remove(TEST_SETTINGS_PATH);
+	remove(TEST_SETTINGS_BACKUP_PATH);
 }
 
 static void write_file(const char *path, const char *content)
@@ -2854,6 +2893,7 @@ int main(void)
 	test_review_state_missing_file();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
+	test_review_state_save_retains_backup_for_primary_recovery();
 	test_review_state_loads_backup_when_primary_missing();
 	test_review_state_loads_backup_when_primary_is_bad();
 	test_review_state_loads_temp_when_primary_and_backup_missing();

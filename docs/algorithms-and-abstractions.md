@@ -140,6 +140,11 @@ Save algorithm:
 4. Ask `storage` to replace the primary file through the shared
    temp/backup transaction.
 
+When replacing an existing primary file, `storage` keeps that previous primary
+as `.bak` after the new temp file becomes primary. First saves still leave no
+backup. This gives the load path a known previous save to recover from if the
+new primary is corrupted later.
+
 If the main state file is missing on load, the app tries `state.tsv.tmp`, then
 `state.tsv.bak`. The temp fallback covers interrupted first saves where the
 temp file was fully written but not yet renamed into place. If the main state

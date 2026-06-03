@@ -96,9 +96,6 @@ bool storage_replace_file(const char *path)
 		return false;
 	}
 
-	if (had_previous_file)
-		remove(backup_path);
-
 	return true;
 }
 
