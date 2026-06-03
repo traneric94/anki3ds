@@ -118,8 +118,26 @@ class HtmlTextExtractor(HTMLParser):
         return "".join(self.parts)
 
 
+class HtmlImageDetector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        if tag.lower() == "img":
+            self.found = True
+
+
 def escape_tsv_field(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n")
+
+
+def text_contains_image_tag(value: str) -> bool:
+    parser = HtmlImageDetector()
+    parser.feed(value)
+    parser.close()
+    return parser.found
 
 
 def normalize_text(value: str) -> str:
@@ -295,6 +313,15 @@ def convert_lines(
         )
         if len(fields) <= max_field:
             raise ValueError(f"line {line_number}: expected at least {max_field + 1} fields")
+
+        if text_contains_image_tag(fields[front_field]) and front_media_field is None:
+            raise ValueError(
+                f"line {line_number}: front image tags require --front-media-field"
+            )
+        if text_contains_image_tag(fields[back_field]) and back_media_field is None:
+            raise ValueError(
+                f"line {line_number}: back image tags require --back-media-field"
+            )
 
         front = normalize_text(fields[front_field])
         back = normalize_text(fields[back_field])

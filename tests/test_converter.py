@@ -77,6 +77,32 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(cards[0].front, "front\nline")
         self.assertEqual(cards[0].back, "back text")
 
+    def test_convert_lines_requires_media_field_for_front_image_tags(self):
+        with self.assertRaisesRegex(ValueError, "front image tags"):
+            convert_lines(
+                ['front text <img src="front.ppm">\tback\ttag'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+            )
+
+        with self.assertRaisesRegex(ValueError, "front image tags"):
+            convert_lines(
+                ['<img src="front.ppm">\tback\ttag'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+            )
+
+    def test_convert_lines_requires_media_field_for_back_image_tags(self):
+        with self.assertRaisesRegex(ValueError, "back image tags"):
+            convert_lines(
+                ['front\tback text <img src="back.ppm">\ttag'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+            )
+
     def test_convert_lines_reads_media_fields(self):
         cards = convert_lines(
             ["front\tback\ttag\tfront.ppm\tback.ppm"],
