@@ -62,6 +62,8 @@ const char *review_log_event_name(enum review_log_event event)
 		return "suspend";
 	case REVIEW_LOG_EVENT_UNDO:
 		return "undo";
+	case REVIEW_LOG_EVENT_RESTORE:
+		return "restore";
 	}
 
 	return NULL;

@@ -2143,6 +2143,27 @@ static void test_review_log_appends_study_events(void)
 		),
 		"review log preserves appended transitions"
 	);
+
+	entry.timestamp = 12347;
+	entry.event = REVIEW_LOG_EVENT_RESTORE;
+	entry.card_id = "card-1";
+	entry.before = initial_card;
+	entry.before.suspended = true;
+	entry.after = initial_card;
+
+	check(review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log appends restore");
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+			"12346\t20000\tundo\tcard-1\t-\t1\t20001\t1\t2500\t0\t0\t"
+			"0\t20000\t0\t2500\t0\t0\n"
+			"12347\t20000\trestore\tcard-1\t-\t0\t20000\t0\t2500\t0\t1\t"
+			"0\t20000\t0\t2500\t0\t0\n"
+		),
+		"review log writes restore transition"
+	);
 	check(!review_log_append(NULL, &entry), "review log rejects null path");
 	check(!review_log_append(TEST_REVIEW_LOG_PATH, NULL), "review log rejects null entry");
 	entry.card_id = "bad\tid";

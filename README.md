@@ -171,9 +171,10 @@ opening the reset action and confirming with `X`. Cards may optionally reference
 bounded `.a3i` images under the deck's `media/` folder. The top screen shows
 deck/card content, while the bottom screen shows controls, review status, save
 feedback, and the last valid sampled battery level, including charging and low
-battery states. Successful ratings, suspend actions, and undo actions append a
-best-effort `review-log.tsv` row for debugging. An in-app controls screen is
-available with `Y` from non-rating screens and unrevealed review cards.
+battery states. Successful ratings, suspend actions, undo actions, and
+restore-suspended actions append best-effort `review-log.tsv` rows for
+debugging. An in-app controls screen is available with `Y` from non-rating
+screens and unrevealed review cards.
 
 See:
 

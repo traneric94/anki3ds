@@ -267,10 +267,10 @@ undo, or restore-suspended action, the app restores that snapshot and leaves the
 user on the current workflow screen with the save error visible. This keeps the
 in-memory review queue from advancing past the durable SD-card state.
 
-After a rating, suspend, or undo action saves `state.tsv`, the app appends a
-diagnostic row to `review-log.tsv` with the before/after scheduler fields for
-the affected card. Review logging is best-effort and append-only: a log append
-failure does not roll back a saved study action.
+After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
+the app appends diagnostic rows to `review-log.tsv` with the before/after
+scheduler fields for the affected cards. Review logging is best-effort and
+append-only: a log append failure does not roll back a saved study action.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant

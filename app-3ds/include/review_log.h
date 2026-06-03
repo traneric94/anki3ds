@@ -11,6 +11,7 @@ enum review_log_event
 	REVIEW_LOG_EVENT_RATING,
 	REVIEW_LOG_EVENT_SUSPEND,
 	REVIEW_LOG_EVENT_UNDO,
+	REVIEW_LOG_EVENT_RESTORE,
 };
 
 struct review_log_entry

@@ -1826,8 +1826,13 @@ static bool reset_progress(struct app_state *app)
 static bool unsuspend_all_cards(struct app_state *app)
 {
 	unsigned int unsuspended_count;
+	bool was_suspended[DECK_MAX_CARDS];
 
 	save_session_rollback(app);
+	memset(was_suspended, 0, sizeof(was_suspended));
+	for (size_t index = 0; index < app->session.card_count; index++)
+		was_suspended[index] = app->session.cards[index].suspended;
+
 	unsuspended_count = scheduler_unsuspend_all(&app->session);
 	if (unsuspended_count == 0)
 	{
@@ -1842,6 +1847,24 @@ static bool unsuspend_all_cards(struct app_state *app)
 		restore_session_rollback(app);
 		app_set_status(app, "Save failed; restore undone");
 		return true;
+	}
+
+	for (size_t index = 0; index < app->session.card_count; index++)
+	{
+		struct scheduler_card before;
+
+		if (!was_suspended[index])
+			continue;
+
+		before = app->session.cards[index];
+		before.suspended = true;
+		append_review_log_entry(
+			app,
+			REVIEW_LOG_EVENT_RESTORE,
+			index,
+			SCHEDULER_RATING_COUNT,
+			&before
+		);
 	}
 
 	app->state_message = "unsuspended";

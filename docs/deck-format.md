@@ -219,9 +219,9 @@ general-purpose image decoding.
 ## Review Log
 
 The app appends study transitions to `review-log.tsv` beside `state.tsv` after
-a rating, suspend, or undo action has been accepted and `state.tsv` has saved.
-The log is diagnostic and append-only; a failed append does not roll back the
-review state or block the study action.
+a rating, suspend, undo, or restore-suspended action has been accepted and
+`state.tsv` has saved. The log is diagnostic and append-only; a failed append
+does not roll back the review state or block the study action.
 
 ```text
 timestamp<TAB>day<TAB>event<TAB>card_id<TAB>rating<TAB>old_review_count<TAB>old_due_day<TAB>old_interval_days<TAB>old_ease_permille<TAB>old_lapses<TAB>old_suspended<TAB>new_review_count<TAB>new_due_day<TAB>new_interval_days<TAB>new_ease_permille<TAB>new_lapses<TAB>new_suspended
@@ -231,7 +231,7 @@ Rules:
 
 - `timestamp` is Unix time in seconds, or `0` if the clock is unavailable
 - `day` is local calendar days since 1970-01-01
-- `event` is `rating`, `suspend`, or `undo`
+- `event` is `rating`, `suspend`, `undo`, or `restore`
 - `card_id` must not include tabs or newlines
 - `rating` is `again`, `hard`, `good`, `easy`, or `-` for non-rating events
 - old/new scheduler fields use the same meanings as `state.tsv`
