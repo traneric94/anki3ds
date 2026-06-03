@@ -27,6 +27,21 @@ Use the emulator for quick iteration between checkpoint builds:
 The emulator loop is allowed to be faster and rougher than the hardware loop.
 Hardware test results should still be recorded in `docs/device-test-log.md`.
 
+## Current Code-Complete Loop
+
+For the current daily-use push, keep the inner loop local and manual-first:
+
+1. Make the app/converter change.
+2. Run a narrow local sanity check such as `make`, `python3 -m py_compile`, or
+   a deck verifier when it directly covers the changed surface.
+3. Commit locally.
+4. Defer CI polling and broad automated tests until the manual pass exposes a
+   concrete issue worth shrinking with a targeted test.
+
+This does not replace the stronger pre-checkpoint gates below; it just keeps
+the code-complete pass moving while manual emulator or hardware feedback is
+still pending.
+
 Current build commands:
 
 ```sh

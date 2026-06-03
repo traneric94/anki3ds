@@ -148,9 +148,12 @@ Pass condition:
 
 Before acceptance:
 
+- During the current code-complete pass, use local commits plus narrow sanity
+  checks and manual emulator or hardware feedback; do not require CI polling
+  before every change.
 - Run `make verify-local` on a machine with the 3DS toolchain, or confirm the
   portable `make verify-ci` gate is green when only host verification is
-  available.
+  available before a tagged checkpoint or release artifact.
 - For emulator acceptance, launch with `make run-emulator-fresh-samples`.
 - For hardware acceptance, copy the current `.3dsx`, `.smdh`, and tracked
   sample decks to `sdmc:/3ds/anki3ds/` with tracked sample progress cleared.
