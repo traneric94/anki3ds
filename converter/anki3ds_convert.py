@@ -290,10 +290,14 @@ def convert_lines(
     back_media_field: int | None = None,
     card_id_field: int | None = None,
     note_id_field: int | None = None,
+    text_only: bool = False,
 ) -> list[ConvertedCard]:
     cards: list[ConvertedCard] = []
     seen_card_ids: dict[str, int] = {}
     seen_note_ids: dict[str, int] = {}
+
+    if text_only and (front_media_field is not None or back_media_field is not None):
+        raise ValueError("text-only decks cannot use media fields")
 
     for line_number, raw_line in enumerate(lines, start=1):
         line = raw_line.rstrip("\n\r")
@@ -317,6 +321,10 @@ def convert_lines(
         front_has_image = text_contains_image_tag(fields[front_field])
         back_has_image = text_contains_image_tag(fields[back_field])
 
+        if text_only and (front_has_image or back_has_image):
+            raise ValueError(
+                f"line {line_number}: text-only decks cannot include image tags"
+            )
         if front_has_image and front_media_field is None:
             raise ValueError(
                 f"line {line_number}: front image tags require --front-media-field"
@@ -950,6 +958,11 @@ def parse_args() -> argparse.Namespace:
         help="directory containing PPM P6 media files to convert into media/*.a3i",
     )
     parser.add_argument(
+        "--text-only",
+        action="store_true",
+        help="reject image tags and media options for daily-use text flash-card decks",
+    )
+    parser.add_argument(
         "--split-large-decks",
         action="store_true",
         help="write oversized exports as numbered sibling deck folders",
@@ -972,6 +985,12 @@ def main() -> int:
         raise SystemExit("field indexes must be non-negative")
     if args.note_id_field is not None and args.note_id_field < 0:
         raise SystemExit("field indexes must be non-negative")
+    if args.text_only and (
+        args.front_media_field is not None
+        or args.back_media_field is not None
+        or args.media_root is not None
+    ):
+        raise SystemExit("text-only decks cannot use media options")
 
     try:
         lines = args.input.read_text(encoding="utf-8").splitlines()
@@ -984,6 +1003,7 @@ def main() -> int:
             args.back_media_field,
             args.card_id_field,
             args.note_id_field,
+            args.text_only,
         )
         deck_id = args.deck_id if args.deck_id is not None else args.output.name
         if args.split_large_decks:

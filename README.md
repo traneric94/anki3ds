@@ -158,13 +158,17 @@ To convert a simple tab-separated export into an anki3ds deck:
 ```sh
 python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --deck-id my-deck \
-  --deck-name "My Deck"
+  --deck-name "My Deck" \
+  --text-only
 ```
 
 The converter simplifies simple HTML in exported fields before writing
 `cards.tsv`: formatting tags are removed, block tags and `<br>` become line
 breaks, entities such as `&nbsp;` are decoded, and script/style content is
 dropped.
+
+`--text-only` is the recommended daily-use mode: it accepts plain text front
+and back fields, but rejects media options and inline image tags.
 
 Conversion failures print a concise `error: ...` message and exit nonzero so
 the input can be fixed without reading a Python traceback.
@@ -179,7 +183,8 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --note-id-field 0 \
   --card-id-field 1 \
   --front-field 2 \
-  --back-field 3
+  --back-field 3 \
+  --text-only
 ```
 
 Current 3DS builds support 256 cards per deck folder and store up to 64 deck
@@ -190,12 +195,13 @@ such as `my-deck-01` and `my-deck-02`:
 python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --deck-id my-deck \
   --deck-name "My Deck" \
+  --text-only \
   --split-large-decks
 ```
 
 Text cards are the supported daily-use scope. Optional media fields can be
-copied from existing `.a3i` images or converted
-from binary PPM `P6` images into the device-side `.a3i` format:
+copied from existing `.a3i` images or converted from binary PPM `P6` images
+into the device-side `.a3i` format only when `--text-only` is omitted:
 
 ```sh
 python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \

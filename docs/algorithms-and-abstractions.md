@@ -430,18 +430,19 @@ Algorithm:
    `note_id` and `card_id` from `--note-id-field`/`--card-id-field` when
    durable source IDs are provided, otherwise `note_id` from front/back/tags
    and `card_id` from note/front/back.
-7. Reject inline `<img>` tags unless the same side has a non-empty mapped
+7. In `--text-only` mode, reject media options and inline `<img>` tags.
+8. Reject inline `<img>` tags unless the same side has a non-empty mapped
    media field, so image-bearing exports do not silently become text-only
    cards.
-8. If media fields and `--media-root` are provided, convert referenced binary
+9. If media fields and `--media-root` are provided, convert referenced binary
    PPM `P6` files into bounded raw `.a3i` files under a temporary media
    directory, then replace final media files with rollback if a commit step
    fails.
-9. If media fields are used without `--media-root`, validate the existing
+10. If media fields are used without `--media-root`, validate the existing
    passthrough `.a3i` files before changing deck payload files.
-10. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
+11. Stage `deck.json` and `cards.tsv` in temporary files, then replace both
     final files with rollback if either commit step fails.
-11. Write default `settings.tsv` if it does not already exist.
+12. Write default `settings.tsv` if it does not already exist.
 
 The converter deliberately does not open or rewrite existing `state.tsv`,
 `review-log.tsv`, or `settings.tsv`, so review progress, diagnostic history,

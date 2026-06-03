@@ -103,6 +103,27 @@ class ConverterTests(unittest.TestCase):
                 tags_field=2,
             )
 
+    def test_convert_lines_text_only_rejects_image_tags(self):
+        with self.assertRaisesRegex(ValueError, "text-only decks cannot include"):
+            convert_lines(
+                ['front <img src="front.ppm">\tback\ttag'],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+                text_only=True,
+            )
+
+    def test_convert_lines_text_only_rejects_media_fields(self):
+        with self.assertRaisesRegex(ValueError, "text-only decks cannot use media"):
+            convert_lines(
+                ["front\tback\ttag\tfront.a3i"],
+                front_field=0,
+                back_field=1,
+                tags_field=2,
+                front_media_field=3,
+                text_only=True,
+            )
+
     def test_convert_lines_requires_non_empty_media_for_image_tags(self):
         with self.assertRaisesRegex(ValueError, "non-empty media field"):
             convert_lines(
@@ -909,6 +930,78 @@ class ConverterTests(unittest.TestCase):
 
             self.assertEqual(stdout.getvalue(), "")
             self.assertIn("error: line 1: front field is empty", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_cli_text_only_writes_plain_text_deck(self):
+        cards_input = "front\tback\ttag\n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            with io.StringIO() as stdout:
+                with redirect_stdout(stdout), mock.patch(
+                    "sys.argv",
+                    [
+                        "anki3ds_convert.py",
+                        str(input_path),
+                        str(output),
+                        "--text-only",
+                    ],
+                ):
+                    self.assertEqual(main(), 0)
+
+            line = (output / "cards.tsv").read_text(encoding="utf-8").splitlines()[0]
+            self.assertEqual(len(line.split("\t")), 5)
+            self.assertFalse((output / "media").exists())
+
+    def test_cli_text_only_rejects_media_options(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text("front\tback\ttag\tfront.a3i\n", encoding="utf-8")
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "anki3ds_convert.py",
+                    str(input_path),
+                    str(output),
+                    "--text-only",
+                    "--front-media-field",
+                    "3",
+                ],
+            ):
+                with self.assertRaisesRegex(SystemExit, "text-only decks"):
+                    main()
+
+    def test_cli_text_only_reports_image_tags_without_traceback(self):
+        cards_input = 'front <img src="front.ppm">\tback\n'
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "export.tsv"
+            output = Path(temp_dir) / "my-deck"
+            input_path.write_text(cards_input, encoding="utf-8")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr), mock.patch(
+                "sys.argv",
+                [
+                    "anki3ds_convert.py",
+                    str(input_path),
+                    str(output),
+                    "--text-only",
+                ],
+            ):
+                self.assertEqual(main(), 1)
+
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn(
+                "text-only decks cannot include image tags",
+                stderr.getvalue(),
+            )
             self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_write_split_decks_writes_numbered_sibling_decks(self):
