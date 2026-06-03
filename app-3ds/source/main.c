@@ -2622,34 +2622,6 @@ static bool app_handle_suspend_confirmation_input(
 	return false;
 }
 
-static bool app_handle_exit_confirmation_input(
-	struct app_state *app,
-	unsigned int buttons_down,
-	unsigned int buttons_active
-)
-{
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_A))
-	{
-		app->exit_requested = true;
-		return true;
-	}
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = app->exit_return_mode;
-		return true;
-	}
-
-	return false;
-}
-
 static bool app_handle_settings_input(
 	struct app_state *app,
 	unsigned int buttons_down,
@@ -2695,30 +2667,6 @@ static bool app_handle_settings_input(
 	return false;
 }
 
-static bool app_handle_controls_input(
-	struct app_state *app,
-	unsigned int buttons_down,
-	unsigned int buttons_active
-)
-{
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_Y) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = app->controls_return_mode;
-		app_set_status(app, "Returned");
-		return true;
-	}
-
-	return false;
-}
-
 static bool app_handle_input(
 	struct app_state *app,
 	u32 keys_down,
@@ -2728,36 +2676,51 @@ static bool app_handle_input(
 	unsigned int buttons_down = app_controls_buttons_from_3ds_keys(keys_down);
 	unsigned int buttons_active = app_controls_buttons_from_3ds_keys(keys_active);
 	enum scheduler_rating rating;
+	enum app_control_action action = app_controls_classify_action(
+		app_control_mode_for_app_mode(app->mode),
+		app->revealed,
+		app_state_allows_study(app),
+		buttons_down,
+		buttons_active,
+		&rating
+	);
 
-	if (app->mode == APP_MODE_CONFIRM_EXIT)
-		return app_handle_exit_confirmation_input(
-			app,
-			buttons_down,
-			buttons_active
-		);
-
-	if (
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_START
-		)
-	)
+	switch (action)
 	{
+	case APP_CONTROL_ACTION_CONFIRM_EXIT:
+		app->exit_requested = true;
+		return true;
+	case APP_CONTROL_ACTION_CANCEL_EXIT:
+		app->mode = app->exit_return_mode;
+		return true;
+	case APP_CONTROL_ACTION_OPEN_EXIT:
 		app_open_exit_confirmation(app);
 		return true;
-	}
-
-	if (app->mode == APP_MODE_CONTROLS)
-		return app_handle_controls_input(app, buttons_down, buttons_active);
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_Y) &&
-		app_controls_can_open(app_control_mode_for_app_mode(app->mode), app->revealed)
-	)
-	{
+	case APP_CONTROL_ACTION_CLOSE_CONTROLS:
+		app->mode = app->controls_return_mode;
+		app_set_status(app, "Returned");
+		return true;
+	case APP_CONTROL_ACTION_OPEN_CONTROLS:
 		app_open_controls(app);
 		return true;
+	case APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT:
+		app_return_to_deck_select(app);
+		return true;
+	case APP_CONTROL_ACTION_OPEN_ACTIONS:
+		app_open_actions(app);
+		return true;
+	case APP_CONTROL_ACTION_UNDO:
+		return undo_last_action(app);
+	case APP_CONTROL_ACTION_OPEN_SUSPEND:
+		app_open_suspend_confirmation(app);
+		return true;
+	case APP_CONTROL_ACTION_SHOW_ANSWER:
+		app->revealed = true;
+		return true;
+	case APP_CONTROL_ACTION_RATE:
+		return rate_current_card(app, rating);
+	case APP_CONTROL_ACTION_NONE:
+		break;
 	}
 
 	if (app->mode == APP_MODE_DECK_SELECT)
@@ -2784,96 +2747,6 @@ static bool app_handle_input(
 			buttons_down,
 			buttons_active
 		);
-
-	if (
-		app->mode == APP_MODE_LOAD_ERROR &&
-		(
-			app_command_pressed(
-				buttons_down,
-				buttons_active,
-				APP_CONTROL_BUTTON_B
-			) ||
-			app_command_pressed(
-				buttons_down,
-				buttons_active,
-				APP_CONTROL_BUTTON_SELECT
-			)
-		)
-	)
-	{
-		app_return_to_deck_select(app);
-		return true;
-	}
-
-	if (
-		(
-			app->mode == APP_MODE_SUMMARY ||
-			(app->mode == APP_MODE_REVIEW && !app->revealed)
-		) &&
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B)
-	)
-	{
-		app_return_to_deck_select(app);
-		return true;
-	}
-
-	if (
-		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app_open_actions(app);
-		return true;
-	}
-
-	if (
-		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
-		app_state_allows_study(app) &&
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_L)
-	)
-	{
-		return undo_last_action(app);
-	}
-
-	if (app->mode != APP_MODE_REVIEW)
-		return false;
-
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_R))
-	{
-		app_open_suspend_confirmation(app);
-		return true;
-	}
-
-	if (!app->revealed)
-	{
-		if (
-			app_controls_should_show_answer_triggered(
-				buttons_down,
-				buttons_active,
-				app->revealed
-			)
-		)
-		{
-			app->revealed = true;
-			return true;
-		}
-
-		return false;
-	}
-
-	if (
-		app_controls_rating_for_trigger(
-			buttons_down,
-			buttons_active,
-			app->revealed,
-			&rating
-		)
-	)
-		return rate_current_card(app, rating);
 
 	return false;
 }

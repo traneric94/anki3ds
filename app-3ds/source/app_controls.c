@@ -345,3 +345,200 @@ bool app_controls_rating_for_buttons(
 		rating
 	);
 }
+
+enum app_control_action app_controls_classify_action(
+	enum app_control_mode mode,
+	bool review_answer_revealed,
+	bool study_allowed,
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	enum scheduler_rating *rating
+)
+{
+	enum scheduler_rating selected_rating;
+
+	if (mode == APP_CONTROL_MODE_CONFIRM_EXIT)
+	{
+		if (
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_A
+			)
+		)
+		{
+			return APP_CONTROL_ACTION_CONFIRM_EXIT;
+		}
+		if (
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_B
+			) ||
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_SELECT
+			)
+		)
+		{
+			return APP_CONTROL_ACTION_CANCEL_EXIT;
+		}
+
+		return APP_CONTROL_ACTION_NONE;
+	}
+
+	if (
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_START
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_OPEN_EXIT;
+	}
+
+	if (mode == APP_CONTROL_MODE_CONTROLS)
+	{
+		if (
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_B
+			) ||
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_Y
+			) ||
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_SELECT
+			)
+		)
+		{
+			return APP_CONTROL_ACTION_CLOSE_CONTROLS;
+		}
+
+		return APP_CONTROL_ACTION_NONE;
+	}
+
+	if (
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_Y
+		) &&
+		app_controls_can_open(mode, review_answer_revealed)
+	)
+	{
+		return APP_CONTROL_ACTION_OPEN_CONTROLS;
+	}
+
+	if (
+		mode == APP_CONTROL_MODE_LOAD_ERROR &&
+		(
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_B
+			) ||
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_SELECT
+			)
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT;
+	}
+
+	if (
+		(
+			mode == APP_CONTROL_MODE_SUMMARY ||
+			(mode == APP_CONTROL_MODE_REVIEW && !review_answer_revealed)
+		) &&
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_B
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT;
+	}
+
+	if (
+		(mode == APP_CONTROL_MODE_REVIEW || mode == APP_CONTROL_MODE_SUMMARY) &&
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_SELECT
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_OPEN_ACTIONS;
+	}
+
+	if (
+		(mode == APP_CONTROL_MODE_REVIEW || mode == APP_CONTROL_MODE_SUMMARY) &&
+		study_allowed &&
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_L
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_UNDO;
+	}
+
+	if (mode != APP_CONTROL_MODE_REVIEW)
+		return APP_CONTROL_ACTION_NONE;
+
+	if (
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_R
+		)
+	)
+	{
+		return APP_CONTROL_ACTION_OPEN_SUSPEND;
+	}
+
+	if (!review_answer_revealed)
+	{
+		if (
+			app_controls_should_show_answer_triggered(
+				trigger_buttons,
+				active_buttons,
+				review_answer_revealed
+			)
+		)
+		{
+			return APP_CONTROL_ACTION_SHOW_ANSWER;
+		}
+
+		return APP_CONTROL_ACTION_NONE;
+	}
+
+	if (
+		rating != NULL &&
+		app_controls_rating_for_trigger(
+			trigger_buttons,
+			active_buttons,
+			review_answer_revealed,
+			&selected_rating
+		)
+	)
+	{
+		*rating = selected_rating;
+		return APP_CONTROL_ACTION_RATE;
+	}
+
+	return APP_CONTROL_ACTION_NONE;
+}

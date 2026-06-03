@@ -946,6 +946,202 @@ static void test_app_controls_modal_controls(void)
 	);
 }
 
+static void test_app_controls_classifies_app_actions(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+	enum app_control_action action;
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CONFIRM_EXIT, "exit confirmation accepts A");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CANCEL_EXIT, "exit confirmation cancels with select");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
+		APP_CONTROL_BUTTON_START,
+		APP_CONTROL_BUTTON_START,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "exit confirmation does not reopen exit");
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_START,
+		APP_CONTROL_BUTTON_START,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_EXIT, "start opens exit before settings");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_START,
+		APP_CONTROL_BUTTON_START,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_EXIT, "start opens exit from controls");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y,
+		APP_CONTROL_BUTTON_Y,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CLOSE_CONTROLS, "Y closes controls screen");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "controls ignores command chords");
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_DECK_SELECT,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y,
+		APP_CONTROL_BUTTON_Y,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_CONTROLS, "Y opens deck controls");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_RESTORE,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y,
+		APP_CONTROL_BUTTON_Y,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "Y does not open controls in modal");
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_LOAD_ERROR,
+		false,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT, "B exits load error");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT, "B leaves front review");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_SHOW_ANSWER, "A reveals front review");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		0,
+		APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "held A does not reveal again");
+
+	rating = SCHEDULER_RATING_COUNT;
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		APP_CONTROL_BUTTON_Y,
+		APP_CONTROL_BUTTON_Y,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RATE, "revealed Y rates instead of controls");
+	check(rating == SCHEDULER_RATING_AGAIN, "revealed Y maps to Again");
+	rating = SCHEDULER_RATING_COUNT;
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RATE, "revealed B rates instead of leaving");
+	check(rating == SCHEDULER_RATING_GOOD, "revealed B maps to Good");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_A,
+		NULL
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "rating action requires output");
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_ACTIONS, "select opens review actions");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SUMMARY,
+		false,
+		true,
+		APP_CONTROL_BUTTON_L,
+		APP_CONTROL_BUTTON_L,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_UNDO, "L undoes from safe summary");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SUMMARY,
+		false,
+		false,
+		APP_CONTROL_BUTTON_L,
+		APP_CONTROL_BUTTON_L,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "unsafe summary blocks undo");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		APP_CONTROL_BUTTON_R,
+		APP_CONTROL_BUTTON_R,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_SUSPEND, "R opens suspend confirmation");
+}
+
 static void test_app_controls_navigation_repeat(void)
 {
 	struct app_control_repeat repeat;
@@ -4323,6 +4519,7 @@ int main(void)
 	test_app_controls_rejects_ambiguous_dpad_axes();
 	test_app_controls_requires_single_command();
 	test_app_controls_modal_controls();
+	test_app_controls_classifies_app_actions();
 	test_app_controls_navigation_repeat();
 	test_app_controls_input_activity();
 	test_scheduler_rejects_invalid_rating();

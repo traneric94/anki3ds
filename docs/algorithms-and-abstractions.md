@@ -201,12 +201,14 @@ framework yet. Rendering uses simple ANSI foreground colors: blue headings,
 green selected or successful state, red errors and destructive reset prompts,
 and yellow cautions.
 
-The review button map lives in the small `app_controls` module so the
-reveal/rating rules can be host-tested without libctru. `main.c` still owns
-state transitions and side effects, but the stable review mapping is: front
-side `A` reveals; after reveal, `Y/X/B/A` choose Again/Hard/Good/Easy.
-Ambiguous post-reveal face-button combinations are ignored so a fat-fingered
-rating does not save the wrong answer.
+The review button map and app-level command priority live in the small
+`app_controls` module so reveal/rating rules can be host-tested without
+libctru. `main.c` still owns state transitions and side effects, but it asks
+`app_controls` to classify global actions such as exit, controls, deck-list
+return, actions, undo, suspend confirmation, reveal, and rating. The stable
+review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
+Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
+ignored so a fat-fingered rating does not save the wrong answer.
 D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
 deck select, actions, and settings modes, so ratings and destructive actions
 stay single-press. Held input keeps the idle wait counter short while a button
@@ -476,6 +478,7 @@ Keep the portable logic separate from the libctru shell:
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds and poll scheduling policy | libctru PTMU calls, rendering |
 | `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
+| `app_controls` | abstract button bits, repeat timing, app command classification | scheduler mutation, file I/O, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `media_image` | bounded `.a3i` validation and pixel loading | PNG/JPEG decoding, deck parsing, scheduler state |
 | `media_cache` | bounded reuse of loaded media images by path | rendering, deck selection, SD path construction |

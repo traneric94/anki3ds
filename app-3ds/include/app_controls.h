@@ -46,6 +46,22 @@ enum app_control_mode
 	APP_CONTROL_MODE_CONFIRM_EXIT,
 };
 
+enum app_control_action
+{
+	APP_CONTROL_ACTION_NONE,
+	APP_CONTROL_ACTION_CONFIRM_EXIT,
+	APP_CONTROL_ACTION_CANCEL_EXIT,
+	APP_CONTROL_ACTION_OPEN_EXIT,
+	APP_CONTROL_ACTION_CLOSE_CONTROLS,
+	APP_CONTROL_ACTION_OPEN_CONTROLS,
+	APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT,
+	APP_CONTROL_ACTION_OPEN_ACTIONS,
+	APP_CONTROL_ACTION_UNDO,
+	APP_CONTROL_ACTION_OPEN_SUSPEND,
+	APP_CONTROL_ACTION_SHOW_ANSWER,
+	APP_CONTROL_ACTION_RATE,
+};
+
 struct app_control_repeat
 {
 	unsigned int buttons;
@@ -108,6 +124,14 @@ bool app_controls_rating_for_trigger(
 bool app_controls_rating_for_buttons(
 	unsigned int buttons,
 	bool review_answer_revealed,
+	enum scheduler_rating *rating
+);
+enum app_control_action app_controls_classify_action(
+	enum app_control_mode mode,
+	bool review_answer_revealed,
+	bool study_allowed,
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
 	enum scheduler_rating *rating
 );
 
