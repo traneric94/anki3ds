@@ -11,7 +11,7 @@ OPTIONAL_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
-.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
 all: app-3ds
 
@@ -53,7 +53,7 @@ test-tools:
 
 verify-ci: test verify-sample-decks
 
-verify-local: test verify-sample-decks install-local-sd verify-package-sd
+verify-local: test verify-sample-decks verify-local-sd verify-package-sd
 
 verify-sample-decks:
 	@set -e; \
@@ -98,6 +98,18 @@ install-local-sd: app-3ds install-local-sample-decks
 	mkdir -p "$(LOCAL_SDMC)/$(APP_SD_DIR)"
 	cp app-3ds/anki3ds.3dsx "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.3dsx"
 	cp app-3ds/anki3ds.smdh "$(LOCAL_SDMC)/$(APP_SD_DIR)/anki3ds.smdh"
+
+verify-local-sd: install-local-sd
+	@set -e; \
+	app_dir="$(LOCAL_SDMC)/$(APP_SD_DIR)"; \
+	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
+	test -f "$$app_dir/anki3ds.smdh" || { echo "$$app_dir/anki3ds.smdh missing"; exit 1; }; \
+	for deck in $(OPTIONAL_SAMPLE_DECKS); do \
+		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed by default"; exit 1; }; \
+	done; \
+	for deck in $(SAMPLE_DECKS); do \
+		$(VERIFY_TEXT_DECK) "$$app_dir/decks/$$deck"; \
+	done
 
 install-local-sample-deck: install-local-sample-decks
 

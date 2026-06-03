@@ -70,6 +70,12 @@ To copy the build and tracked sample decks into the gitignored local SD mirror:
 make install-local-sd
 ```
 
+To copy and verify that local SD mirror in one step:
+
+```sh
+make verify-local-sd
+```
+
 To stage a clean SD-card payload under `dist/sdmc/` for release or manual copy:
 
 ```sh

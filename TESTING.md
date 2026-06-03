@@ -38,6 +38,7 @@ make test-tools
 make verify-ci
 make verify-sample-decks
 make verify-local
+make verify-local-sd
 make package-sd
 make verify-package-sd
 make install-local-sd
@@ -68,9 +69,12 @@ Verification gates:
   five-field text-card rows, valid settings, no optional media fixture, no
   generated progress files, and no media or extra files inside those text deck
   folders.
+- `make verify-local-sd` builds the local SD mirror and verifies that it
+  contains the app artifacts, default text decks, no optional media fixture, and
+  no progress or stray files inside those text deck folders.
 - `make verify-local` is the local pre-checkpoint gate. It runs tests,
-  sample-deck verification, local SD staging, and package-payload verification.
-  It requires the local 3DS toolchain.
+  sample-deck verification, local SD staging and verification, and
+  package-payload verification. It requires the local 3DS toolchain.
 - `make package-sd` builds a clean SD-card payload under `dist/sdmc/` with the
   app artifact and tracked sample decks, but without generated progress files.
 
