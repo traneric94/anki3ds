@@ -15,6 +15,7 @@ DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128
 DECK_MAX_NAME_LENGTH = 64
 DECK_MAX_LINE_LENGTH = 1024
+DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 APP_SETTINGS_MAX_DAILY_LIMIT = 1000000
 
 PROGRESS_FILES = (
@@ -195,11 +196,11 @@ def verify_cards(deck_dir: Path, card_rows: list[str], errors: list[str]) -> Non
         )
 
     for line_number, row in enumerate(card_rows, start=1):
-        if utf8_length(row) >= DECK_MAX_LINE_LENGTH:
+        if utf8_length(row) > DECK_MAX_ROW_BYTES:
             append_file_error(
                 errors,
                 cards_path,
-                f"line {line_number}: row exceeds {DECK_MAX_LINE_LENGTH - 1} bytes",
+                f"line {line_number}: row exceeds {DECK_MAX_ROW_BYTES} bytes",
             )
 
         fields = row.split("\t")

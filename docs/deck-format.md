@@ -110,7 +110,8 @@ Rules:
 - converter output simplifies simple HTML to text before writing these fields
 - media fields, inline image tags, audio, and arbitrary template output are not
   part of the supported deck format
-- each physical `cards.tsv` row must fit in the current 1024-byte parser buffer
+- each physical `cards.tsv` row may use at most 1022 UTF-8 bytes before the
+  optional trailing newline, so it fits in the current 1024-byte parser buffer
 
 Example:
 
