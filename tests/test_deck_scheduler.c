@@ -4387,6 +4387,16 @@ static void test_deck_summary_reports_load_error(void)
 	check(summary.new_due_count == 0, "bad summary has zero new cards");
 	check(summary.suspended_count == 0, "bad summary has zero suspended cards");
 
+	write_file(entry.cards_path, "bad\trow\n");
+	deck_summary_load(&summary, &entry, TEST_TODAY);
+
+	check(summary.deck_load_result == DECK_LOAD_BAD_FORMAT, "summary reports bad cards");
+	check(summary.deck_load_report.line_number == 1, "summary reports bad line");
+	check(
+		summary.deck_load_report.parse_result == DECK_PARSE_BAD_FIELD_COUNT,
+		"summary reports bad parse reason"
+	);
+
 	cleanup_deck_index_test_root();
 }
 

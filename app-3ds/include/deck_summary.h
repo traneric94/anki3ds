@@ -12,6 +12,7 @@
 struct deck_summary
 {
 	enum deck_load_result deck_load_result;
+	struct deck_load_report deck_load_report;
 	enum app_settings_load_result settings_load_result;
 	enum review_state_load_result state_load_result;
 	size_t card_count;

@@ -5,6 +5,8 @@
 void deck_summary_init(struct deck_summary *summary)
 {
 	summary->deck_load_result = DECK_LOAD_NOT_FOUND;
+	summary->deck_load_report.line_number = 0;
+	summary->deck_load_report.parse_result = DECK_PARSE_OK;
 	summary->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
 	summary->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	summary->card_count = 0;
@@ -68,7 +70,11 @@ void deck_summary_load(
 	}
 
 	deck_init(deck, entry->display_name);
-	summary->deck_load_result = deck_load_cards(deck, entry->cards_path);
+	summary->deck_load_result = deck_load_cards_with_report(
+		deck,
+		entry->cards_path,
+		&summary->deck_load_report
+	);
 	if (summary->deck_load_result != DECK_LOAD_OK)
 	{
 		free(session);

@@ -430,29 +430,37 @@ static bool state_load_result_needs_warning(enum review_state_load_result result
 	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
-static void draw_load_error_detail(const struct app_state *app, int row)
+static void draw_deck_load_error_detail(
+	enum deck_load_result load_result,
+	const struct deck_load_report *report,
+	int row
+)
 {
-	if (app->load_report.line_number > 0 && app->load_result == DECK_LOAD_TOO_LARGE)
+	if (report == NULL)
+		return;
+
+	if (report->line_number > 0 && load_result == DECK_LOAD_TOO_LARGE)
 	{
-		printf(
-			"\x1b[%d;1HLine %u: too many cards",
-			row,
-			app->load_report.line_number
-		);
+		printf("\x1b[%d;1HLine %u: too many cards", row, report->line_number);
 	}
-	else if (app->load_report.line_number > 0)
+	else if (report->line_number > 0)
 	{
 		printf(
 			"\x1b[%d;1HLine %u: %s",
 			row,
-			app->load_report.line_number,
-			deck_parse_result_name(app->load_report.parse_result)
+			report->line_number,
+			deck_parse_result_name(report->parse_result)
 		);
 	}
-	else if (app->load_report.parse_result == DECK_PARSE_EMPTY)
+	else if (report->parse_result == DECK_PARSE_EMPTY)
 	{
 		printf("\x1b[%d;1Hcards.tsv has no cards.", row);
 	}
+}
+
+static void draw_load_error_detail(const struct app_state *app, int row)
+{
+	draw_deck_load_error_detail(app->load_result, &app->load_report, row);
 }
 
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
@@ -1814,6 +1822,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				printf(
 					"\x1b[14;1H" APP_COLOR_RED
 					"Selected deck load error" APP_COLOR_RESET
+				);
+				draw_deck_load_error_detail(
+					summary->deck_load_result,
+					&summary->deck_load_report,
+					16
 				);
 			}
 		}
