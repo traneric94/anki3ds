@@ -257,8 +257,9 @@ easy to mistake for scheduler bugs during emulator or hardware testing.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
 opens a confirmation screen. Pressing `X` there removes the active `state.tsv`
-and reloads the selected deck. If removal fails, the app leaves the current
-session in place and shows `reset failed`.
+and reloads the selected deck. If reload succeeds, the bottom status confirms
+`Progress reset`; if removal fails, the app leaves the current session in place
+and shows `reset failed`.
 
 `START` opens an exit confirmation screen from every normal app mode. Pressing
 `A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This
@@ -285,6 +286,8 @@ limits screen using the same temp/backup save pattern as review state. If
 `settings.tsv.bak`. If `settings.tsv` is malformed, backup is tried before temp
 so a stale temp file does not outrank a known previous save. If all available
 settings files are malformed, the app uses defaults.
+Settings save feedback stays in the settings/status messages and does not
+overwrite the review-state status line.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards.

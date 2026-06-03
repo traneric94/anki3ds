@@ -53,6 +53,7 @@ restore suspended cards.
 - Press `A` to confirm the selected action.
 - Press `B` or `SELECT` to cancel.
 - Reset progress requires `X` on the reset confirmation screen.
+- A successful reset reloads the deck and shows `Progress reset`.
 
 ## Daily Limits
 
@@ -64,3 +65,4 @@ In the daily-limits screen:
 - `B` or `SELECT` cancels.
 
 `0` means all available cards.
+Saving limits updates `settings.tsv` and leaves review progress status separate.

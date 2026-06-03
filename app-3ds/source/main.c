@@ -1686,8 +1686,9 @@ static bool reset_progress(struct app_state *app)
 		return false;
 	}
 
-	app_set_status(app, "Progress reset");
 	app_load_selected_deck(app);
+	if (app->load_result == DECK_LOAD_OK)
+		app_set_status(app, "Progress reset");
 	return true;
 }
 
@@ -1736,7 +1737,6 @@ static bool save_daily_limits(struct app_state *app)
 		app->active_settings_path
 	);
 	app->settings_message = app_settings_save_result_name(app->settings_save_result);
-	app->state_message = app->settings_message;
 
 	if (app->settings_save_result != APP_SETTINGS_SAVE_OK)
 	{
