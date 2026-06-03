@@ -71,6 +71,12 @@ Or install the sample decks and launch the current build in one command:
 make run-emulator-samples
 ```
 
+For a clean sample-deck launch that clears tracked sample progress first:
+
+```sh
+make run-emulator-fresh-samples
+```
+
 ## M1 Local Test
 
 For the toolchain proof, the emulator test is intentionally small:

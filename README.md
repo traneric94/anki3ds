@@ -113,6 +113,12 @@ current build in one command:
 make run-emulator-samples
 ```
 
+For the same launch with tracked sample progress cleared first:
+
+```sh
+make run-emulator-fresh-samples
+```
+
 By default this expects Azahar at:
 
 ```text

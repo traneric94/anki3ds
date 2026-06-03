@@ -46,6 +46,7 @@ make reset-azahar-sample-progress
 make prepare-azahar-samples-fresh
 make run-emulator
 make run-emulator-samples
+make run-emulator-fresh-samples
 ```
 
 The local SD mirror lives at:
