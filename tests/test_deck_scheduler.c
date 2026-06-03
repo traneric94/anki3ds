@@ -45,9 +45,11 @@ static void write_file(const char *path, const char *content);
 static void write_numbered_cards_file(const char *path, size_t card_count);
 static void write_binary_file(const char *path, const unsigned char *content, size_t size);
 static void write_repeated_byte_file(const char *path, size_t size);
+static void write_newline_terminated_filler_file(const char *path, size_t size);
 static bool file_equals(const char *path, const char *content);
 static long file_size(const char *path);
 static void build_test_deck(struct deck *deck);
+static void build_review_log_entry(struct review_log_entry *entry);
 
 static void check(bool condition, const char *message)
 {
@@ -512,6 +514,22 @@ static void test_app_controls_review_front_actions(void)
 		"A with D-pad does not show answer"
 	);
 	check(
+		!app_controls_should_show_answer_triggered(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			false
+		),
+		"A tap with held D-pad does not show answer"
+	);
+	check(
+		!app_controls_should_show_answer_triggered(
+			0,
+			APP_CONTROL_BUTTON_A,
+			false
+		),
+		"held A without new press does not show answer"
+	);
+	check(
 		!app_controls_should_show_answer(APP_CONTROL_BUTTON_A, true),
 		"A does not show answer after reveal"
 	);
@@ -553,6 +571,16 @@ static void test_app_controls_review_rating_keys(void)
 		"A rates after reveal"
 	);
 	check(rating == SCHEDULER_RATING_EASY, "A maps to Easy");
+	check(
+		app_controls_rating_for_trigger(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A,
+			true,
+			&rating
+		),
+		"A trigger rates after reveal"
+	);
+	check(rating == SCHEDULER_RATING_EASY, "A trigger maps to Easy");
 }
 
 static void test_app_controls_rejects_ambiguous_ratings(void)
@@ -588,6 +616,24 @@ static void test_app_controls_rejects_ambiguous_ratings(void)
 		),
 		"rating with D-pad is ignored"
 	);
+	check(
+		!app_controls_rating_for_trigger(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			true,
+			&rating
+		),
+		"rating tap with held D-pad is ignored"
+	);
+	check(
+		!app_controls_rating_for_trigger(
+			0,
+			APP_CONTROL_BUTTON_A,
+			true,
+			&rating
+		),
+		"held rating button without new press is ignored"
+	);
 }
 
 static void test_app_controls_rejects_ambiguous_dpad_axes(void)
@@ -605,6 +651,15 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 		"up/down axis accepts down"
 	);
 	check(down, "up/down axis maps down to true");
+	check(
+		app_controls_up_down_triggered(
+			APP_CONTROL_BUTTON_DOWN,
+			APP_CONTROL_BUTTON_DOWN,
+			&down
+		),
+		"up/down trigger accepts down"
+	);
+	check(down, "up/down trigger maps down to true");
 	check(
 		!app_controls_up_down_direction(
 			APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN,
@@ -630,6 +685,26 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 	);
 	check(down, "command chord up/down leaves output unchanged");
 	check(
+		!app_controls_up_down_triggered(
+			APP_CONTROL_BUTTON_DOWN,
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_A,
+			&down
+		),
+		"up/down trigger rejects held command chord"
+	);
+	check(
+		!app_controls_up_down_triggered(
+			APP_CONTROL_BUTTON_DOWN,
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT,
+			&down
+		),
+		"up/down trigger rejects held diagonal"
+	);
+	check(
+		!app_controls_up_down_triggered(0, APP_CONTROL_BUTTON_DOWN, &down),
+		"up/down trigger requires new or repeated direction"
+	);
+	check(
 		!app_controls_up_down_direction(APP_CONTROL_BUTTON_UP, NULL),
 		"up/down axis output is required"
 	);
@@ -644,6 +719,15 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 		"left/right axis accepts right"
 	);
 	check(right, "left/right axis maps right to true");
+	check(
+		app_controls_left_right_triggered(
+			APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right trigger accepts right"
+	);
+	check(right, "left/right trigger maps right to true");
 	check(
 		!app_controls_left_right_direction(
 			APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT,
@@ -669,6 +753,26 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 	);
 	check(right, "command chord left/right leaves output unchanged");
 	check(
+		!app_controls_left_right_triggered(
+			APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right trigger rejects held command chord"
+	);
+	check(
+		!app_controls_left_right_triggered(
+			APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT,
+			&right
+		),
+		"left/right trigger rejects held diagonal"
+	);
+	check(
+		!app_controls_left_right_triggered(0, APP_CONTROL_BUTTON_RIGHT, &right),
+		"left/right trigger requires new or repeated direction"
+	);
+	check(
 		!app_controls_left_right_direction(APP_CONTROL_BUTTON_LEFT, NULL),
 		"left/right axis output is required"
 	);
@@ -684,6 +788,14 @@ static void test_app_controls_requires_single_command(void)
 		"command helper accepts exact command"
 	);
 	check(
+		app_controls_command_triggered(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A
+		),
+		"command trigger accepts exact command"
+	);
+	check(
 		!app_controls_command_pressed(
 			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
 			APP_CONTROL_BUTTON_A
@@ -696,6 +808,22 @@ static void test_app_controls_requires_single_command(void)
 			APP_CONTROL_BUTTON_A
 		),
 		"command helper rejects navigation chord"
+	);
+	check(
+		!app_controls_command_triggered(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+			APP_CONTROL_BUTTON_A
+		),
+		"command trigger rejects held navigation chord"
+	);
+	check(
+		!app_controls_command_triggered(
+			0,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A
+		),
+		"command trigger requires newly pressed command"
 	);
 	check(
 		app_controls_single_command(
@@ -823,6 +951,26 @@ static void test_app_controls_navigation_repeat(void)
 	check(
 		APP_CONTROL_REPEAT_INTERVAL_TICKS >= 3,
 		"navigation repeat interval stays human-readable"
+	);
+	check(
+		app_controls_repeatable_navigation_held(APP_CONTROL_BUTTON_DOWN),
+		"held navigation wait accepts single direction"
+	);
+	check(
+		!app_controls_repeatable_navigation_held(
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_RIGHT
+		),
+		"held navigation wait rejects diagonal"
+	);
+	check(
+		!app_controls_repeatable_navigation_held(
+			APP_CONTROL_BUTTON_DOWN | APP_CONTROL_BUTTON_A
+		),
+		"held navigation wait rejects command chord"
+	);
+	check(
+		!app_controls_repeatable_navigation_held(APP_CONTROL_BUTTON_A),
+		"held navigation wait rejects command-only hold"
 	);
 
 	app_controls_repeat_init(&repeat);
@@ -1276,6 +1424,36 @@ static void test_scheduler_limits_review_cards(void)
 	check(session.due_count == 0, "review limit hides remaining review cards");
 }
 
+static void test_scheduler_restore_repositions_to_due_card(void)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			1,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY + 10,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 20,
+			TEST_TODAY - 10
+		),
+		"future restored card"
+	);
+
+	check(session.due_count == 1, "restore leaves one due card");
+	check(scheduler_current_index(&session) == 1, "restore repositions to due card");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.cards[0].review_count == 1, "future restored card is not rated");
+	check(session.cards[1].review_count == 1, "current due card is rated");
+}
+
 static void test_scheduler_day_change_resets_review_limit(void)
 {
 	struct scheduler_session session;
@@ -1564,6 +1742,23 @@ static void build_test_deck(struct deck *deck)
 	snprintf(deck->cards[1].back, sizeof(deck->cards[1].back), "back 2");
 }
 
+static void build_review_log_entry(struct review_log_entry *entry)
+{
+	struct scheduler_session session;
+
+	scheduler_init(&session, 1, TEST_TODAY);
+
+	memset(entry, 0, sizeof(*entry));
+	entry->timestamp = 12345;
+	entry->day = TEST_TODAY;
+	entry->event = REVIEW_LOG_EVENT_RATING;
+	entry->card_id = "card-1";
+	entry->rating = SCHEDULER_RATING_GOOD;
+	entry->before = session.cards[0];
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	entry->after = session.cards[0];
+}
+
 static void test_review_state_missing_file(void)
 {
 	struct deck deck;
@@ -1686,6 +1881,84 @@ static void test_review_state_round_trip_suspended_card(void)
 	check(scheduler_current_index(&loaded) == 1, "loaded suspended state picks next card");
 
 	remove(TEST_STATE_PATH);
+}
+
+static void test_review_state_round_trip_review_limit_count(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 30,
+			TEST_TODAY - 10
+		),
+		"review limit first mature card restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			5,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			10,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 30,
+			TEST_TODAY - 10
+		),
+		"review limit second mature card restores"
+	);
+	scheduler_set_daily_limits(&session, 0, 1);
+	check(session.due_count == 1, "review limit exposes one mature card");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(session.review_count_today == 1, "review limit counts rated mature card");
+	check(session.due_count == 0, "review limit hides second mature card");
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"review limit state saves"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(&loaded, 0, 1);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"review limit state reloads"
+	);
+	check(
+		loaded.review_count_today == 1,
+		"review limit count reloads from last review day"
+	);
+	check(loaded.due_count == 0, "review limit remains exhausted after reload");
+	check(
+		!scheduler_card_is_due(&loaded, 1),
+		"unstarted mature card stays hidden after reload"
+	);
+	check(
+		scheduler_reviewed_today_count(&loaded) == 1,
+		"review limit reviewed-today summary reloads"
+	);
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
 }
 
 static void test_review_state_save_rejects_count_mismatch(void)
@@ -2234,20 +2507,9 @@ static void test_review_log_delete_removes_log_file(void)
 static void test_review_log_rejects_full_log(void)
 {
 	struct review_log_entry entry;
-	struct scheduler_session session;
 
 	remove(TEST_REVIEW_LOG_PATH);
-	scheduler_init(&session, 1, TEST_TODAY);
-
-	memset(&entry, 0, sizeof(entry));
-	entry.timestamp = 12345;
-	entry.day = TEST_TODAY;
-	entry.event = REVIEW_LOG_EVENT_RATING;
-	entry.card_id = "card-1";
-	entry.rating = SCHEDULER_RATING_GOOD;
-	entry.before = session.cards[0];
-	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
-	entry.after = session.cards[0];
+	build_review_log_entry(&entry);
 
 	write_repeated_byte_file(TEST_REVIEW_LOG_PATH, (size_t)REVIEW_LOG_MAX_BYTES);
 
@@ -2255,6 +2517,72 @@ static void test_review_log_rejects_full_log(void)
 	check(
 		file_size(TEST_REVIEW_LOG_PATH) == REVIEW_LOG_MAX_BYTES,
 		"review log leaves full file unchanged"
+	);
+
+	remove(TEST_REVIEW_LOG_PATH);
+}
+
+static void test_review_log_rejects_partial_final_row(void)
+{
+	struct review_log_entry entry;
+
+	remove(TEST_REVIEW_LOG_PATH);
+	build_review_log_entry(&entry);
+	write_file(TEST_REVIEW_LOG_PATH, "partial row without newline");
+
+	check(
+		!review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log rejects partial final row"
+	);
+	check(
+		file_equals(TEST_REVIEW_LOG_PATH, "partial row without newline"),
+		"review log leaves partial final row unchanged"
+	);
+
+	remove(TEST_REVIEW_LOG_PATH);
+}
+
+static void test_review_log_appends_at_capacity_boundary(void)
+{
+	struct review_log_entry entry;
+	long row_size;
+
+	remove(TEST_REVIEW_LOG_PATH);
+	build_review_log_entry(&entry);
+
+	check(review_log_append(TEST_REVIEW_LOG_PATH, &entry), "review log sample row writes");
+	row_size = file_size(TEST_REVIEW_LOG_PATH);
+	check(
+		row_size > 0 && row_size <= REVIEW_LOG_MAX_BYTES,
+		"review log sample row has bounded size"
+	);
+	if (row_size <= 0 || row_size > REVIEW_LOG_MAX_BYTES)
+	{
+		remove(TEST_REVIEW_LOG_PATH);
+		return;
+	}
+
+	remove(TEST_REVIEW_LOG_PATH);
+	write_newline_terminated_filler_file(
+		TEST_REVIEW_LOG_PATH,
+		(size_t)(REVIEW_LOG_MAX_BYTES - row_size)
+	);
+
+	check(
+		review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log appends row that exactly fills cap"
+	);
+	check(
+		file_size(TEST_REVIEW_LOG_PATH) == REVIEW_LOG_MAX_BYTES,
+		"review log reaches exact cap"
+	);
+	check(
+		!review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log rejects row after exact cap"
+	);
+	check(
+		file_size(TEST_REVIEW_LOG_PATH) == REVIEW_LOG_MAX_BYTES,
+		"review log exact cap failure leaves file unchanged"
 	);
 
 	remove(TEST_REVIEW_LOG_PATH);
@@ -2673,6 +3001,36 @@ static void write_repeated_byte_file(const char *path, size_t size)
 	}
 
 	check(!failed, "test repeated byte file writes");
+	fclose(file);
+}
+
+static void write_newline_terminated_filler_file(const char *path, size_t size)
+{
+	FILE *file = fopen(path, "wb");
+	bool failed = false;
+
+	check(file != NULL, "test newline filler file opens");
+	if (file == NULL)
+		return;
+
+	if (size == 0)
+	{
+		fclose(file);
+		return;
+	}
+
+	for (size_t index = 1; index < size; index++)
+	{
+		if (fputc('x', file) == EOF)
+		{
+			failed = true;
+			break;
+		}
+	}
+	if (!failed && fputc('\n', file) == EOF)
+		failed = true;
+
+	check(!failed, "test newline filler file writes");
 	fclose(file);
 }
 
@@ -3267,7 +3625,22 @@ static void test_deck_summary_from_session_counts_due_cards(void)
 		),
 		"summary session review card restores"
 	);
-	check(scheduler_suspend_current(&session), "summary session suspends current card");
+	check(
+		scheduler_restore_card(
+			&session,
+			3,
+			0,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			0,
+			2500,
+			0,
+			true,
+			0,
+			0
+		),
+		"summary session suspended card restores"
+	);
 
 	deck_summary_from_session(
 		&summary,
@@ -3574,6 +3947,7 @@ int main(void)
 	test_scheduler_day_change_resets_new_limit();
 	test_scheduler_allows_started_new_card_after_limit();
 	test_scheduler_limits_review_cards();
+	test_scheduler_restore_repositions_to_due_card();
 	test_scheduler_day_change_resets_review_limit();
 	test_scheduler_prioritizes_learning_cards();
 	test_scheduler_learning_cards_bypass_review_limit();
@@ -3584,6 +3958,7 @@ int main(void)
 	test_review_state_load_rejects_null_arguments();
 	test_review_state_round_trip();
 	test_review_state_round_trip_suspended_card();
+	test_review_state_round_trip_review_limit_count();
 	test_review_state_save_rejects_count_mismatch();
 	test_review_state_save_retains_backup_for_primary_recovery();
 	test_review_state_loads_backup_when_primary_missing();
@@ -3609,6 +3984,8 @@ int main(void)
 	test_review_log_appends_study_events();
 	test_review_log_delete_removes_log_file();
 	test_review_log_rejects_full_log();
+	test_review_log_rejects_partial_final_row();
+	test_review_log_appends_at_capacity_boundary();
 	test_app_settings_missing_file_uses_defaults();
 	test_app_settings_loads_limits();
 	test_app_settings_loads_backup_when_primary_missing();

@@ -123,11 +123,11 @@ bool storage_delete_save_files(const char *path)
 		return false;
 	}
 
-	if (!remove_if_present(path))
-		return false;
 	if (!remove_if_present(temp_path))
 		return false;
 	if (!remove_if_present(backup_path))
+		return false;
+	if (!remove_if_present(path))
 		return false;
 
 	return true;

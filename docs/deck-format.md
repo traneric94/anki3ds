@@ -240,12 +240,16 @@ Rules:
 - `rating` is `again`, `hard`, `good`, `easy`, or `-` for non-rating events
 - old/new scheduler fields use the same meanings as `state.tsv`
 - the app stops appending when the next row would exceed 262144 bytes
+- if the existing log does not end in a newline, appending stops so a new row is
+  not concatenated onto a partial interrupted row
 
 This can support debugging and possible desktop import later. The current
 one-step undo is still an in-memory scheduler snapshot saved back to
 `state.tsv`; the review log is not read by the 3DS app.
 
-Resetting deck progress removes `review-log.tsv` before removing `state.tsv`.
+Resetting deck progress removes `state.tsv.tmp` and `state.tsv.bak` before the
+primary `state.tsv`, then removes `review-log.tsv` as diagnostic cleanup. A log
+delete failure does not restore review progress.
 
 ## Compatibility Policy
 

@@ -132,6 +132,19 @@ static int review_log_write_entry(
 	);
 }
 
+static bool review_log_final_row_is_complete(FILE *file, long file_size)
+{
+	int final_byte;
+
+	if (file_size == 0)
+		return true;
+	if (fseek(file, -1, SEEK_END) != 0)
+		return false;
+
+	final_byte = fgetc(file);
+	return final_byte == '\n';
+}
+
 bool review_log_append(const char *path, const struct review_log_entry *entry)
 {
 	FILE *file;
@@ -177,6 +190,16 @@ bool review_log_append(const char *path, const struct review_log_entry *entry)
 		file_size < 0 ||
 		file_size > REVIEW_LOG_MAX_BYTES - (long)row_size
 	)
+	{
+		fclose(file);
+		return false;
+	}
+	if (!review_log_final_row_is_complete(file, file_size))
+	{
+		fclose(file);
+		return false;
+	}
+	if (fseek(file, 0, SEEK_END) != 0)
 	{
 		fclose(file);
 		return false;

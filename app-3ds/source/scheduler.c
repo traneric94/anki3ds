@@ -479,6 +479,7 @@ bool scheduler_restore_card(
 	session->undo.available = false;
 	session->undo.kind = SCHEDULER_UNDO_NONE;
 	scheduler_recount(session);
+	scheduler_reposition(session);
 	return true;
 }
 

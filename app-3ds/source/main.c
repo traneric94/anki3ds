@@ -434,9 +434,17 @@ static unsigned int *selected_daily_limit(struct app_state *app)
 	return &app->edited_settings.review_limit;
 }
 
-static bool app_command_pressed(unsigned int buttons, unsigned int command_button)
+static bool app_command_pressed(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	unsigned int command_button
+)
 {
-	return app_controls_command_pressed(buttons, command_button);
+	return app_controls_command_triggered(
+		trigger_buttons,
+		active_buttons,
+		command_button
+	);
 }
 
 static bool deck_summary_state_allows_study(const struct deck_summary *summary)
@@ -531,7 +539,7 @@ static bool app_mode_uses_held_navigation_wait(
 	if (!app_mode_uses_navigation_repeat(mode))
 		return false;
 
-	return (buttons_held & APP_CONTROL_BUTTON_NAVIGATION_MASK) != 0;
+	return app_controls_repeatable_navigation_held(buttons_held);
 }
 
 static void schedule_next_day_check(time_t *next_check_time, time_t now)
@@ -1324,7 +1332,7 @@ static void draw_restore_confirmation_screen(const struct app_state *app)
 	);
 	printf("\x1b[11;1HRestored cards can become");
 	printf("\x1b[12;1Hdue again if scheduled.");
-	printf("\x1b[15;1HUse " APP_COLOR_RED "X" APP_COLOR_RESET " to restore.");
+	printf("\x1b[15;1HUse " APP_COLOR_GREEN "X" APP_COLOR_RESET " to restore.");
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
@@ -1344,7 +1352,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 	}
 	printf("\x1b[11;1HThis hides the card from");
 	printf("\x1b[12;1Hreview until restored.");
-	printf("\x1b[15;1HUse " APP_COLOR_RED "X" APP_COLOR_RESET " to suspend.");
+	printf("\x1b[15;1HUse " APP_COLOR_YELLOW "X" APP_COLOR_RESET " to suspend.");
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
@@ -1796,13 +1804,13 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		break;
 	case APP_MODE_CONFIRM_RESTORE:
 		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm restore" APP_COLOR_RESET);
-		printf("\x1b[3;1H" APP_COLOR_RED "X: restore cards" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_GREEN "X: restore cards" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_SUSPEND:
 		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm suspend" APP_COLOR_RESET);
-		printf("\x1b[3;1H" APP_COLOR_RED "X: suspend card" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_YELLOW "X: suspend card" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
 		break;
@@ -2113,14 +2121,9 @@ static bool suspend_current_card(struct app_state *app)
 
 static bool reset_progress(struct app_state *app)
 {
-	if (app->active_state_path[0] == '\0' || app->active_review_log_path[0] == '\0')
-	{
-		app->state_message = "reset failed";
-		app_set_status(app, "Reset failed");
-		return false;
-	}
+	bool log_deleted;
 
-	if (!review_log_delete(app->active_review_log_path))
+	if (app->active_state_path[0] == '\0' || app->active_review_log_path[0] == '\0')
 	{
 		app->state_message = "reset failed";
 		app_set_status(app, "Reset failed");
@@ -2134,9 +2137,14 @@ static bool reset_progress(struct app_state *app)
 		return false;
 	}
 
+	log_deleted = review_log_delete(app->active_review_log_path);
+
 	app_load_selected_deck(app);
 	if (app->load_result == DECK_LOAD_OK)
-		app_set_status(app, "Progress reset");
+		app_set_status(
+			app,
+			log_deleted ? "Progress reset" : "Progress reset; log kept"
+		);
 	return true;
 }
 
@@ -2244,12 +2252,19 @@ static bool save_daily_limits(struct app_state *app)
 
 static bool app_handle_deck_select_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
 	bool move_down;
 
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT))
+	if (
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
+	)
 	{
 		show_scan_then_scan_decks(app);
 		return true;
@@ -2258,7 +2273,7 @@ static bool app_handle_deck_select_input(
 	if (app->deck_index.count == 0)
 		return false;
 
-	if (app_controls_up_down_direction(buttons_down, &move_down))
+	if (app_controls_up_down_triggered(buttons_down, buttons_active, &move_down))
 	{
 		if (move_down)
 		{
@@ -2277,7 +2292,13 @@ static bool app_handle_deck_select_input(
 		return true;
 	}
 
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
+	if (
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_A
+		)
+	)
 	{
 		app_load_selected_deck(app);
 		return true;
@@ -2288,12 +2309,13 @@ static bool app_handle_deck_select_input(
 
 static bool app_handle_actions_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
 	bool move_down;
 
-	if (app_controls_up_down_direction(buttons_down, &move_down))
+	if (app_controls_up_down_triggered(buttons_down, buttons_active, &move_down))
 	{
 		if (move_down)
 		{
@@ -2311,7 +2333,13 @@ static bool app_handle_actions_input(
 		return true;
 	}
 
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
+	if (
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_A
+		)
+	)
 	{
 		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 		{
@@ -2332,8 +2360,12 @@ static bool app_handle_actions_input(
 	}
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = app->action_return_mode;
@@ -2345,15 +2377,20 @@ static bool app_handle_actions_input(
 
 static bool app_handle_restore_confirmation_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_X))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
 		return unsuspend_all_cards(app);
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = APP_MODE_ACTIONS;
@@ -2366,10 +2403,11 @@ static bool app_handle_restore_confirmation_input(
 
 static bool app_handle_reset_confirmation_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_X))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
 	{
 		if (!reset_progress(app))
 			app->mode = APP_MODE_CONFIRM_RESET;
@@ -2377,8 +2415,12 @@ static bool app_handle_reset_confirmation_input(
 	}
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = APP_MODE_ACTIONS;
@@ -2390,15 +2432,20 @@ static bool app_handle_reset_confirmation_input(
 
 static bool app_handle_suspend_confirmation_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_X))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
 		return suspend_current_card(app);
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = APP_MODE_REVIEW;
@@ -2411,18 +2458,23 @@ static bool app_handle_suspend_confirmation_input(
 
 static bool app_handle_exit_confirmation_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_A))
 	{
 		app->exit_requested = true;
 		return true;
 	}
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = app->exit_return_mode;
@@ -2434,13 +2486,14 @@ static bool app_handle_exit_confirmation_input(
 
 static bool app_handle_settings_input(
 	struct app_state *app,
-	unsigned int buttons_down
+	unsigned int buttons_down,
+	unsigned int buttons_active
 )
 {
 	bool down;
 	bool right;
 
-	if (app_controls_up_down_direction(buttons_down, &down))
+	if (app_controls_up_down_triggered(buttons_down, buttons_active, &down))
 	{
 		if (app->selected_setting == SETTING_ITEM_NEW_LIMIT)
 			app->selected_setting = SETTING_ITEM_REVIEW_LIMIT;
@@ -2449,7 +2502,7 @@ static bool app_handle_settings_input(
 		return true;
 	}
 
-	if (app_controls_left_right_direction(buttons_down, &right))
+	if (app_controls_left_right_triggered(buttons_down, buttons_active, &right))
 	{
 		unsigned int *limit = selected_daily_limit(app);
 
@@ -2457,12 +2510,16 @@ static bool app_handle_settings_input(
 		return true;
 	}
 
-	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_A))
 		return save_daily_limits(app);
 
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = app->action_return_mode;
@@ -2472,12 +2529,20 @@ static bool app_handle_settings_input(
 	return false;
 }
 
-static bool app_handle_controls_input(struct app_state *app, unsigned int buttons_down)
+static bool app_handle_controls_input(
+	struct app_state *app,
+	unsigned int buttons_down,
+	unsigned int buttons_active
+)
 {
 	if (
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_Y) ||
-		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_Y) ||
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app->mode = app->controls_return_mode;
@@ -2488,25 +2553,40 @@ static bool app_handle_controls_input(struct app_state *app, unsigned int button
 	return false;
 }
 
-static bool app_handle_input(struct app_state *app, u32 keys_down)
+static bool app_handle_input(
+	struct app_state *app,
+	u32 keys_down,
+	u32 keys_active
+)
 {
-	unsigned int buttons = app_controls_buttons_from_3ds_keys(keys_down);
+	unsigned int buttons_down = app_controls_buttons_from_3ds_keys(keys_down);
+	unsigned int buttons_active = app_controls_buttons_from_3ds_keys(keys_active);
 	enum scheduler_rating rating;
 
 	if (app->mode == APP_MODE_CONFIRM_EXIT)
-		return app_handle_exit_confirmation_input(app, buttons);
+		return app_handle_exit_confirmation_input(
+			app,
+			buttons_down,
+			buttons_active
+		);
 
-	if (app_command_pressed(buttons, APP_CONTROL_BUTTON_START))
+	if (
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_START
+		)
+	)
 	{
 		app_open_exit_confirmation(app);
 		return true;
 	}
 
 	if (app->mode == APP_MODE_CONTROLS)
-		return app_handle_controls_input(app, buttons);
+		return app_handle_controls_input(app, buttons_down, buttons_active);
 
 	if (
-		app_command_pressed(buttons, APP_CONTROL_BUTTON_Y) &&
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_Y) &&
 		app_controls_can_open(app_control_mode_for_app_mode(app->mode), app->revealed)
 	)
 	{
@@ -2515,23 +2595,43 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	}
 
 	if (app->mode == APP_MODE_DECK_SELECT)
-		return app_handle_deck_select_input(app, buttons);
+		return app_handle_deck_select_input(app, buttons_down, buttons_active);
 	if (app->mode == APP_MODE_ACTIONS)
-		return app_handle_actions_input(app, buttons);
+		return app_handle_actions_input(app, buttons_down, buttons_active);
 	if (app->mode == APP_MODE_SETTINGS)
-		return app_handle_settings_input(app, buttons);
+		return app_handle_settings_input(app, buttons_down, buttons_active);
 	if (app->mode == APP_MODE_CONFIRM_RESTORE)
-		return app_handle_restore_confirmation_input(app, buttons);
+		return app_handle_restore_confirmation_input(
+			app,
+			buttons_down,
+			buttons_active
+		);
 	if (app->mode == APP_MODE_CONFIRM_SUSPEND)
-		return app_handle_suspend_confirmation_input(app, buttons);
+		return app_handle_suspend_confirmation_input(
+			app,
+			buttons_down,
+			buttons_active
+		);
 	if (app->mode == APP_MODE_CONFIRM_RESET)
-		return app_handle_reset_confirmation_input(app, buttons);
+		return app_handle_reset_confirmation_input(
+			app,
+			buttons_down,
+			buttons_active
+		);
 
 	if (
 		app->mode == APP_MODE_LOAD_ERROR &&
 		(
-			app_command_pressed(buttons, APP_CONTROL_BUTTON_B) ||
-			app_command_pressed(buttons, APP_CONTROL_BUTTON_SELECT)
+			app_command_pressed(
+				buttons_down,
+				buttons_active,
+				APP_CONTROL_BUTTON_B
+			) ||
+			app_command_pressed(
+				buttons_down,
+				buttons_active,
+				APP_CONTROL_BUTTON_SELECT
+			)
 		)
 	)
 	{
@@ -2544,7 +2644,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 			app->mode == APP_MODE_SUMMARY ||
 			(app->mode == APP_MODE_REVIEW && !app->revealed)
 		) &&
-		app_command_pressed(buttons, APP_CONTROL_BUTTON_B)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B)
 	)
 	{
 		app_return_to_deck_select(app);
@@ -2553,7 +2653,11 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (
 		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
-		app_command_pressed(buttons, APP_CONTROL_BUTTON_SELECT)
+		app_command_pressed(
+			buttons_down,
+			buttons_active,
+			APP_CONTROL_BUTTON_SELECT
+		)
 	)
 	{
 		app_open_actions(app);
@@ -2563,7 +2667,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (
 		(app->mode == APP_MODE_REVIEW || app->mode == APP_MODE_SUMMARY) &&
 		app_state_allows_study(app) &&
-		app_command_pressed(buttons, APP_CONTROL_BUTTON_L)
+		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_L)
 	)
 	{
 		return undo_last_action(app);
@@ -2572,7 +2676,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (app->mode != APP_MODE_REVIEW)
 		return false;
 
-	if (app_command_pressed(buttons, APP_CONTROL_BUTTON_R))
+	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_R))
 	{
 		app_open_suspend_confirmation(app);
 		return true;
@@ -2580,7 +2684,13 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 
 	if (!app->revealed)
 	{
-		if (app_controls_should_show_answer(buttons, app->revealed))
+		if (
+			app_controls_should_show_answer_triggered(
+				buttons_down,
+				buttons_active,
+				app->revealed
+			)
+		)
 		{
 			app->revealed = true;
 			return true;
@@ -2589,7 +2699,14 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 		return false;
 	}
 
-	if (app_controls_rating_for_buttons(buttons, app->revealed, &rating))
+	if (
+		app_controls_rating_for_trigger(
+			buttons_down,
+			buttons_active,
+			app->revealed,
+			&rating
+		)
+	)
 		return rate_current_card(app, rating);
 
 	return false;
@@ -2666,6 +2783,7 @@ int main(int argc, char *argv[])
 			buttons_held
 		);
 		keys_down |= keys_for_repeat_buttons(repeat_buttons);
+		u32 keys_active = keys_down | keys_held;
 		if (app_controls_input_is_active(buttons_down, buttons_held, repeat_buttons))
 		{
 			idle_wait_count = 0;
@@ -2707,7 +2825,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (app_handle_input(&app, keys_down))
+		if (app_handle_input(&app, keys_down, keys_active))
 		{
 			if (app.exit_requested)
 				break;

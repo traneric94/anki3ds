@@ -31,7 +31,6 @@ anki3ds/
   converter/        desktop converter in Python
   docs/             design notes and test logs
   sample-decks/     tiny non-copyrighted sample decks
-  tools/            helper scripts
 ```
 
 ## Build

@@ -87,8 +87,10 @@ sdmc:/3ds/anki3ds/decks/<deck-id>/review-log.tsv
 
 This log is not required for loading progress; it records accepted rating,
 suspend, undo, and restore-suspended transitions after `state.tsv` saves
-successfully. The app caps it at 262144 bytes, and resetting deck progress
-removes the log before removing `state.tsv`.
+successfully. The app caps it at 262144 bytes and stops appending if an
+interrupted write leaves a partial final row. Resetting deck progress removes
+state recovery files before the primary `state.tsv`, then removes the log as
+diagnostic cleanup.
 
 Deck settings live beside the selected deck:
 

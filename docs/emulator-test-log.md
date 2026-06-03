@@ -228,3 +228,21 @@ Notes:
 - Confirmed suspend and restore attempts now leave their confirmation screens
   after success or save failure. Automated tests and build passed; full button
   acceptance is deferred to the final manual pass.
+
+## 2026-06-03 - Input And Persistence Hardening Launch Check
+
+Build: local working tree
+Command: `make run-emulator`
+Steps:
+- Ran `make test`, `make`, and `make install-local-sd`.
+- Launched the build through Azahar with macOS `open`.
+Observed:
+- The launch command completed successfully.
+Expected:
+- Azahar accepts the `.3dsx` and starts the app process.
+Result: pass for launch command only
+Notes:
+- Host tests cover held-button command rejection, clean D-pad hold waits,
+  scheduler restore repositioning, mature-review daily-limit reloads, and
+  review-log partial-row rejection. Full button/render acceptance is deferred to
+  the final manual pass.

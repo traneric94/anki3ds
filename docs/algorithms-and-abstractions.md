@@ -210,12 +210,14 @@ rating does not save the wrong answer.
 D-pad hold repeat also lives in `app_controls`; `main.c` applies it only in
 deck select, actions, and settings modes, so ratings and destructive actions
 stay single-press. Held input keeps the idle wait counter short while a button
-is down, so selector movement does not slow down as if the app were idle. While
-a repeatable D-pad key was held on the previous scan, the unchanged-screen path
-waits for one VBlank instead of entering the longer HID idle wait; after release
-it returns to the adaptive low-power idle path. Repeat starts after about
-300 ms and then fires about every 80 ms, keeping normal taps to one movement
-while still making long deck lists usable.
+is down, so selector movement does not slow down as if the app were idle. This
+short wait only applies to a clean single-direction D-pad hold; diagonal holds
+and command chords fall back to the adaptive idle path. While a repeatable
+D-pad key was held on the previous scan, the unchanged-screen path waits for
+one VBlank instead of entering the longer HID idle wait; after release it
+returns to the adaptive low-power idle path. Repeat starts after about 300 ms
+and then fires about every 80 ms, keeping normal taps to one movement while
+still making long deck lists usable.
 
 To avoid unnecessary screen work, the main loop only flushes and swaps
 framebuffers after drawing a changed screen. Redraws still wait for VBlank.
@@ -305,8 +307,9 @@ stale confirmation prompt open.
 After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
 the app appends diagnostic rows to `review-log.tsv` with the before/after
 scheduler fields for the affected cards. Review logging is best-effort and
-append-only until the next row would exceed the configured size cap: a log
-append failure does not roll back a saved study action.
+append-only until the next row would exceed the configured size cap or the
+existing file ends with a partial non-newline row. A log append failure does not
+roll back a saved study action.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant
@@ -314,10 +317,13 @@ with the top-screen state string because SD-card save failures are otherwise
 easy to mistake for scheduler bugs during emulator or hardware testing.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
-opens a confirmation screen. Pressing `X` there removes the active
-`review-log.tsv` and `state.tsv`, then reloads the selected deck. If reload
-succeeds, the bottom status confirms `Progress reset`; if removal fails, the
-app leaves the current session in place and shows `reset failed`.
+opens a confirmation screen. Pressing `X` there removes active state recovery
+files before the primary `state.tsv`, then removes `review-log.tsv` as
+diagnostic cleanup and reloads the selected deck. If state removal and reload
+succeed, the bottom status confirms `Progress reset`; if only the diagnostic
+log cleanup fails, progress still stays reset and the status reports that the
+log was kept. If state removal fails, the app leaves the current session in
+place and shows `reset failed`.
 
 `START` opens an exit confirmation screen from every normal app mode. Pressing
 `A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This
@@ -400,6 +406,10 @@ review limit like other review cards. During an active session, advancement
 starts after the current card so a failed card is not immediately reselected
 while other due cards remain; among those candidates, rotation is the
 tie-breaker when priority and due day are equal.
+
+Restoring saved card rows recomputes daily counters, due count, and current-card
+position immediately. This keeps direct scheduler callers from leaving
+`current_index` on a hidden or future card while another card is due.
 
 ## Converter Flow
 

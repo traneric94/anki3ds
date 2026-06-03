@@ -24,12 +24,12 @@ roughly 300 ms starts repeat movement or daily-limit value changes, then repeats
 roughly every 80 ms. The app keeps the input loop responsive while a button is
 held so deck and action selection do not fall into the idle backoff cadence.
 Pressing multiple D-pad directions together does not move or change values.
-D-pad directions pressed together with command buttons are ignored. Face-button
-actions such as reveal, rating, save, reset, and exit remain single-press
-actions. After reveal, pressing more than one rating button at the same time
-does not save a rating. Save, restore-confirm, suspend-confirm, reset,
-action-confirm, exit-open, and exit-confirm buttons are also ignored when
-pressed together with another button.
+D-pad directions pressed or held together with command buttons are ignored.
+Face-button actions such as reveal, rating, save, reset, and exit remain
+single-press actions. After reveal, pressing more than one rating button at the
+same time does not save a rating. Save, restore-confirm, suspend-confirm,
+reset, action-confirm, exit-open, and exit-confirm buttons are also ignored
+when another button is active or held.
 
 The deck selector shows the current position as `selected/total` on both
 screens. Basic terminal-style colors are used for status: blue headings, green

@@ -65,19 +65,46 @@ bool app_controls_input_is_active(
 	unsigned int buttons_held,
 	unsigned int repeat_buttons
 );
+bool app_controls_repeatable_navigation_held(unsigned int buttons_held);
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed
 );
+bool app_controls_up_down_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool *down
+);
 bool app_controls_up_down_direction(unsigned int buttons, bool *down);
+bool app_controls_left_right_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool *right
+);
 bool app_controls_left_right_direction(unsigned int buttons, bool *right);
 bool app_controls_single_command(
 	unsigned int buttons,
 	unsigned int command_button,
 	unsigned int command_mask
 );
+bool app_controls_command_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	unsigned int command_button
+);
 bool app_controls_command_pressed(unsigned int buttons, unsigned int command_button);
+bool app_controls_should_show_answer_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool review_answer_revealed
+);
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed);
+bool app_controls_rating_for_trigger(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool review_answer_revealed,
+	enum scheduler_rating *rating
+);
 bool app_controls_rating_for_buttons(
 	unsigned int buttons,
 	bool review_answer_revealed,

@@ -116,6 +116,20 @@ bool app_controls_input_is_active(
 	) != 0;
 }
 
+bool app_controls_repeatable_navigation_held(unsigned int buttons_held)
+{
+	unsigned int held_input = buttons_held & APP_CONTROL_BUTTON_INPUT_MASK;
+	unsigned int held_navigation =
+		held_input & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+
+	if ((held_input & APP_CONTROL_COMMAND_BUTTON_MASK) != 0)
+		return false;
+	if (held_navigation == 0)
+		return false;
+
+	return (held_navigation & (held_navigation - 1)) == 0;
+}
+
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed
@@ -135,46 +149,78 @@ bool app_controls_can_open(
 	return true;
 }
 
-bool app_controls_up_down_direction(unsigned int buttons, bool *down)
+bool app_controls_up_down_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool *down
+)
 {
-	bool up_pressed = (buttons & APP_CONTROL_BUTTON_UP) != 0;
-	bool down_pressed = (buttons & APP_CONTROL_BUTTON_DOWN) != 0;
-	unsigned int left_right_buttons =
-		buttons & (APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT);
-	unsigned int command_buttons = buttons & APP_CONTROL_COMMAND_BUTTON_MASK;
+	bool up_triggered = (trigger_buttons & APP_CONTROL_BUTTON_UP) != 0;
+	bool down_triggered = (trigger_buttons & APP_CONTROL_BUTTON_DOWN) != 0;
+	unsigned int expected_button;
 
 	if (down == NULL)
 		return false;
-	if (command_buttons != 0)
-		return false;
-	if (left_right_buttons != 0)
-		return false;
-	if (up_pressed == down_pressed)
+	if (up_triggered == down_triggered)
 		return false;
 
-	*down = down_pressed;
+	expected_button = down_triggered ?
+		APP_CONTROL_BUTTON_DOWN :
+		APP_CONTROL_BUTTON_UP;
+	if ((trigger_buttons & APP_CONTROL_BUTTON_INPUT_MASK) != expected_button)
+		return false;
+	if (
+		(active_buttons & APP_CONTROL_BUTTON_INPUT_MASK) !=
+		expected_button
+	)
+	{
+		return false;
+	}
+
+	*down = down_triggered;
+	return true;
+}
+
+bool app_controls_up_down_direction(unsigned int buttons, bool *down)
+{
+	return app_controls_up_down_triggered(buttons, buttons, down);
+}
+
+bool app_controls_left_right_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool *right
+)
+{
+	bool left_triggered = (trigger_buttons & APP_CONTROL_BUTTON_LEFT) != 0;
+	bool right_triggered = (trigger_buttons & APP_CONTROL_BUTTON_RIGHT) != 0;
+	unsigned int expected_button;
+
+	if (right == NULL)
+		return false;
+	if (left_triggered == right_triggered)
+		return false;
+
+	expected_button = right_triggered ?
+		APP_CONTROL_BUTTON_RIGHT :
+		APP_CONTROL_BUTTON_LEFT;
+	if ((trigger_buttons & APP_CONTROL_BUTTON_INPUT_MASK) != expected_button)
+		return false;
+	if (
+		(active_buttons & APP_CONTROL_BUTTON_INPUT_MASK) !=
+		expected_button
+	)
+	{
+		return false;
+	}
+
+	*right = right_triggered;
 	return true;
 }
 
 bool app_controls_left_right_direction(unsigned int buttons, bool *right)
 {
-	bool left_pressed = (buttons & APP_CONTROL_BUTTON_LEFT) != 0;
-	bool right_pressed = (buttons & APP_CONTROL_BUTTON_RIGHT) != 0;
-	unsigned int up_down_buttons =
-		buttons & (APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN);
-	unsigned int command_buttons = buttons & APP_CONTROL_COMMAND_BUTTON_MASK;
-
-	if (right == NULL)
-		return false;
-	if (command_buttons != 0)
-		return false;
-	if (up_down_buttons != 0)
-		return false;
-	if (left_pressed == right_pressed)
-		return false;
-
-	*right = right_pressed;
-	return true;
+	return app_controls_left_right_triggered(buttons, buttons, right);
 }
 
 bool app_controls_single_command(
@@ -191,31 +237,65 @@ bool app_controls_single_command(
 	return (buttons & command_mask) == command_button;
 }
 
-bool app_controls_command_pressed(unsigned int buttons, unsigned int command_button)
+bool app_controls_command_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	unsigned int command_button
+)
 {
+	if ((trigger_buttons & command_button) == 0)
+		return false;
+
 	return app_controls_single_command(
-		buttons,
+		active_buttons,
 		command_button,
 		APP_CONTROL_BUTTON_INPUT_MASK
 	);
 }
 
-bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
+bool app_controls_command_pressed(unsigned int buttons, unsigned int command_button)
 {
-	return (
-		!review_answer_revealed &&
-		app_controls_command_pressed(buttons, APP_CONTROL_BUTTON_A)
+	return app_controls_command_triggered(
+		buttons,
+		buttons,
+		command_button
 	);
 }
 
-bool app_controls_rating_for_buttons(
-	unsigned int buttons,
+bool app_controls_should_show_answer_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	bool review_answer_revealed
+)
+{
+	return (
+		!review_answer_revealed &&
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_A
+		)
+	);
+}
+
+bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
+{
+	return app_controls_should_show_answer_triggered(
+		buttons,
+		buttons,
+		review_answer_revealed
+	);
+}
+
+bool app_controls_rating_for_trigger(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
 	bool review_answer_revealed,
 	enum scheduler_rating *rating
 )
 {
 	unsigned int rating_buttons =
-		buttons & APP_CONTROL_FACE_BUTTON_MASK;
+		trigger_buttons & APP_CONTROL_FACE_BUTTON_MASK;
 
 	if (!review_answer_revealed)
 		return false;
@@ -223,7 +303,9 @@ bool app_controls_rating_for_buttons(
 		return false;
 	if (rating_buttons == 0 || (rating_buttons & (rating_buttons - 1)) != 0)
 		return false;
-	if ((buttons & APP_CONTROL_BUTTON_INPUT_MASK) != rating_buttons)
+	if ((trigger_buttons & APP_CONTROL_BUTTON_INPUT_MASK) != rating_buttons)
+		return false;
+	if ((active_buttons & APP_CONTROL_BUTTON_INPUT_MASK) != rating_buttons)
 		return false;
 
 	if (rating_buttons & APP_CONTROL_BUTTON_Y)
@@ -248,4 +330,18 @@ bool app_controls_rating_for_buttons(
 	}
 
 	return false;
+}
+
+bool app_controls_rating_for_buttons(
+	unsigned int buttons,
+	bool review_answer_revealed,
+	enum scheduler_rating *rating
+)
+{
+	return app_controls_rating_for_trigger(
+		buttons,
+		buttons,
+		review_answer_revealed,
+		rating
+	);
 }
