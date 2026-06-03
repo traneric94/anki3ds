@@ -500,6 +500,61 @@ static void test_app_controls_rejects_ambiguous_dpad_axes(void)
 	);
 }
 
+static void test_app_controls_requires_single_command(void)
+{
+	unsigned int confirm_cancel_mask =
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_SELECT;
+
+	check(
+		app_controls_single_command(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A,
+			confirm_cancel_mask
+		),
+		"single command accepts exact confirm"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
+			APP_CONTROL_BUTTON_A,
+			confirm_cancel_mask
+		),
+		"single command rejects confirm with cancel"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_Y,
+			APP_CONTROL_BUTTON_A,
+			confirm_cancel_mask | APP_CONTROL_BUTTON_Y
+		),
+		"single command rejects extra face button"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_B,
+			APP_CONTROL_BUTTON_A,
+			confirm_cancel_mask
+		),
+		"single command rejects different command"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
+			confirm_cancel_mask
+		),
+		"single command rejects multi-bit target"
+	);
+	check(
+		!app_controls_single_command(
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_SELECT
+		),
+		"single command rejects target outside mask"
+	);
+}
+
 static void test_app_controls_modal_controls(void)
 {
 	check(
@@ -2510,6 +2565,7 @@ int main(void)
 	test_app_controls_review_rating_keys();
 	test_app_controls_rejects_ambiguous_ratings();
 	test_app_controls_rejects_ambiguous_dpad_axes();
+	test_app_controls_requires_single_command();
 	test_app_controls_modal_controls();
 	test_app_controls_navigation_repeat();
 	test_scheduler_rejects_invalid_rating();

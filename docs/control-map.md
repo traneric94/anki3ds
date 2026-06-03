@@ -23,7 +23,8 @@ Holding a D-pad direction repeats movement or daily-limit value changes after a
 short delay. Pressing opposite D-pad directions together does not move or change
 values. Face-button actions such as reveal, rating, save, reset, and exit remain
 single-press actions. After reveal, pressing more than one rating button at the
-same time does not save a rating.
+same time does not save a rating. Save, reset, action-confirm, and exit-confirm
+buttons are also ignored when pressed together with another command button.
 
 ## Review Flow
 

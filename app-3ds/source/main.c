@@ -38,6 +38,9 @@
 #define STATUS_MESSAGE_SIZE 64
 #define STATUS_MESSAGE_WIDTH 31
 #define DAY_CHECK_INTERVAL_SECONDS 60
+#define APP_COMMAND_MODAL_MASK \
+	(APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B | APP_CONTROL_BUTTON_X | \
+	APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_SELECT | APP_CONTROL_BUTTON_START)
 
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -403,6 +406,11 @@ static unsigned int *selected_daily_limit(struct app_state *app)
 		return &app->edited_settings.new_limit;
 
 	return &app->edited_settings.review_limit;
+}
+
+static bool app_command_pressed(unsigned int buttons, unsigned int command_button)
+{
+	return app_controls_single_command(buttons, command_button, APP_COMMAND_MODAL_MASK);
 }
 
 static const struct card *current_card(const struct app_state *app)
@@ -1834,7 +1842,7 @@ static bool app_handle_actions_input(
 		return true;
 	}
 
-	if (keys_down & KEY_A)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
 	{
 		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 			return unsuspend_all_cards(app);
@@ -1848,7 +1856,10 @@ static bool app_handle_actions_input(
 		return true;
 	}
 
-	if (keys_down & (KEY_B | KEY_SELECT))
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
 	{
 		app->mode = app->action_return_mode;
 		return true;
@@ -1857,16 +1868,22 @@ static bool app_handle_actions_input(
 	return false;
 }
 
-static bool app_handle_reset_confirmation_input(struct app_state *app, u32 keys_down)
+static bool app_handle_reset_confirmation_input(
+	struct app_state *app,
+	unsigned int buttons_down
+)
 {
-	if (keys_down & KEY_X)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_X))
 	{
 		if (!reset_progress(app))
 			app->mode = APP_MODE_CONFIRM_RESET;
 		return true;
 	}
 
-	if (keys_down & (KEY_B | KEY_SELECT))
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
 	{
 		app->mode = APP_MODE_ACTIONS;
 		return true;
@@ -1875,15 +1892,21 @@ static bool app_handle_reset_confirmation_input(struct app_state *app, u32 keys_
 	return false;
 }
 
-static bool app_handle_exit_confirmation_input(struct app_state *app, u32 keys_down)
+static bool app_handle_exit_confirmation_input(
+	struct app_state *app,
+	unsigned int buttons_down
+)
 {
-	if (keys_down & KEY_A)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
 	{
 		app->exit_requested = true;
 		return true;
 	}
 
-	if (keys_down & (KEY_B | KEY_SELECT))
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
 	{
 		app->mode = app->exit_return_mode;
 		return true;
@@ -1918,10 +1941,13 @@ static bool app_handle_settings_input(
 		return true;
 	}
 
-	if (keys_down & KEY_A)
+	if (app_command_pressed(buttons_down, APP_CONTROL_BUTTON_A))
 		return save_daily_limits(app);
 
-	if (keys_down & (KEY_B | KEY_SELECT))
+	if (
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_B) ||
+		app_command_pressed(buttons_down, APP_CONTROL_BUTTON_SELECT)
+	)
 	{
 		app->mode = app->action_return_mode;
 		return true;
@@ -1948,7 +1974,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	enum scheduler_rating rating;
 
 	if (app->mode == APP_MODE_CONFIRM_EXIT)
-		return app_handle_exit_confirmation_input(app, keys_down);
+		return app_handle_exit_confirmation_input(app, buttons);
 
 	if (keys_down & KEY_START)
 	{
@@ -1975,7 +2001,7 @@ static bool app_handle_input(struct app_state *app, u32 keys_down)
 	if (app->mode == APP_MODE_SETTINGS)
 		return app_handle_settings_input(app, keys_down, buttons);
 	if (app->mode == APP_MODE_CONFIRM_RESET)
-		return app_handle_reset_confirmation_input(app, keys_down);
+		return app_handle_reset_confirmation_input(app, buttons);
 
 	if (app->mode == APP_MODE_LOAD_ERROR && (keys_down & (KEY_B | KEY_SELECT)))
 	{

@@ -141,6 +141,20 @@ bool app_controls_left_right_direction(unsigned int buttons, bool *right)
 	return true;
 }
 
+bool app_controls_single_command(
+	unsigned int buttons,
+	unsigned int command_button,
+	unsigned int command_mask
+)
+{
+	if (command_button == 0 || (command_button & (command_button - 1)) != 0)
+		return false;
+	if ((command_button & command_mask) == 0)
+		return false;
+
+	return (buttons & command_mask) == command_button;
+}
+
 bool app_controls_should_show_answer(unsigned int buttons, bool review_answer_revealed)
 {
 	return !review_answer_revealed && (buttons & APP_CONTROL_BUTTON_A) != 0;
