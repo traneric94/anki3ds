@@ -323,7 +323,9 @@ limits screen using the same temp/backup save pattern as review state. If
 so a stale temp file does not outrank a known previous save. If all available
 settings files are malformed, the app uses defaults.
 Settings save feedback stays in the settings/status messages and does not
-overwrite the review-state status line.
+overwrite the review-state status line. Saving settings after a malformed
+review-state load still leaves the deck on the reset-needed summary; settings
+changes do not make an unsafe review queue visible.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards.

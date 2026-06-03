@@ -1997,16 +1997,19 @@ static bool save_daily_limits(struct app_state *app)
 		app->settings.review_limit
 	);
 	app->revealed = false;
+	app->mode = app_review_mode_for_session(app);
 
-	if (scheduler_is_complete(&app->session))
+	if (!app_state_allows_study(app))
+	{
+		app_set_status(app, "Limits saved; reset state");
+	}
+	else if (app->mode == APP_MODE_SUMMARY)
 	{
 		app_set_status(app, "Limits saved; no cards due");
-		app->mode = APP_MODE_SUMMARY;
 	}
 	else
 	{
 		app_set_status(app, "Limits saved");
-		app->mode = APP_MODE_REVIEW;
 	}
 
 	return true;
