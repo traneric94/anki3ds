@@ -4130,6 +4130,21 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status actions limit reached is warning"
 	);
 	check(
+		app_status_message_color("Action: Daily limits; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status action selection limit reached is warning"
+	);
+	check(
+		app_status_message_color("Action: Reset deck progress") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset action selection is warning"
+	);
+	check(
+		app_status_message_color("Action: Reset deck progress; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset action selection reset state/settings is warning"
+	);
+	check(
 		app_status_message_color("Editing limits; limit reached") ==
 			APP_STATUS_COLOR_WARNING,
 		"status editing limits limit reached is warning"

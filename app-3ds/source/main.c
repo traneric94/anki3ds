@@ -575,6 +575,17 @@ static void app_set_actions_status(struct app_state *app)
 	);
 }
 
+static void app_set_action_selection_status(struct app_state *app)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Action: %s%s",
+		action_item_name(app->selected_action),
+		active_deck_status_suffix(app)
+	);
+}
+
 static void app_set_settings_open_status(struct app_state *app)
 {
 	snprintf(
@@ -3337,12 +3348,7 @@ static bool app_handle_actions_input(
 		{
 			app->selected_action--;
 		}
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			"Action: %s",
-			action_item_name(app->selected_action)
-		);
+		app_set_action_selection_status(app);
 		return true;
 	}
 

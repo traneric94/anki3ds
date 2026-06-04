@@ -106,9 +106,11 @@ restore suspended cards. If a deck opens with malformed saved state, reset is
 selected by default so the repair flow is immediately reachable.
 Opening actions preserves active deck warnings in the status line, including
 reset-needed state, ignored settings, unmatched state, and daily-limit
-exhaustion. Opening or canceling restore/suspend/reset confirmations preserves
-that warning context too. Canceling exit from actions or those confirmations
-also preserves the active deck warning context.
+exhaustion. Moving through actions preserves that warning context too, and the
+reset action keeps a warning status even on otherwise healthy decks. Opening or
+canceling restore/suspend/reset confirmations preserves that warning context
+too. Canceling exit from actions or those confirmations also preserves the
+active deck warning context.
 Opening daily limits preserves the same active deck warning context. The
 action, daily-limit, and restore/suspend/reset confirmation screens show the
 active deck name on the bottom controls screen as well as the top screen.

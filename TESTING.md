@@ -333,8 +333,9 @@ Acceptance steps:
   selected-deck, load-error, controls, or active-deck warning context
 - confirm canceling exit from controls, actions, confirmations, and warning
   surfaces preserves the relevant status-line warning context
-- confirm opening actions from reset-needed, ignored-settings, or limit-blocked
-  decks preserves that warning context in the status line
+- confirm opening actions and moving through action items from reset-needed,
+  ignored-settings, or limit-blocked decks preserves that warning context in
+  the status line
 - confirm canceling actions or restore/suspend/reset confirmations preserves
   active deck warning context in the status line
 - confirm action, daily-limit, restore, suspend, and reset screens show the

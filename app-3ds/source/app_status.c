@@ -25,6 +25,7 @@ enum app_status_color app_status_message_color(const char *message)
 		strstr(message, "skipped") != NULL ||
 		strstr(message, "same card due") != NULL ||
 		strstr(message, "same due") != NULL ||
+		strstr(message, "Action: Reset") != NULL ||
 		strstr(message, "canceled") != NULL ||
 		strstr(message, "kept") != NULL ||
 		strstr(message, "reset state") != NULL ||
