@@ -662,8 +662,8 @@ class ConverterTests(unittest.TestCase):
             root = Path(temp_dir)
             output = root / "large"
             write_split_decks(output, "large", "Large", old_cards)
-            state = root / "large-02" / "state.tsv"
-            state.write_text("existing-state\n", encoding="utf-8")
+            stale_state = root / "large-02" / "state.tsv"
+            stale_state.write_text("existing-state\n", encoding="utf-8")
             self.assertTrue((root / "large-03").exists())
 
             written_paths = write_split_decks(output, "large", "Large", new_cards)
@@ -672,7 +672,58 @@ class ConverterTests(unittest.TestCase):
             self.assertTrue((root / "large-01").exists())
             self.assertTrue((root / "large-02").exists())
             self.assertFalse((root / "large-03").exists())
-            self.assertEqual(state.read_text(encoding="utf-8"), "existing-state\n")
+            self.assertFalse(stale_state.exists())
+
+    def test_write_split_decks_keeps_matching_state_after_shrink(self):
+        old_cards = convert_lines(
+            [
+                f"source-{index}\tnote-{index}\told front {index}\told back {index}"
+                for index in range(DECK_MAX_CARDS * 2 + 1)
+            ],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+        new_cards = convert_lines(
+            [
+                f"fresh-{index}\tfresh-note-{index}\tfront {index}\tback {index}"
+                for index in range(DECK_MAX_CARDS)
+            ] + [
+                (
+                    f"source-{DECK_MAX_CARDS}\tnote-{DECK_MAX_CARDS}"
+                    f"\tnew front {DECK_MAX_CARDS}\tnew back {DECK_MAX_CARDS}"
+                )
+            ],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            matching_state = (
+                "#anki3ds-state-v1\t1\n"
+                f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
+                "#anki3ds-state-complete\t1\n"
+            )
+            write_split_decks(output, "large", "Large", old_cards)
+            state = root / "large-02" / "state.tsv"
+            state.write_text(matching_state, encoding="utf-8")
+            self.assertTrue((root / "large-03").exists())
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            self.assertEqual(written_paths, [root / "large-01", root / "large-02"])
+            self.assertFalse((root / "large-03").exists())
+            self.assertEqual(
+                state.read_text(encoding="utf-8"),
+                matching_state,
+            )
 
     def test_write_split_decks_removes_stale_chunks_when_deck_becomes_single(self):
         old_cards = convert_lines(
