@@ -322,6 +322,8 @@ Acceptance steps:
 - confirm daily-limit edits show an unsaved-changes cue before saving and
   return to no-changes state after save or cancel
 - confirm controls opened from unsaved daily-limit edits show an unsaved warning
+- confirm controls opened from reset-needed, ignored-settings, limit-blocked,
+  or load-error screens preserve that warning context in the status line
 - confirm exit from daily limits and from its controls screen warns before
   losing unsaved edits
 - confirm opening actions from reset-needed, ignored-settings, or limit-blocked

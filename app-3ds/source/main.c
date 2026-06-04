@@ -636,6 +636,12 @@ static void app_set_controls_status(struct app_state *app)
 		return;
 	}
 
+	if (app->controls_return_mode == APP_MODE_LOAD_ERROR)
+	{
+		app_set_status(app, "Controls; load error");
+		return;
+	}
+
 	if (app->controls_return_mode == APP_MODE_DECK_SELECT)
 	{
 		const char *suffix = "";
@@ -652,6 +658,22 @@ static void app_set_controls_status(struct app_state *app)
 			sizeof(app->status_message),
 			"Controls%s",
 			suffix
+		);
+		return;
+	}
+
+	if (
+		app->controls_return_mode == APP_MODE_REVIEW ||
+		app->controls_return_mode == APP_MODE_SUMMARY ||
+		app->controls_return_mode == APP_MODE_ACTIONS ||
+		app->controls_return_mode == APP_MODE_SETTINGS
+	)
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Controls%s",
+			active_deck_status_suffix(app)
 		);
 		return;
 	}

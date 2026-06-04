@@ -226,9 +226,9 @@ counts. Blue, cyan, and magenta are intentionally avoided because they are hard
 to read on the dark 3DS console background. Moving through the deck selector
 keeps the status line aligned with the selected row, including load errors,
 ignored settings, unmatched state, and daily-limit-blocked decks. Controls
-opened from the selector inherit that warning context, and returning to the
-selector restores the selected-deck status instead of a generic navigation
-message.
+opened from deck-specific screens inherit warning context from the selector or
+active deck, and returning to the selector restores the selected-deck status
+instead of a generic navigation message.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without

@@ -4100,6 +4100,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status controls load error is danger"
 	);
 	check(
+		app_status_message_color("Controls; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status controls reset state/settings is warning"
+	);
+	check(
+		app_status_message_color("Controls; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status controls settings ignored is warning"
+	);
+	check(
 		app_status_message_color("Actions; reset state/settings") ==
 			APP_STATUS_COLOR_WARNING,
 		"status actions reset state/settings is warning"
