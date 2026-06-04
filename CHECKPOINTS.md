@@ -154,6 +154,9 @@ Before acceptance:
 - Run `make verify-local` on a machine with the 3DS toolchain, or confirm the
   portable `make verify-ci` gate is green when only host verification is
   available before a tagged checkpoint or release artifact.
+- For the full emulator preflight, run `make verify-m7-preflight` so local
+  verification, copy-ready packaging, and Azahar fresh-sample staging are all
+  current before the manual pass.
 - For emulator acceptance, launch with `make run-emulator-fresh-samples`.
 - For hardware acceptance, copy the current `.3dsx`, `.smdh`, and tracked
   sample decks to `sdmc:/3ds/anki3ds/` with tracked sample progress cleared.

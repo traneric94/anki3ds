@@ -53,6 +53,7 @@ make test-tools
 make verify-ci
 make verify-sample-decks
 make verify-local
+make verify-m7-preflight
 make verify-local-sd
 make verify-azahar-fresh-samples
 make package-sd
@@ -93,6 +94,9 @@ Verification gates:
 - `make verify-local` is the local pre-checkpoint gate. It runs tests,
   sample-deck verification, local SD staging and verification, and
   package-payload verification. It requires the local 3DS toolchain.
+- `make verify-m7-preflight` runs `make verify-local`, then stages and verifies
+  fresh tracked sample decks inside Azahar's SD data directory. It does not
+  launch the emulator; run it immediately before the manual M7 emulator pass.
 - `make package-sd` builds a clean SD-card payload under `dist/sdmc/` with the
   app artifact and tracked sample decks, but without generated progress files.
 
@@ -244,6 +248,16 @@ C host compiler can be overridden with `HOST_CC` and `HOST_CFLAGS`; the default
 flags include the POSIX feature level needed by the timezone and filesystem
 tests.
 
+Run the full local M7 preflight gate with:
+
+```sh
+make verify-m7-preflight
+```
+
+That target runs the local pre-checkpoint gate, then prepares and verifies
+fresh tracked sample decks inside Azahar's SD data directory without launching
+the emulator.
+
 Run the local pre-checkpoint gate with:
 
 ```sh
@@ -252,10 +266,10 @@ make verify-local
 
 That target runs `make test`, builds the 3DS app, and stages the local SD mirror
 with sample decks. It requires the local 3DS toolchain, so CI uses the portable
-`make verify-ci` gate instead. `make verify-local` does not clear existing
-sample-deck progress; run `make prepare-local-samples-fresh`,
-`make prepare-azahar-samples-fresh`, or `make run-emulator-fresh-samples`
-before a fresh manual acceptance pass.
+`make verify-ci` gate instead. `make verify-local` prepares fresh tracked
+sample decks in the local SD mirror but does not stage Azahar's SD data
+directory; run `make verify-m7-preflight` or `make run-emulator-fresh-samples`
+before a fresh manual emulator acceptance pass.
 
 Run converter tests with:
 

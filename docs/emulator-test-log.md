@@ -388,6 +388,38 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - M7 Preflight Target Gate
+
+Build: `0959159`
+Command: `make verify-m7-preflight`
+Gate: pass for automated pre-manual gate
+Sample prep: `verify-local` plus `prepare-azahar-samples-fresh`
+Decks: `limits-demo`, `sample`
+Steps:
+- Added `make verify-m7-preflight` as a combined non-launching M7 setup gate.
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, package payload
+  verification, and Azahar fresh-sample staging.
+Observed:
+- Host C tests passed.
+- Converter and text-deck verifier tests passed.
+- Tracked sample decks verified in source, local SD mirror, `dist/sdmc/`, and
+  Azahar's SDMC directory.
+- Azahar sample progress and diagnostic files were cleared for the tracked
+  sample decks.
+Expected:
+- Running `make verify-m7-preflight` immediately before manual M7 emulator
+  acceptance should leave the app artifact, package payload, local SD mirror,
+  and Azahar sample decks in a known-good state without launching the emulator.
+Evidence:
+- `make verify-m7-preflight` completed with exit code 0.
+Result: pass for automated pre-manual gate only
+Notes:
+- The emulator app was not launched in this gate. Button-level review,
+  rendered palette contrast, save-feedback visibility, SD-card behavior,
+  relaunch persistence, and long-idle input wake feel still need the final
+  manual emulator or hardware acceptance pass.
+
 ## 2026-06-04 - Azahar Fresh Samples Preflight
 
 Build: `515f995`
