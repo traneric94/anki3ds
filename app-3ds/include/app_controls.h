@@ -78,13 +78,24 @@ unsigned int app_controls_repeat_buttons(
 	unsigned int buttons_down,
 	unsigned int buttons_held
 );
+unsigned int app_controls_repeat_buttons_for_mode(
+	struct app_control_repeat *repeat,
+	enum app_control_mode mode,
+	unsigned int buttons_down,
+	unsigned int buttons_held
+);
 bool app_controls_input_is_active(
 	unsigned int buttons_down,
 	unsigned int buttons_held,
 	unsigned int repeat_buttons
 );
+unsigned int app_controls_navigation_repeat_mask(enum app_control_mode mode);
 bool app_controls_mode_uses_navigation_repeat(enum app_control_mode mode);
 bool app_controls_repeatable_navigation_held(unsigned int buttons_held);
+bool app_controls_repeatable_navigation_held_for_mode(
+	enum app_control_mode mode,
+	unsigned int buttons_held
+);
 bool app_controls_can_open(
 	enum app_control_mode mode,
 	bool review_answer_revealed

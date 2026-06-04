@@ -226,19 +226,24 @@ return, actions, undo, suspend confirmation, reveal, and rating. The stable
 review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
 Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
 ignored so a fat-fingered rating does not save the wrong answer.
-D-pad hold repeat also lives in `app_controls`; `main.c` applies it in deck
-select, review, actions, and settings modes. In review mode, D-pad Up/Down
-scrolls the active text pane: front before reveal, back after reveal. Ratings
-and destructive actions stay single-press. Long active panes draw a compact
-`^ current/total v` cue in the top-screen section header so scrollability is
-visible without moving the controls off the bottom screen. Held input keeps the
-idle wait counter short while a button is down, so selector movement and text
-scrolling do not slow down as if the app were idle. This short wait only
-applies to a clean single-direction D-pad hold; diagonal holds and command
-chords fall back to the adaptive idle path. While a repeatable D-pad key was
-held on the previous scan, the unchanged-screen path waits for one VBlank
-instead of entering the longer HID idle wait; after release it returns to the
-adaptive low-power idle path. Repeat buttons stay in the abstract
+D-pad hold repeat also lives in `app_controls`; repeatable axes are declared per
+mode. Deck select repeats Up/Down movement and Left/Right paging; review
+repeats only Up/Down text scrolling; actions repeat only Up/Down selection; and
+settings repeats only Left/Right daily-limit value changes. Up/Down field
+selection in settings remains single-step so a held button cannot bounce between
+the two fields. In review mode, D-pad Up/Down scrolls the active text pane:
+front before reveal, back after reveal. Ratings and destructive actions stay
+single-press. Long active panes draw a compact `^ current/total v` cue in the
+top-screen section header so scrollability is visible without moving the
+controls off the bottom screen. Held input keeps the idle wait counter short
+while a repeatable button is down, so selector movement, action selection, value
+changes, and text scrolling do not slow down as if the app were idle. This short
+wait only applies to a clean single-direction D-pad hold on a repeatable axis;
+diagonal holds, non-repeatable axes, and command chords fall back to the
+adaptive idle path. While a repeatable D-pad key was held on the previous scan,
+the unchanged-screen path waits for one VBlank instead of entering the longer
+HID idle wait; after release it returns to the adaptive low-power idle path.
+Repeat buttons stay in the abstract
 `APP_CONTROL_BUTTON_*` layer after the initial HID scan instead of being
 synthesized back into raw libctru key bits. Repeat starts after about 300 ms
 and then fires about every 80 ms, keeping normal taps to one movement while

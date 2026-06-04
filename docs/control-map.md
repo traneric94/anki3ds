@@ -22,10 +22,11 @@ letters do not match the 3DS button label.
 Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding
 a single direction for roughly 300 ms starts repeat movement, paging,
 review-text scrolling, or daily-limit value changes, then repeats roughly every
-80 ms. The app keeps the input loop responsive while a button is held so deck
-selection, action selection, and review text scrolling do not fall into the
-idle backoff cadence. Pressing multiple directions together does not move or
-change values.
+80 ms. Daily-limit field selection with Up/Down is single-step so a held button
+does not bounce between fields. The app keeps the input loop responsive while a
+repeatable direction is held so deck selection, action selection, value
+changes, and review text scrolling do not fall into the idle backoff cadence.
+Pressing multiple directions together does not move or change values.
 Directions pressed or held together with command buttons are ignored.
 Face-button actions such as reveal, rating, save, reset, and exit remain
 single-press actions. After reveal, pressing more than one rating button at the
@@ -117,7 +118,7 @@ Suspending from review also uses a confirmation screen:
 In the daily-limits screen:
 
 - D-pad Up/Down chooses `new_limit` or `review_limit`.
-- D-pad Left/Right cycles preset values.
+- D-pad Left/Right cycles preset values and repeats while held.
 - `A` saves.
 - `B` or `SELECT` returns to actions without saving.
 

@@ -54,21 +54,52 @@ void app_controls_repeat_reset(struct app_control_repeat *repeat)
 	repeat->tick_count = 0;
 }
 
-unsigned int app_controls_repeat_buttons(
+unsigned int app_controls_navigation_repeat_mask(enum app_control_mode mode)
+{
+	switch (mode)
+	{
+	case APP_CONTROL_MODE_DECK_SELECT:
+		return APP_CONTROL_BUTTON_NAVIGATION_MASK;
+	case APP_CONTROL_MODE_REVIEW:
+	case APP_CONTROL_MODE_ACTIONS:
+		return APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN;
+	case APP_CONTROL_MODE_SETTINGS:
+		return APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT;
+	case APP_CONTROL_MODE_LOAD_ERROR:
+	case APP_CONTROL_MODE_SUMMARY:
+	case APP_CONTROL_MODE_CONTROLS:
+	case APP_CONTROL_MODE_CONFIRM_RESTORE:
+	case APP_CONTROL_MODE_CONFIRM_SUSPEND:
+	case APP_CONTROL_MODE_CONFIRM_RESET:
+	case APP_CONTROL_MODE_CONFIRM_EXIT:
+		break;
+	}
+
+	return 0;
+}
+
+static unsigned int app_controls_repeat_buttons_with_mask(
 	struct app_control_repeat *repeat,
 	unsigned int buttons_down,
-	unsigned int buttons_held
+	unsigned int buttons_held,
+	unsigned int navigation_mask
 )
 {
-	unsigned int held_navigation = buttons_held & APP_CONTROL_BUTTON_NAVIGATION_MASK;
-	unsigned int down_navigation = buttons_down & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+	unsigned int active_input =
+		(buttons_down | buttons_held) & APP_CONTROL_BUTTON_INPUT_MASK;
+	unsigned int held_navigation = buttons_held & navigation_mask;
+	unsigned int down_navigation = buttons_down & navigation_mask;
 	unsigned int command_buttons =
 		(buttons_down | buttons_held) & APP_CONTROL_COMMAND_BUTTON_MASK;
+	unsigned int disallowed_navigation =
+		active_input & APP_CONTROL_BUTTON_NAVIGATION_MASK & ~navigation_mask;
 
 	if (repeat == NULL)
 		return 0;
 	if (
+		navigation_mask == 0 ||
 		command_buttons != 0 ||
+		disallowed_navigation != 0 ||
 		held_navigation == 0 ||
 		(held_navigation & (held_navigation - 1)) != 0
 	)
@@ -104,6 +135,35 @@ unsigned int app_controls_repeat_buttons(
 	return 0;
 }
 
+unsigned int app_controls_repeat_buttons(
+	struct app_control_repeat *repeat,
+	unsigned int buttons_down,
+	unsigned int buttons_held
+)
+{
+	return app_controls_repeat_buttons_with_mask(
+		repeat,
+		buttons_down,
+		buttons_held,
+		APP_CONTROL_BUTTON_NAVIGATION_MASK
+	);
+}
+
+unsigned int app_controls_repeat_buttons_for_mode(
+	struct app_control_repeat *repeat,
+	enum app_control_mode mode,
+	unsigned int buttons_down,
+	unsigned int buttons_held
+)
+{
+	return app_controls_repeat_buttons_with_mask(
+		repeat,
+		buttons_down,
+		buttons_held,
+		app_controls_navigation_repeat_mask(mode)
+	);
+}
+
 bool app_controls_input_is_active(
 	unsigned int buttons_down,
 	unsigned int buttons_held,
@@ -118,26 +178,48 @@ bool app_controls_input_is_active(
 
 bool app_controls_mode_uses_navigation_repeat(enum app_control_mode mode)
 {
-	return (
-		mode == APP_CONTROL_MODE_DECK_SELECT ||
-		mode == APP_CONTROL_MODE_REVIEW ||
-		mode == APP_CONTROL_MODE_ACTIONS ||
-		mode == APP_CONTROL_MODE_SETTINGS
-	);
+	return app_controls_navigation_repeat_mask(mode) != 0;
 }
 
-bool app_controls_repeatable_navigation_held(unsigned int buttons_held)
+static bool app_controls_repeatable_navigation_held_with_mask(
+	unsigned int buttons_held,
+	unsigned int navigation_mask
+)
 {
 	unsigned int held_input = buttons_held & APP_CONTROL_BUTTON_INPUT_MASK;
-	unsigned int held_navigation =
-		held_input & APP_CONTROL_BUTTON_NAVIGATION_MASK;
+	unsigned int held_navigation = held_input & navigation_mask;
+	unsigned int disallowed_navigation =
+		held_input & APP_CONTROL_BUTTON_NAVIGATION_MASK & ~navigation_mask;
 
+	if (navigation_mask == 0)
+		return false;
 	if ((held_input & APP_CONTROL_COMMAND_BUTTON_MASK) != 0)
+		return false;
+	if (disallowed_navigation != 0)
 		return false;
 	if (held_navigation == 0)
 		return false;
 
 	return (held_navigation & (held_navigation - 1)) == 0;
+}
+
+bool app_controls_repeatable_navigation_held(unsigned int buttons_held)
+{
+	return app_controls_repeatable_navigation_held_with_mask(
+		buttons_held,
+		APP_CONTROL_BUTTON_NAVIGATION_MASK
+	);
+}
+
+bool app_controls_repeatable_navigation_held_for_mode(
+	enum app_control_mode mode,
+	unsigned int buttons_held
+)
+{
+	return app_controls_repeatable_navigation_held_with_mask(
+		buttons_held,
+		app_controls_navigation_repeat_mask(mode)
+	);
 }
 
 bool app_controls_can_open(

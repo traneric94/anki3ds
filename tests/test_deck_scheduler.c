@@ -1421,29 +1421,108 @@ static void test_app_controls_navigation_repeat(void)
 		repeated = app_controls_repeat_buttons(&repeat, 0, 0);
 		check(repeated == 0, "released navigation cannot accumulate repeat ticks");
 	}
+
+	app_controls_repeat_init(&repeat);
+	repeated = app_controls_repeat_buttons_for_mode(
+		&repeat,
+		APP_CONTROL_MODE_SETTINGS,
+		APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_DOWN
+	);
+	check(repeated == 0, "settings field tap does not repeat on press");
+	for (
+		unsigned int tick = 0;
+		tick < APP_CONTROL_REPEAT_INITIAL_TICKS + APP_CONTROL_REPEAT_INTERVAL_TICKS;
+		tick++
+	)
+	{
+		repeated = app_controls_repeat_buttons_for_mode(
+			&repeat,
+			APP_CONTROL_MODE_SETTINGS,
+			0,
+			APP_CONTROL_BUTTON_DOWN
+		);
+		check(repeated == 0, "settings field hold does not repeat");
+	}
+
+	app_controls_repeat_init(&repeat);
+	repeated = app_controls_repeat_buttons_for_mode(
+		&repeat,
+		APP_CONTROL_MODE_SETTINGS,
+		APP_CONTROL_BUTTON_RIGHT,
+		APP_CONTROL_BUTTON_RIGHT
+	);
+	check(repeated == 0, "settings value tap does not repeat on press");
+	for (unsigned int tick = 1; tick < APP_CONTROL_REPEAT_INITIAL_TICKS; tick++)
+	{
+		repeated = app_controls_repeat_buttons_for_mode(
+			&repeat,
+			APP_CONTROL_MODE_SETTINGS,
+			0,
+			APP_CONTROL_BUTTON_RIGHT
+		);
+		check(repeated == 0, "settings value hold waits before repeat");
+	}
+	repeated = app_controls_repeat_buttons_for_mode(
+		&repeat,
+		APP_CONTROL_MODE_SETTINGS,
+		0,
+		APP_CONTROL_BUTTON_RIGHT
+	);
+	check(
+		repeated == APP_CONTROL_BUTTON_RIGHT,
+		"settings value hold repeats after delay"
+	);
 }
 
 static void test_app_controls_navigation_repeat_modes(void)
 {
+	unsigned int up_down_mask = APP_CONTROL_BUTTON_UP | APP_CONTROL_BUTTON_DOWN;
+	unsigned int left_right_mask = APP_CONTROL_BUTTON_LEFT | APP_CONTROL_BUTTON_RIGHT;
+
 	check(
 		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_DECK_SELECT),
 		"deck select supports navigation repeat"
+	);
+	check(
+		app_controls_navigation_repeat_mask(APP_CONTROL_MODE_DECK_SELECT) ==
+			APP_CONTROL_BUTTON_NAVIGATION_MASK,
+		"deck select repeats all navigation directions"
 	);
 	check(
 		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_REVIEW),
 		"review supports navigation repeat"
 	);
 	check(
+		app_controls_navigation_repeat_mask(APP_CONTROL_MODE_REVIEW) ==
+			up_down_mask,
+		"review repeats only text scroll directions"
+	);
+	check(
 		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_ACTIONS),
 		"actions supports navigation repeat"
+	);
+	check(
+		app_controls_navigation_repeat_mask(APP_CONTROL_MODE_ACTIONS) ==
+			up_down_mask,
+		"actions repeats only selection directions"
 	);
 	check(
 		app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_SETTINGS),
 		"settings supports navigation repeat"
 	);
 	check(
+		app_controls_navigation_repeat_mask(APP_CONTROL_MODE_SETTINGS) ==
+			left_right_mask,
+		"settings repeats only value directions"
+	);
+	check(
 		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_LOAD_ERROR),
 		"load error does not repeat navigation"
+	);
+	check(
+		app_controls_navigation_repeat_mask(APP_CONTROL_MODE_LOAD_ERROR) == 0,
+		"load error has no repeat mask"
 	);
 	check(
 		!app_controls_mode_uses_navigation_repeat(APP_CONTROL_MODE_SUMMARY),

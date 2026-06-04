@@ -821,7 +821,10 @@ static bool app_mode_uses_held_navigation_wait(
 		return false;
 	}
 
-	return app_controls_repeatable_navigation_held(buttons_held);
+	return app_controls_repeatable_navigation_held_for_mode(
+		app_control_mode_for_app_mode(mode),
+		buttons_held
+	);
 }
 
 static void schedule_next_day_check(time_t *next_check_time, time_t now)
@@ -1695,7 +1698,7 @@ static void draw_controls_screen(const struct app_state *app)
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily-limit controls" APP_COLOR_RESET);
-		printf("\x1b[5;1HD-pad/Circle U/D: field/hold");
+		printf("\x1b[5;1HD-pad/Circle U/D: field");
 		printf("\x1b[7;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[9;1HA: save limits");
 		printf("\x1b[11;1HB or SELECT: actions");
@@ -2289,7 +2292,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[1;1H" APP_COLOR_ACCENT "Daily limits" APP_COLOR_RESET);
-		printf("\x1b[3;1HD-pad/Circle U/D: field/hold");
+		printf("\x1b[3;1HD-pad/Circle U/D: field");
 		printf("\x1b[5;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[7;1HA: save limits");
 		printf("\x1b[9;1HB or SELECT: actions");
@@ -3296,16 +3299,14 @@ int main(int argc, char *argv[])
 		u32 keys_held = hidKeysHeld();
 		unsigned int buttons_down = app_controls_buttons_from_3ds_keys(keys_down);
 		unsigned int buttons_held = app_controls_buttons_from_3ds_keys(keys_held);
+		enum app_control_mode control_mode = app_control_mode_for_app_mode(app.mode);
 		unsigned int buttons_active;
 		unsigned int repeat_buttons = 0;
-		if (
-			app_controls_mode_uses_navigation_repeat(
-				app_control_mode_for_app_mode(app.mode)
-			)
-		)
+		if (app_controls_mode_uses_navigation_repeat(control_mode))
 		{
-			repeat_buttons = app_controls_repeat_buttons(
+			repeat_buttons = app_controls_repeat_buttons_for_mode(
 				&navigation_repeat,
+				control_mode,
 				buttons_down,
 				buttons_held
 			);
