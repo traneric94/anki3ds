@@ -388,6 +388,31 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Longer Idle Backoff Gate
+
+Build: local working tree
+Command: `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Increased the unchanged-screen idle timeout ceiling from 0.5 seconds to
+  2 seconds after the app has already been idle for several seconds.
+Observed:
+- Host C tests passed, including idle wait tier coverage.
+- The 3DS target rebuilt successfully.
+Expected:
+- A stable idle screen should wake less often while HID input still wakes the
+  app immediately and scheduled battery/day checks are delayed by at most the
+  idle timeout.
+Evidence:
+- `make test-host` completed with exit code 0.
+- `make -C app-3ds` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Manual emulator or hardware testing still needs to confirm input wake feel
+  after long idle, plus the broader M7 acceptance pass.
+
 ## 2026-06-04 - Local Command Classifier Gate
 
 Build: local working tree

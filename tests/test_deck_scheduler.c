@@ -418,6 +418,10 @@ static void test_app_power_idle_input_backoff(void)
 		"idle input backs off to max wait"
 	);
 	check(
+		APP_POWER_IDLE_INPUT_WAIT_MAX_NS >= 1000000000LL,
+		"idle input max wait avoids high-frequency idle polling"
+	);
+	check(
 		app_power_next_idle_input_wait_count(0) == 1,
 		"idle input wait count increments"
 	);

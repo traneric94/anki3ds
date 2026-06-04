@@ -281,9 +281,12 @@ framebuffers after drawing a changed screen. Redraws still wait for VBlank.
 When the screen is unchanged, the app waits for HID input with an adaptive
 timeout before scanning controls again. The wait starts short for responsive
 input, then backs off while idle to avoid busy redraw/poll loops while still
-letting `aptMainLoop` run regularly. Any held, newly pressed, or repeated input
-resets the idle wait counter. The pure idle-backoff timing policy lives in
-`app_power` so host tests cover the fast, mid, and max wait tiers plus the
+letting `aptMainLoop` run regularly. After several seconds of no input, the
+unchanged-screen timeout reaches two seconds; HID events still wake it
+immediately, and scheduled battery/day checks can be delayed by at most that
+timeout while the app is otherwise idle. Any held, newly pressed, or repeated
+input resets the idle wait counter. The pure idle-backoff timing policy lives
+in `app_power` so host tests cover the fast, mid, and max wait tiers plus the
 capped wait counter.
 
 The app tracks the current local calendar day while it is open. The main loop
