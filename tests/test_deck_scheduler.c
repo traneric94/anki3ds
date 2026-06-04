@@ -4015,6 +4015,8 @@ static void test_app_review_formats_day_change_status(void)
 
 static void test_app_status_classifies_daily_use_feedback(void)
 {
+	char visible[64];
+
 	check(
 		app_status_message_color("Loaded deck") == APP_STATUS_COLOR_SUCCESS,
 		"status loaded deck is success"
@@ -4331,6 +4333,61 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		app_status_message_color(NULL) == APP_STATUS_COLOR_NEUTRAL,
 		"status null is neutral"
 	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"Answer shown; choose rating; settings ignored",
+		31
+	);
+	check(
+		strcmp(visible, "Answer sho...; settings ignored") == 0,
+		"status width keeps settings warning suffix"
+	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"Limits saved; daily limit reached; state unmatched",
+		31
+	);
+	check(
+		strcmp(visible, "Limits save...; state unmatched") == 0,
+		"status width keeps state warning suffix"
+	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"Progress reset; log kept; limit reached",
+		31
+	);
+	check(
+		strcmp(visible, "Progress rese...; limit reached") == 0,
+		"status width keeps limit suffix"
+	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"New day; cards due",
+		31
+	);
+	check(
+		strcmp(visible, "New day; cards due") == 0,
+		"status width leaves fitting message unchanged"
+	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"abcdefghijklmnopqrstuvwxyz",
+		8
+	);
+	check(strcmp(visible, "abcde...") == 0, "status width truncates without suffix");
+
+	app_status_format_for_width(visible, sizeof(visible), NULL, 31);
+	check(visible[0] == '\0', "status width handles null message");
 }
 
 static void test_app_settings_missing_file_uses_defaults(void)

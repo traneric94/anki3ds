@@ -2383,15 +2383,23 @@ static void draw_due_legend(int row, bool include_suspended)
 
 static void draw_status_message(const struct app_state *app)
 {
+	char visible_message[STATUS_MESSAGE_SIZE];
+
 	if (app->status_message[0] == '\0')
 		return;
 
+	app_status_format_for_width(
+		visible_message,
+		sizeof(visible_message),
+		app->status_message,
+		APP_LAYOUT_STATUS_MESSAGE_WIDTH
+	);
 	printf("\x1b[24;1H" APP_COLOR_ACCENT "Status:" APP_COLOR_RESET " ");
 	printf(
 		"%s",
 		status_color_escape(app_status_message_color(app->status_message))
 	);
-	print_truncated(app->status_message, APP_LAYOUT_STATUS_MESSAGE_WIDTH);
+	printf("%s", visible_message);
 	printf(APP_COLOR_RESET);
 }
 

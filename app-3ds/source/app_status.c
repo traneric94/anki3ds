@@ -1,6 +1,58 @@
 #include "app_status.h"
 
+#include "app_text.h"
+
+#include <stdio.h>
 #include <string.h>
+
+static const char *last_status_clause(const char *message)
+{
+	const char *clause = NULL;
+	const char *cursor = message;
+
+	while (cursor != NULL)
+	{
+		cursor = strstr(cursor, "; ");
+		if (cursor != NULL)
+		{
+			clause = cursor;
+			cursor += 2;
+		}
+	}
+
+	return clause;
+}
+
+static void copy_status_columns(
+	char *destination,
+	size_t destination_size,
+	const char *message,
+	size_t columns
+)
+{
+	size_t bytes = app_text_byte_count_for_columns(message, columns);
+
+	snprintf(destination, destination_size, "%.*s", (int)bytes, message);
+}
+
+static void copy_status_prefix_ellipsis(
+	char *destination,
+	size_t destination_size,
+	const char *message,
+	size_t max_columns
+)
+{
+	size_t bytes;
+
+	if (max_columns <= 3)
+	{
+		copy_status_columns(destination, destination_size, message, max_columns);
+		return;
+	}
+
+	bytes = app_text_byte_count_for_columns(message, max_columns - 3);
+	snprintf(destination, destination_size, "%.*s...", (int)bytes, message);
+}
 
 enum app_status_color app_status_message_color(const char *message)
 {
@@ -54,4 +106,67 @@ enum app_status_color app_status_message_color(const char *message)
 	}
 
 	return APP_STATUS_COLOR_NEUTRAL;
+}
+
+void app_status_format_for_width(
+	char *destination,
+	size_t destination_size,
+	const char *message,
+	size_t max_columns
+)
+{
+	const char *suffix;
+	size_t columns;
+	size_t suffix_columns;
+	size_t prefix_columns;
+	size_t prefix_bytes;
+
+	if (destination_size == 0)
+		return;
+
+	destination[0] = '\0';
+	if (message == NULL || max_columns == 0)
+		return;
+
+	columns = app_text_column_count(message);
+	if (columns <= max_columns)
+	{
+		snprintf(destination, destination_size, "%s", message);
+		return;
+	}
+
+	suffix = last_status_clause(message);
+	if (suffix == NULL || suffix == message)
+	{
+		copy_status_prefix_ellipsis(
+			destination,
+			destination_size,
+			message,
+			max_columns
+		);
+		return;
+	}
+
+	suffix_columns = app_text_column_count(suffix);
+	if (suffix_columns + 3 >= max_columns)
+	{
+		copy_status_prefix_ellipsis(
+			destination,
+			destination_size,
+			message,
+			max_columns
+		);
+		return;
+	}
+
+	prefix_columns = max_columns - suffix_columns - 3;
+	prefix_bytes = app_text_byte_count_for_columns(message, prefix_columns);
+	snprintf(
+		destination,
+		destination_size,
+		"%.*s...%s",
+		(int)prefix_bytes,
+		message,
+		suffix
+	);
 }

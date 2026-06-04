@@ -584,7 +584,9 @@ sample, instead of clearing it.
 The console renderer still uses a simple one-column-per-character model, but
 `app_text` keeps valid UTF-8 byte sequences together during wrapping and
 ellipsis truncation so language-deck text is not split in the middle of a
-character.
+character. Long bottom status messages compact the left side first when a
+semicolon-delimited warning suffix is present, keeping context such as ignored
+settings or unmatched state visible within the one-line status area.
 
 Likely next boundaries:
 
