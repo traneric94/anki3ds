@@ -22,10 +22,10 @@
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET "\x1b[0m"
-#define APP_COLOR_BLUE "\x1b[34m"
-#define APP_COLOR_GREEN "\x1b[32m"
-#define APP_COLOR_RED "\x1b[31m"
-#define APP_COLOR_YELLOW "\x1b[33m"
+#define APP_COLOR_ACCENT "\x1b[36m"
+#define APP_COLOR_SUCCESS "\x1b[32m"
+#define APP_COLOR_DANGER "\x1b[31m"
+#define APP_COLOR_WARNING "\x1b[33m"
 static const unsigned int daily_limit_presets[] = {
 	5,
 	10,
@@ -183,7 +183,7 @@ static void console_move(int row, int column)
 
 static void draw_app_title(const char *section)
 {
-	printf("\x1b[1;1H" APP_COLOR_BLUE "anki3ds");
+	printf("\x1b[1;1H" APP_COLOR_ACCENT "anki3ds");
 	if (section != NULL && section[0] != '\0')
 		printf(" %s", section);
 	printf(" %s" APP_COLOR_RESET, APP_VERSION);
@@ -599,7 +599,7 @@ static const char *status_message_color(const char *message)
 		strstr(message, "bad") != NULL
 	)
 	{
-		return APP_COLOR_RED;
+		return APP_COLOR_DANGER;
 	}
 	if (
 		strstr(message, "requires") != NULL ||
@@ -613,7 +613,7 @@ static const char *status_message_color(const char *message)
 		strstr(message, "unmatched") != NULL
 	)
 	{
-		return APP_COLOR_YELLOW;
+		return APP_COLOR_WARNING;
 	}
 	if (
 		strstr(message, "saved") != NULL ||
@@ -622,10 +622,10 @@ static const char *status_message_color(const char *message)
 		strstr(message, "Reset") != NULL
 	)
 	{
-		return APP_COLOR_GREEN;
+		return APP_COLOR_SUCCESS;
 	}
 
-	return APP_COLOR_BLUE;
+	return APP_COLOR_ACCENT;
 }
 
 static void wait_for_idle_input(unsigned int idle_wait_count)
@@ -995,7 +995,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 
 	app_console_clear();
 	draw_app_title(NULL);
-	printf("\x1b[3;1H" APP_COLOR_BLUE "Select deck" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_ACCENT "Select deck" APP_COLOR_RESET);
 	if (app->deck_index.count > 0)
 	{
 		printf(
@@ -1007,7 +1007,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 
 	if (app->deck_index.count == 0)
 	{
-		printf("\x1b[5;1H" APP_COLOR_YELLOW "No decks found." APP_COLOR_RESET);
+		printf("\x1b[5;1H" APP_COLOR_WARNING "No decks found." APP_COLOR_RESET);
 		printf("\x1b[7;1HCreate a folder like:");
 		printf("\x1b[8;1H%s/my-deck/cards.tsv", DECK_INDEX_ROOT_PATH);
 		if (app->deck_index.ignored_count > 0)
@@ -1038,7 +1038,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 			const struct deck_summary *summary = &app->deck_summaries[index];
 
 			if (selected)
-				printf(APP_COLOR_GREEN);
+				printf(APP_COLOR_SUCCESS);
 			printf(
 				"\x1b[%lu;1H%s ",
 				(unsigned long)(APP_LAYOUT_DECK_SELECTOR_FIRST_ROW + visible_index),
@@ -1056,14 +1056,14 @@ static void draw_deck_select_screen(const struct app_state *app)
 				if (settings_load_result_needs_warning(summary->settings_load_result))
 				{
 					printf(
-						APP_COLOR_RESET APP_COLOR_YELLOW
+						APP_COLOR_RESET APP_COLOR_WARNING
 						" settings ignored" APP_COLOR_RESET
 					);
 				}
 				else if (state_load_result_needs_warning(summary->state_load_result))
 				{
 					printf(
-						APP_COLOR_RESET APP_COLOR_YELLOW
+						APP_COLOR_RESET APP_COLOR_WARNING
 						" state unmatched" APP_COLOR_RESET
 					);
 				}
@@ -1080,11 +1080,11 @@ static void draw_deck_select_screen(const struct app_state *app)
 			}
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
-				printf(APP_COLOR_RESET APP_COLOR_RED " state error" APP_COLOR_RESET);
+				printf(APP_COLOR_RESET APP_COLOR_DANGER " state error" APP_COLOR_RESET);
 			}
 			else
 			{
-				printf(APP_COLOR_RESET APP_COLOR_RED " load error" APP_COLOR_RESET);
+				printf(APP_COLOR_RESET APP_COLOR_DANGER " load error" APP_COLOR_RESET);
 			}
 			printf(APP_COLOR_RESET);
 		}
@@ -1121,7 +1121,7 @@ static void draw_load_error_screen(const struct app_state *app)
 {
 	app_console_clear();
 	draw_app_title(NULL);
-	printf("\x1b[3;1H" APP_COLOR_RED "Could not load deck." APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_DANGER "Could not load deck." APP_COLOR_RESET);
 	printf("\x1b[5;1H");
 	print_truncated(
 		app->active_cards_path[0] ? app->active_cards_path : DECK_INDEX_ROOT_PATH,
@@ -1146,8 +1146,8 @@ static void draw_review_screen(const struct app_state *app)
 	}
 
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
-	printf("\x1b[7;1H" APP_COLOR_BLUE "Front" APP_COLOR_RESET);
-	printf("\x1b[8;1H" APP_COLOR_BLUE "------------------------------------------------" APP_COLOR_RESET);
+	printf("\x1b[7;1H" APP_COLOR_ACCENT "Front" APP_COLOR_RESET);
+	printf("\x1b[8;1H" APP_COLOR_ACCENT "------------------------------------------------" APP_COLOR_RESET);
 
 	if (app->revealed)
 	{
@@ -1158,8 +1158,8 @@ static void draw_review_screen(const struct app_state *app)
 			APP_LAYOUT_TEXT_WIDTH,
 			0
 		);
-		printf("\x1b[15;1H" APP_COLOR_BLUE "Back" APP_COLOR_RESET);
-		printf("\x1b[16;1H" APP_COLOR_BLUE "------------------------------------------------" APP_COLOR_RESET);
+		printf("\x1b[15;1H" APP_COLOR_ACCENT "Back" APP_COLOR_RESET);
+		printf("\x1b[16;1H" APP_COLOR_ACCENT "------------------------------------------------" APP_COLOR_RESET);
 		draw_wrapped_text_columns(
 			card->back,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
@@ -1191,7 +1191,7 @@ static void draw_summary_screen(const struct app_state *app)
 	draw_app_title("Review");
 	if (!app_state_allows_study(app))
 	{
-		printf("\x1b[3;1H" APP_COLOR_RED "Review state error" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_DANGER "Review state error" APP_COLOR_RESET);
 		printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
 		printf("\x1b[7;1HState:         %s", app->state_message);
 		printf("\x1b[10;1HUse SELECT actions, then");
@@ -1201,7 +1201,7 @@ static void draw_summary_screen(const struct app_state *app)
 
 	printf(
 		"\x1b[3;1H%s%s" APP_COLOR_RESET,
-		daily_limit_reached ? APP_COLOR_YELLOW : APP_COLOR_GREEN,
+		daily_limit_reached ? APP_COLOR_WARNING : APP_COLOR_SUCCESS,
 		daily_limit_reached ? "Daily limit reached" : "No cards due now"
 	);
 	printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
@@ -1225,19 +1225,19 @@ static void draw_summary_screen(const struct app_state *app)
 	}
 	printf("\x1b[11;1HState:         %s", app->state_message);
 	printf(
-		"\x1b[13;1H" APP_COLOR_RED "Y Again" APP_COLOR_RESET ": %u",
+		"\x1b[13;1H" APP_COLOR_DANGER "Y Again" APP_COLOR_RESET ": %u",
 		session->rating_counts[SCHEDULER_RATING_AGAIN]
 	);
 	printf(
-		"\x1b[14;1H" APP_COLOR_YELLOW "X Hard" APP_COLOR_RESET ":  %u",
+		"\x1b[14;1H" APP_COLOR_WARNING "X Hard" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_HARD]
 	);
 	printf(
-		"\x1b[15;1H" APP_COLOR_GREEN "B Good" APP_COLOR_RESET ":  %u",
+		"\x1b[15;1H" APP_COLOR_SUCCESS "B Good" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[16;1H" APP_COLOR_BLUE "A Easy" APP_COLOR_RESET ":  %u",
+		"\x1b[16;1H" APP_COLOR_ACCENT "A Easy" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 }
@@ -1253,20 +1253,20 @@ static void draw_actions_screen(const struct app_state *app)
 
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_BLUE "Actions" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions" APP_COLOR_RESET);
 	printf(
 		"\x1b[6;1H%s%s Restore suspended cards" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? APP_COLOR_GREEN : "",
+		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? APP_COLOR_SUCCESS : "",
 		unsuspend_marker
 	);
 	printf(
 		"\x1b[8;1H%s%s Daily limits" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_DAILY_LIMITS ? APP_COLOR_GREEN : "",
+		app->selected_action == ACTION_ITEM_DAILY_LIMITS ? APP_COLOR_SUCCESS : "",
 		settings_marker
 	);
 	printf(
 		"\x1b[10;1H%s%s Reset deck progress" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? APP_COLOR_RED : "",
+		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? APP_COLOR_DANGER : "",
 		reset_marker
 	);
 	printf("\x1b[13;1HDeck: ");
@@ -1318,18 +1318,18 @@ static void draw_settings_screen(const struct app_state *app)
 
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_BLUE "Daily limits" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily limits" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[8;1H%s%s New cards:    %s" APP_COLOR_RESET,
-		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? APP_COLOR_GREEN : "",
+		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? APP_COLOR_SUCCESS : "",
 		new_marker,
 		new_limit
 	);
 	printf(
 		"\x1b[10;1H%s%s Review cards: %s" APP_COLOR_RESET,
-		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? APP_COLOR_GREEN : "",
+		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? APP_COLOR_SUCCESS : "",
 		review_marker,
 		review_limit
 	);
@@ -1345,13 +1345,13 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_RED "Reset deck progress?" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_DANGER "Reset deck progress?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf("\x1b[8;1HThis removes saved review");
 	printf("\x1b[9;1Hstate for this deck.");
 	printf("\x1b[12;1HCards stay in cards.tsv.");
-	printf("\x1b[15;1HUse " APP_COLOR_RED "X" APP_COLOR_RESET " to reset.");
+	printf("\x1b[15;1HUse " APP_COLOR_DANGER "X" APP_COLOR_RESET " to reset.");
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
@@ -1359,7 +1359,7 @@ static void draw_restore_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_YELLOW "Restore suspended cards?" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_WARNING "Restore suspended cards?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
@@ -1368,7 +1368,7 @@ static void draw_restore_confirmation_screen(const struct app_state *app)
 	);
 	printf("\x1b[11;1HRestored cards can become");
 	printf("\x1b[12;1Hdue again if scheduled.");
-	printf("\x1b[15;1HUse " APP_COLOR_GREEN "X" APP_COLOR_RESET " to restore.");
+	printf("\x1b[15;1HUse " APP_COLOR_SUCCESS "X" APP_COLOR_RESET " to restore.");
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
@@ -1378,7 +1378,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_YELLOW "Suspend current card?" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_WARNING "Suspend current card?" APP_COLOR_RESET);
 	printf("\x1b[5;1HDeck: ");
 	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	if (card != NULL)
@@ -1388,7 +1388,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 	}
 	printf("\x1b[11;1HThis hides the card from");
 	printf("\x1b[12;1Hreview until restored.");
-	printf("\x1b[15;1HUse " APP_COLOR_YELLOW "X" APP_COLOR_RESET " to suspend.");
+	printf("\x1b[15;1HUse " APP_COLOR_WARNING "X" APP_COLOR_RESET " to suspend.");
 	printf("\x1b[17;1HUse B or SELECT to cancel.");
 }
 
@@ -1396,7 +1396,7 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 {
 	app_console_clear();
 	draw_app_title("Review");
-	printf("\x1b[3;1H" APP_COLOR_YELLOW "Exit app?" APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_WARNING "Exit app?" APP_COLOR_RESET);
 	printf("\x1b[6;1HProgress is saved after");
 	printf("\x1b[7;1Heach review action.");
 	printf("\x1b[10;1HUse A to exit.");
@@ -1417,7 +1417,7 @@ static void draw_controls_screen(const struct app_state *app)
 	switch (app->controls_return_mode)
 	{
 	case APP_MODE_DECK_SELECT:
-		printf("\x1b[3;1H" APP_COLOR_BLUE "Deck list controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Deck list controls" APP_COLOR_RESET);
 		if (app->deck_index.count > 0)
 		{
 			printf("\x1b[5;1HA: open selected deck");
@@ -1433,7 +1433,7 @@ static void draw_controls_screen(const struct app_state *app)
 		}
 		break;
 	case APP_MODE_LOAD_ERROR:
-		printf("\x1b[3;1H" APP_COLOR_RED "Load error controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_DANGER "Load error controls" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: deck list");
 		printf("\x1b[7;1HY: controls");
 		break;
@@ -1441,7 +1441,7 @@ static void draw_controls_screen(const struct app_state *app)
 		if (!app_state_allows_study(app))
 		{
 			printf(
-				"\x1b[3;1H" APP_COLOR_RED
+				"\x1b[3;1H" APP_COLOR_DANGER
 				"Review state controls" APP_COLOR_RESET
 			);
 			printf("\x1b[5;1HSELECT: actions");
@@ -1452,7 +1452,7 @@ static void draw_controls_screen(const struct app_state *app)
 		else
 		{
 			printf(
-				"\x1b[3;1H" APP_COLOR_GREEN
+				"\x1b[3;1H" APP_COLOR_SUCCESS
 				"No-due controls" APP_COLOR_RESET
 			);
 			printf("\x1b[5;1HB: deck list");
@@ -1462,14 +1462,14 @@ static void draw_controls_screen(const struct app_state *app)
 		}
 		break;
 	case APP_MODE_ACTIONS:
-		printf("\x1b[3;1H" APP_COLOR_BLUE "Actions controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions controls" APP_COLOR_RESET);
 		printf("\x1b[5;1HA: choose selected");
 		printf("\x1b[7;1HD-pad/Circle U/D: move/hold");
 		printf("\x1b[9;1HB or SELECT: cancel");
 		printf("\x1b[11;1HY: controls");
 		break;
 	case APP_MODE_SETTINGS:
-		printf("\x1b[3;1H" APP_COLOR_BLUE "Daily-limit controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily-limit controls" APP_COLOR_RESET);
 		printf("\x1b[5;1HD-pad/Circle U/D: field/hold");
 		printf("\x1b[7;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[9;1HA: save limits");
@@ -1481,22 +1481,22 @@ static void draw_controls_screen(const struct app_state *app)
 		if (app->revealed)
 		{
 			printf(
-				"\x1b[3;1H" APP_COLOR_BLUE
+				"\x1b[3;1H" APP_COLOR_ACCENT
 				"Review rating controls" APP_COLOR_RESET
 			);
 			printf(
-				"\x1b[5;1H" APP_COLOR_RED "Y: Again" APP_COLOR_RESET
-				"      " APP_COLOR_YELLOW "X: Hard" APP_COLOR_RESET
+				"\x1b[5;1H" APP_COLOR_DANGER "Y: Again" APP_COLOR_RESET
+				"      " APP_COLOR_WARNING "X: Hard" APP_COLOR_RESET
 			);
 			printf(
-				"\x1b[7;1H" APP_COLOR_GREEN "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_BLUE "A: Easy" APP_COLOR_RESET
+				"\x1b[7;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
+				"       " APP_COLOR_ACCENT "A: Easy" APP_COLOR_RESET
 			);
 			printf("\x1b[9;1HL: undo last action");
 			printf("\x1b[11;1HR: confirm suspend");
 			printf("\x1b[13;1HSELECT: actions");
 			printf(
-				"\x1b[15;1H" APP_COLOR_YELLOW
+				"\x1b[15;1H" APP_COLOR_WARNING
 				"Use one rating button only." APP_COLOR_RESET
 			);
 			printf("\x1b[17;1HD-pad U/D: scroll back");
@@ -1504,7 +1504,7 @@ static void draw_controls_screen(const struct app_state *app)
 		else
 		{
 			printf(
-				"\x1b[3;1H" APP_COLOR_BLUE
+				"\x1b[3;1H" APP_COLOR_ACCENT
 				"Review front controls" APP_COLOR_RESET
 			);
 			printf("\x1b[5;1HA: show answer");
@@ -1533,28 +1533,28 @@ static void draw_battery_status(const struct app_state *app)
 	if (display_state == APP_POWER_BATTERY_DISPLAY_UNAVAILABLE)
 	{
 		printf(
-			"\x1b[29;1H" APP_COLOR_YELLOW
+			"\x1b[29;1H" APP_COLOR_WARNING
 			"Battery: unavailable" APP_COLOR_RESET
 		);
 	}
 	else if (display_state == APP_POWER_BATTERY_DISPLAY_CHARGING)
 	{
 		printf(
-			"\x1b[29;1H" APP_COLOR_GREEN "Battery: %u/5 charging" APP_COLOR_RESET,
+			"\x1b[29;1H" APP_COLOR_SUCCESS "Battery: %u/5 charging" APP_COLOR_RESET,
 			(unsigned int)app->battery_level
 		);
 	}
 	else if (display_state == APP_POWER_BATTERY_DISPLAY_LOW)
 	{
 		printf(
-			"\x1b[29;1H" APP_COLOR_RED "Battery: %u/5 low. Charge soon." APP_COLOR_RESET,
+			"\x1b[29;1H" APP_COLOR_DANGER "Battery: %u/5 low. Charge soon." APP_COLOR_RESET,
 			(unsigned int)app->battery_level
 		);
 	}
 	else
 	{
 		printf(
-			"\x1b[29;1H" APP_COLOR_BLUE "Battery: %u/5" APP_COLOR_RESET,
+			"\x1b[29;1H" APP_COLOR_ACCENT "Battery: %u/5" APP_COLOR_RESET,
 			(unsigned int)app->battery_level
 		);
 	}
@@ -1563,14 +1563,14 @@ static void draw_battery_status(const struct app_state *app)
 static void draw_due_legend(int row, bool include_suspended)
 {
 	printf(
-		"\x1b[%d;1H" APP_COLOR_BLUE "N" APP_COLOR_RESET
-		" new  " APP_COLOR_YELLOW "L" APP_COLOR_RESET
-		" learn  " APP_COLOR_GREEN "R" APP_COLOR_RESET " review",
+		"\x1b[%d;1H" APP_COLOR_ACCENT "N" APP_COLOR_RESET
+		" new  " APP_COLOR_WARNING "L" APP_COLOR_RESET
+		" learn  " APP_COLOR_SUCCESS "R" APP_COLOR_RESET " review",
 		row
 	);
 	if (include_suspended)
 		printf(
-			"\x1b[%d;1H" APP_COLOR_YELLOW "S" APP_COLOR_RESET " suspended",
+			"\x1b[%d;1H" APP_COLOR_WARNING "S" APP_COLOR_RESET " suspended",
 			row + 1
 		);
 }
@@ -1580,7 +1580,7 @@ static void draw_status_message(const struct app_state *app)
 	if (app->status_message[0] == '\0')
 		return;
 
-	printf("\x1b[24;1H" APP_COLOR_BLUE "Status:" APP_COLOR_RESET " ");
+	printf("\x1b[24;1H" APP_COLOR_ACCENT "Status:" APP_COLOR_RESET " ");
 	printf("%s", status_message_color(app->status_message));
 	print_truncated(app->status_message, APP_LAYOUT_STATUS_MESSAGE_WIDTH);
 	printf(APP_COLOR_RESET);
@@ -1601,7 +1601,7 @@ static void draw_scanning_progress_screen(
 	select_top_screen();
 	app_console_clear();
 	draw_app_title(NULL);
-	printf("\x1b[3;1H" APP_COLOR_BLUE "Scanning decks..." APP_COLOR_RESET);
+	printf("\x1b[3;1H" APP_COLOR_ACCENT "Scanning decks..." APP_COLOR_RESET);
 	printf("\x1b[5;1H%s", DECK_INDEX_ROOT_PATH);
 	if (total_count > 0)
 	{
@@ -1623,7 +1623,7 @@ static void draw_scanning_progress_screen(
 
 	select_bottom_screen();
 	app_console_clear();
-	printf("\x1b[1;1H" APP_COLOR_BLUE "Deck scan" APP_COLOR_RESET);
+	printf("\x1b[1;1H" APP_COLOR_ACCENT "Deck scan" APP_COLOR_RESET);
 	if (total_count > 0)
 	{
 		printf(
@@ -1738,14 +1738,14 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		if (app->deck_index.count > 0)
 		{
 			printf(
-				"\x1b[1;1H" APP_COLOR_BLUE "Decks" APP_COLOR_RESET " %lu/%lu",
+				"\x1b[1;1H" APP_COLOR_ACCENT "Decks" APP_COLOR_RESET " %lu/%lu",
 				(unsigned long)(app->selected_deck_index + 1),
 				(unsigned long)app->deck_index.count
 			);
 		}
 		else
 		{
-			printf("\x1b[1;1H" APP_COLOR_BLUE "Decks" APP_COLOR_RESET);
+			printf("\x1b[1;1H" APP_COLOR_ACCENT "Decks" APP_COLOR_RESET);
 		}
 		if (app->deck_index.count > 0)
 		{
@@ -1768,7 +1768,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				if (settings_load_result_needs_warning(summary->settings_load_result))
 				{
 					printf(
-						"\x1b[14;1H" APP_COLOR_YELLOW
+						"\x1b[14;1H" APP_COLOR_WARNING
 						"Settings ignored; defaults" APP_COLOR_RESET
 					);
 					details_row = 16;
@@ -1776,7 +1776,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				if (state_load_result_needs_warning(summary->state_load_result))
 				{
 					printf(
-						"\x1b[%d;1H" APP_COLOR_YELLOW
+						"\x1b[%d;1H" APP_COLOR_WARNING
 						"State unmatched; fresh" APP_COLOR_RESET,
 						details_row
 					);
@@ -1805,11 +1805,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
 				printf(
-					"\x1b[14;1HState: " APP_COLOR_RED "%s" APP_COLOR_RESET,
+					"\x1b[14;1HState: " APP_COLOR_DANGER "%s" APP_COLOR_RESET,
 					review_state_load_result_name(summary->state_load_result)
 				);
 				printf(
-					"\x1b[16;1H" APP_COLOR_YELLOW
+					"\x1b[16;1H" APP_COLOR_WARNING
 					"Open deck, then reset progress." APP_COLOR_RESET
 				);
 				printf(
@@ -1820,7 +1820,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			else
 			{
 				printf(
-					"\x1b[14;1H" APP_COLOR_RED
+					"\x1b[14;1H" APP_COLOR_DANGER
 					"Selected deck load error" APP_COLOR_RESET
 				);
 				draw_deck_load_error_detail(
@@ -1859,7 +1859,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		}
 		break;
 	case APP_MODE_LOAD_ERROR:
-		printf("\x1b[1;1H" APP_COLOR_RED "Load error" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_DANGER "Load error" APP_COLOR_RESET);
 		printf("\x1b[3;1HB or SELECT: deck list");
 		printf("\x1b[5;1HSTART: confirm exit");
 		printf("\x1b[7;1HY: controls");
@@ -1873,7 +1873,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 
 		format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
 		format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
-		printf("\x1b[1;1H" APP_COLOR_BLUE "Review" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_ACCENT "Review" APP_COLOR_RESET);
 		printf(
 			"\x1b[3;1HDue: N %lu  L %lu  R %lu",
 			(unsigned long)scheduler_new_due_count(&app->session),
@@ -1892,19 +1892,19 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		if (app->revealed)
 		{
 			printf(
-				"\x1b[6;1H" APP_COLOR_RED "Y: Again" APP_COLOR_RESET
-				"      " APP_COLOR_YELLOW "X: Hard" APP_COLOR_RESET
+				"\x1b[6;1H" APP_COLOR_DANGER "Y: Again" APP_COLOR_RESET
+				"      " APP_COLOR_WARNING "X: Hard" APP_COLOR_RESET
 			);
 			printf(
-				"\x1b[8;1H" APP_COLOR_GREEN "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_BLUE "A: Easy" APP_COLOR_RESET
+				"\x1b[8;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
+				"       " APP_COLOR_ACCENT "A: Easy" APP_COLOR_RESET
 			);
 			printf("\x1b[10;1HL: undo last action");
 			printf("\x1b[12;1HR: confirm suspend");
 			printf("\x1b[14;1HSELECT: actions");
 			printf("\x1b[16;1HSTART: confirm exit");
 			printf(
-				"\x1b[20;1H" APP_COLOR_YELLOW
+				"\x1b[20;1H" APP_COLOR_WARNING
 				"Use one rating button only." APP_COLOR_RESET
 			);
 		}
@@ -1942,13 +1942,13 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 
 		if (!app_state_allows_study(app))
 		{
-			printf("\x1b[1;1H" APP_COLOR_RED "Review state error" APP_COLOR_RESET);
+			printf("\x1b[1;1H" APP_COLOR_DANGER "Review state error" APP_COLOR_RESET);
 			printf("\x1b[3;1HSELECT: actions");
 			printf("\x1b[5;1HB: deck list");
 			printf("\x1b[7;1HSTART: confirm exit");
 			printf("\x1b[9;1HY: controls");
 			printf(
-				"\x1b[13;1H" APP_COLOR_YELLOW
+				"\x1b[13;1H" APP_COLOR_WARNING
 				"Reset progress to study." APP_COLOR_RESET
 			);
 			break;
@@ -1961,7 +1961,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		daily_limit_reached = new_blocked_count > 0 || review_blocked_count > 0;
 		printf(
 			"\x1b[1;1H%s%s" APP_COLOR_RESET,
-			daily_limit_reached ? APP_COLOR_YELLOW : APP_COLOR_GREEN,
+			daily_limit_reached ? APP_COLOR_WARNING : APP_COLOR_SUCCESS,
 			daily_limit_reached ? "Daily limit reached" : "No cards due now"
 		);
 		printf("\x1b[3;1HB: deck list");
@@ -1993,7 +1993,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		break;
 	}
 	case APP_MODE_ACTIONS:
-		printf("\x1b[1;1H" APP_COLOR_BLUE "Actions" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_ACCENT "Actions" APP_COLOR_RESET);
 		printf("\x1b[3;1HA: choose selected");
 		printf("\x1b[5;1HD-pad/Circle U/D: move/hold");
 		printf("\x1b[7;1HB or SELECT: cancel");
@@ -2001,7 +2001,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[11;1HY: controls");
 		break;
 	case APP_MODE_SETTINGS:
-		printf("\x1b[1;1H" APP_COLOR_BLUE "Daily limits" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_ACCENT "Daily limits" APP_COLOR_RESET);
 		printf("\x1b[3;1HD-pad/Circle U/D: field/hold");
 		printf("\x1b[5;1HD-pad/Circle L/R: value/hold");
 		printf("\x1b[7;1HA: save limits");
@@ -2010,30 +2010,30 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[13;1HY: controls");
 		break;
 	case APP_MODE_CONTROLS:
-		printf("\x1b[1;1H" APP_COLOR_BLUE "Controls" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_ACCENT "Controls" APP_COLOR_RESET);
 		printf("\x1b[3;1HB, Y, or SELECT: back");
 		printf("\x1b[5;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_RESTORE:
-		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm restore" APP_COLOR_RESET);
-		printf("\x1b[3;1H" APP_COLOR_GREEN "X: restore cards" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_WARNING "Confirm restore" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_SUCCESS "X: restore cards" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_SUSPEND:
-		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm suspend" APP_COLOR_RESET);
-		printf("\x1b[3;1H" APP_COLOR_YELLOW "X: suspend card" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_WARNING "Confirm suspend" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_WARNING "X: suspend card" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_RESET:
-		printf("\x1b[1;1H" APP_COLOR_RED "Confirm reset" APP_COLOR_RESET);
-		printf("\x1b[3;1H" APP_COLOR_RED "X: reset progress" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_DANGER "Confirm reset" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_DANGER "X: reset progress" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
 		break;
 	case APP_MODE_CONFIRM_EXIT:
-		printf("\x1b[1;1H" APP_COLOR_YELLOW "Confirm exit" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_WARNING "Confirm exit" APP_COLOR_RESET);
 		printf("\x1b[3;1HA: exit app");
 		printf("\x1b[5;1HB or SELECT: cancel");
 		break;

@@ -210,9 +210,9 @@ The app loop is a small mode machine:
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
-framework yet. Rendering uses simple ANSI foreground colors: blue headings,
-green selected or successful state, red errors and destructive reset prompts,
-and yellow cautions.
+framework yet. Rendering uses simple ANSI foreground colors: cyan headings and
+neutral status, green selected or successful state, red errors and destructive
+reset prompts, and yellow cautions.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without
