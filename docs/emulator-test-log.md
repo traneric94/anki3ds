@@ -388,6 +388,25 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Warm Dark Palette Refresh
+
+Build: local working tree
+Command: `make -C app-3ds`
+Steps:
+- Replaced the blue-purple heading/status accent with warm amber.
+- Moved the normal selected-row highlight to green reverse video so selected
+  rows remain distinct from caution text.
+Observed:
+- The 3DS target rebuilt successfully.
+- Not manually rendered yet.
+Expected:
+- Headings, status labels, selected rows, and rating labels should stay readable
+  on a dark 3DS console without relying on blue or cyan.
+Result: pass for build only; pending manual render check
+Notes:
+- The app still needs the final emulator or hardware pass for rendered palette
+  contrast.
+
 ## 2026-06-04 - Limit-Blocked Summary Local Gate
 
 Build: `feb223b`
