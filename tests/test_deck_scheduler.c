@@ -4165,6 +4165,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status setting value settings ignored is warning"
 	);
 	check(
+		app_status_message_color("Limits canceled; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limits cancel limit reached is warning"
+	);
+	check(
+		app_status_message_color("Limits canceled; discarded; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limits cancel discarded reset state/settings is warning"
+	);
+	check(
 		app_status_message_color("Restore requires X; limit reached") ==
 			APP_STATUS_COLOR_WARNING,
 		"status restore requires limit reached is warning"

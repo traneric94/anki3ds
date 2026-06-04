@@ -634,6 +634,20 @@ static void app_set_setting_value_status(
 	);
 }
 
+static void app_set_limits_canceled_status(
+	struct app_state *app,
+	bool discarded_changes
+)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s%s",
+		discarded_changes ? "Limits canceled; discarded" : "Limits canceled",
+		active_deck_status_suffix(app)
+	);
+}
+
 static void app_set_canceled_status(struct app_state *app, const char *label)
 {
 	snprintf(
@@ -3570,12 +3584,7 @@ static bool app_handle_settings_input(
 		app->edited_settings = app->settings;
 		app->settings_message = "no changes";
 		app->mode = APP_MODE_ACTIONS;
-		app_set_status(
-			app,
-			discarded_changes ?
-				"Limits canceled; discarded" :
-				"Limits canceled"
-		);
+		app_set_limits_canceled_status(app, discarded_changes);
 		return true;
 	}
 

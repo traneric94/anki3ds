@@ -149,5 +149,6 @@ limits and warns about `unsaved changes` after a value change. The bottom
 status line uses the warning color for active deck warnings on entry, after
 clean field movement or value movement, and for unsaved edits. Unsaved edits
 take priority over the active deck warning. Canceling with unsaved changes
-discards the edit buffer and returns to actions.
+discards the edit buffer and returns to actions while restoring active deck
+warning context.
 Saving limits updates `settings.tsv` and leaves review progress status separate.

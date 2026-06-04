@@ -424,7 +424,8 @@ review-state load still leaves the deck on the reset-needed summary; settings
 changes do not make an unsafe review queue visible. Opening the daily-limits
 screen, moving between fields before edits, and cycling a value back to its
 saved value preserve active deck warning context; unsaved edit feedback takes
-priority until save or cancel replaces it.
+priority until save or cancel replaces it. Canceling daily-limit edits returns
+to actions with discarded-edit feedback and the active deck warning suffix.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards in

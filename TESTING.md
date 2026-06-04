@@ -320,7 +320,8 @@ Acceptance steps:
 - undo one rating and confirm the queue/status updates sensibly
 - change `new_limit` and `review_limit` from the actions screen
 - confirm daily-limit edits show an unsaved-changes cue before saving and
-  return to no-changes state after save or cancel
+  return to no-changes state after save or cancel, with active warning context
+  preserved after cancel
 - confirm opening daily limits and moving clean fields/values from reset-needed,
   ignored-settings, or limit-blocked decks preserves that warning context in
   the status line
