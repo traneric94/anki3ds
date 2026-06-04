@@ -789,6 +789,7 @@ static const char *status_message_color(const char *message)
 	if (
 		strstr(message, "failed") != NULL ||
 		strstr(message, "Failed") != NULL ||
+		strstr(message, "Missing") != NULL ||
 		strstr(message, "error") != NULL ||
 		strstr(message, "bad") != NULL
 	)
@@ -818,6 +819,7 @@ static const char *status_message_color(const char *message)
 		strstr(message, "saved") != NULL ||
 		strstr(message, "Loaded") != NULL ||
 		strstr(message, "Restored") != NULL ||
+		strstr(message, "no cards due") != NULL ||
 		strstr(message, "reset") != NULL ||
 		strstr(message, "Reset") != NULL
 	)
