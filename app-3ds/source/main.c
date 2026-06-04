@@ -1948,7 +1948,7 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 	app_update_review_return_modes_for_day_change(app, target_mode);
 
 	if (!app_mode_is_review_surface(app->mode))
-		return false;
+		return true;
 
 	app->mode = target_mode;
 	if (!app_state_allows_study(app))

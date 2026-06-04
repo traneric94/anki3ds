@@ -262,10 +262,12 @@ review session updates the scheduler's `today`, clears one-step undo,
 recomputes daily counts, and repositions to the next due card. If a review,
 summary, suspend-confirmation, or restore-confirmation screen is visible, the
 screen redraws immediately on the correct review or summary surface for the new
-day. Other modal return targets are updated so canceling a modal lands on the
-correct review or summary screen for the new day. A deck with malformed saved
-state stays on the reset-needed summary across day changes instead of moving
-into the review queue.
+day. Other deck-specific screens, such as actions, daily limits, controls, and
+exit confirmation, redraw in place after the scheduler update and keep their
+current modal context. Their return targets are updated so canceling a modal
+lands on the correct review or summary screen for the new day. A deck with
+malformed saved state stays on the reset-needed summary across day changes
+instead of moving into the review queue.
 
 The app samples PTMU battery state at startup, then normally at most once every
 ten minutes. Startup and periodic samples use the same scheduling policy, so a
