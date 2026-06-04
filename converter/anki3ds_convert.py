@@ -27,6 +27,7 @@ STATE_FILE_HEADER = "#anki3ds-state-v1"
 STATE_FILE_FOOTER = "#anki3ds-state-complete"
 REVIEW_STATE_FILES = ("state.tsv", "state.tsv.tmp", "state.tsv.bak")
 SETTINGS_FILES = ("settings.tsv", "settings.tsv.tmp", "settings.tsv.bak")
+REVIEW_LOG_FILE = "review-log.tsv"
 
 BLOCK_TAGS = {
     "address",
@@ -677,6 +678,131 @@ def collect_state_rows(source_dirs: list[Path], state_filename: str) -> list[str
     return rows
 
 
+def review_log_row_card_id(row: str) -> str | None:
+    fields = row.split("\t")
+
+    if len(fields) < 4 or not fields[3]:
+        return None
+
+    return fields[3]
+
+
+def complete_review_log_rows(log_text: str) -> list[str]:
+    lines = log_text.splitlines()
+
+    if log_text and not log_text.endswith("\n"):
+        lines = lines[:-1]
+
+    return [
+        line
+        for line in lines
+        if review_log_row_card_id(line) is not None
+    ]
+
+
+def matching_review_log_rows_for_cards(
+    log_text: str,
+    target_card_ids: set[str],
+) -> list[str]:
+    return matching_review_log_rows_from_rows(
+        complete_review_log_rows(log_text),
+        target_card_ids,
+    )
+
+
+def matching_review_log_rows_from_rows(
+    rows: list[str],
+    target_card_ids: set[str],
+) -> list[str]:
+    return [
+        row
+        for row in rows
+        if review_log_row_card_id(row) in target_card_ids
+    ]
+
+
+def migrate_review_log_file(
+    source_path: Path,
+    target_path: Path,
+    target_card_ids: set[str],
+) -> None:
+    if target_path.exists() or not source_path.is_file():
+        return
+
+    try:
+        matching_rows = matching_review_log_rows_for_cards(
+            source_path.read_text(encoding="utf-8"),
+            target_card_ids,
+        )
+    except (OSError, UnicodeDecodeError):
+        return
+
+    if matching_rows:
+        target_path.write_text("\n".join(matching_rows) + "\n", encoding="utf-8")
+
+
+def collect_review_log_rows(source_dirs: list[Path]) -> list[str]:
+    rows: list[str] = []
+
+    for source_dir in source_dirs:
+        source_path = source_dir / REVIEW_LOG_FILE
+
+        if not source_path.is_file():
+            continue
+
+        try:
+            log_text = source_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        rows.extend(complete_review_log_rows(log_text))
+
+    return rows
+
+
+def collect_matching_review_log_rows(
+    source_dirs: list[Path],
+    target_card_ids: set[str],
+) -> list[str]:
+    rows: list[str] = []
+
+    for source_dir in source_dirs:
+        source_path = source_dir / REVIEW_LOG_FILE
+
+        if not source_path.is_file():
+            continue
+
+        try:
+            rows.extend(
+                matching_review_log_rows_for_cards(
+                    source_path.read_text(encoding="utf-8"),
+                    target_card_ids,
+                )
+            )
+        except (OSError, UnicodeDecodeError):
+            continue
+
+    return rows
+
+
+def write_review_log_rows(target_path: Path, matching_rows: list[str]) -> None:
+    if matching_rows:
+        target_path.write_text("\n".join(matching_rows) + "\n", encoding="utf-8")
+    else:
+        remove_path_if_present(target_path)
+
+
+def rewrite_review_log_for_cards(
+    source_dirs: list[Path],
+    target_path: Path,
+    target_card_ids: set[str],
+) -> None:
+    write_review_log_rows(
+        target_path,
+        collect_matching_review_log_rows(source_dirs, target_card_ids),
+    )
+
+
 def migrate_combined_review_state_file(
     source_dirs: list[Path],
     target_path: Path,
@@ -724,6 +850,12 @@ def migrate_single_deck_progress_to_split_outputs(
                 target_card_ids,
             )
 
+        migrate_review_log_file(
+            source_dir / REVIEW_LOG_FILE,
+            chunk_output / REVIEW_LOG_FILE,
+            target_card_ids,
+        )
+
         for settings_filename in SETTINGS_FILES:
             copy_settings_file(
                 source_dir / settings_filename,
@@ -744,6 +876,7 @@ def migrate_split_progress_to_split_outputs(
         state_filename: collect_state_rows(source_dirs, state_filename)
         for state_filename in REVIEW_STATE_FILES
     }
+    source_review_log_rows = collect_review_log_rows(source_dirs)
 
     for chunk_output, cards in chunk_cards.items():
         target_card_ids = {card.card_id for card in cards}
@@ -764,6 +897,14 @@ def migrate_split_progress_to_split_outputs(
                 )
             else:
                 remove_path_if_present(target_path)
+
+        write_review_log_rows(
+            chunk_output / REVIEW_LOG_FILE,
+            matching_review_log_rows_from_rows(
+                source_review_log_rows,
+                target_card_ids,
+            ),
+        )
 
         for settings_filename in SETTINGS_FILES:
             for source_dir in source_dirs:
@@ -798,6 +939,12 @@ def migrate_split_progress_to_single_output(
             state_filename,
             target_card_ids,
         )
+
+    rewrite_review_log_for_cards(
+        source_dirs,
+        output_dir / REVIEW_LOG_FILE,
+        target_card_ids,
+    )
 
     for settings_filename in SETTINGS_FILES:
         for source_dir in source_dirs:

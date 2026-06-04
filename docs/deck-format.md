@@ -86,15 +86,16 @@ Rules:
 - split re-import removes stale converter-generated sibling chunks after the
   current output is written
 - if a converter-generated single-folder deck grows into split chunks, matching
-  saved state rows and daily-limit settings are copied into the new chunk
-  folders before the obsolete single folder is removed
+  saved state rows, review-log rows, and daily-limit settings are copied into
+  the new chunk folders before the obsolete single folder is removed
 - if converter-generated split chunks shrink back into one deck, matching saved
-  state rows and daily-limit settings are copied into the new single folder
-  before the obsolete chunks are removed
+  state rows, review-log rows, and daily-limit settings are copied into the new
+  single folder before the obsolete chunks are removed
 - if split output remains split but card boundaries move between numbered
-  chunks, matching saved state rows are rewritten into the chunk that now owns
-  each card; chunks with no matching saved rows start fresh instead of keeping
-  stale state from their previous card ranges
+  chunks, matching saved state rows and review-log rows are rewritten into the
+  chunk that now owns each card; chunks with no matching saved rows start fresh
+  instead of keeping stale state from their previous card ranges, and chunks
+  with no matching review-log rows drop stale diagnostic logs
 - text-only re-import removes a stale `media/` directory from the active output
   folder while preserving progress and settings files
 - `front` and `back` fields may use at most 383 UTF-8 bytes after unescaping
@@ -201,7 +202,10 @@ Rules:
   as a migration path
 
 `state.tsv` and `review-log.tsv` are owned by the 3DS app. The converter should
-preserve them when updating card content.
+preserve them when updating card content. When split output changes shape, the
+converter preserves complete `review-log.tsv` rows whose `card_id` still exists
+in the target deck or chunk; incomplete final log rows are ignored, matching the
+app's partial-row repair policy.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can

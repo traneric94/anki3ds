@@ -683,6 +683,26 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Converter Review-Log Migration Gate
+
+Build: local working tree
+Command: `python3 -m unittest tests/test_converter.py`
+Steps:
+- Added converter migration support for complete `review-log.tsv` rows when a
+  converter-generated deck changes between single-folder and split output, or
+  when split chunk boundaries move.
+- Review-log rows are filtered by the target card IDs so stale chunk logs do
+  not follow unrelated cards.
+Observed:
+- Converter tests passed.
+Expected:
+- Updating large text decks should preserve diagnostic study history for cards
+  that still exist, while dropping rows for removed cards.
+Result: pass for converter gate
+Notes:
+- The review log remains diagnostic; `state.tsv` is still the source of review
+  progress loaded by the 3DS app.
+
 ## 2026-06-04 - Warm High-Contrast Palette Gate
 
 Build: local working tree

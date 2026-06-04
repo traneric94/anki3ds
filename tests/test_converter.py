@@ -21,6 +21,14 @@ from converter.anki3ds_convert import (
 )
 
 
+def review_log_row(card_id: str, timestamp: int) -> str:
+    return (
+        f"{timestamp}\t20000\trating\t{card_id}\tgood\t"
+        "0\t0\t0\t20000\t0\t2500\t0\t0\t"
+        "1\t20000\t20000\t20001\t1\t2500\t0\t0\n"
+    )
+
+
 class ConverterTests(unittest.TestCase):
     def test_deck_id_validation(self):
         self.assertTrue(deck_id_is_valid("my-deck_01"))
@@ -812,6 +820,14 @@ class ConverterTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (first_chunk / "review-log.tsv").write_text(
+                review_log_row(old_cards[0].card_id, 1),
+                encoding="utf-8",
+            )
+            (second_chunk / "review-log.tsv").write_text(
+                review_log_row(old_cards[DECK_MAX_CARDS].card_id, 2),
+                encoding="utf-8",
+            )
             (first_chunk / "settings.tsv").write_text(
                 "new_limit\t3\nreview_limit\t4\n",
                 encoding="utf-8",
@@ -830,6 +846,13 @@ class ConverterTests(unittest.TestCase):
                     f"{old_cards[0].card_id}\t1\t2\t20001\t1\t2500\t0\t0\t20000\t20000\n"
                     f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t2\n"
+                ),
+            )
+            self.assertEqual(
+                (output / "review-log.tsv").read_text(encoding="utf-8"),
+                (
+                    review_log_row(old_cards[0].card_id, 1)
+                    + review_log_row(old_cards[DECK_MAX_CARDS].card_id, 2)
                 ),
             )
             self.assertEqual(
@@ -878,12 +901,23 @@ class ConverterTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (first_chunk / "review-log.tsv").write_text(
+                (
+                    review_log_row(old_cards[0].card_id, 1)
+                    + review_log_row(old_cards[255].card_id, 2)
+                ),
+                encoding="utf-8",
+            )
             (second_chunk / "state.tsv").write_text(
                 (
                     "#anki3ds-state-v1\t1\n"
                     f"{old_cards[256].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t1\n"
                 ),
+                encoding="utf-8",
+            )
+            (second_chunk / "review-log.tsv").write_text(
+                review_log_row(old_cards[256].card_id, 3),
                 encoding="utf-8",
             )
 
@@ -899,12 +933,23 @@ class ConverterTests(unittest.TestCase):
                 ),
             )
             self.assertEqual(
+                (first_chunk / "review-log.tsv").read_text(encoding="utf-8"),
+                review_log_row(old_cards[0].card_id, 1),
+            )
+            self.assertEqual(
                 (second_chunk / "state.tsv").read_text(encoding="utf-8"),
                 (
                     "#anki3ds-state-v1\t2\n"
                     f"{old_cards[255].card_id}\t1\t1\t20002\t2\t2400\t0\t0\t20000\t20000\n"
                     f"{old_cards[256].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t2\n"
+                ),
+            )
+            self.assertEqual(
+                (second_chunk / "review-log.tsv").read_text(encoding="utf-8"),
+                (
+                    review_log_row(old_cards[255].card_id, 2)
+                    + review_log_row(old_cards[256].card_id, 3)
                 ),
             )
 
@@ -981,6 +1026,15 @@ class ConverterTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (output / "review-log.tsv").write_text(
+                (
+                    review_log_row(old_cards[0].card_id, 1)
+                    + review_log_row(old_cards[1].card_id, 2)
+                    + review_log_row("missing-card", 3)
+                    + review_log_row(old_cards[0].card_id, 4).rstrip("\n")
+                ),
+                encoding="utf-8",
+            )
             (output / "settings.tsv").write_text(
                 "new_limit\t3\nreview_limit\t4\n",
                 encoding="utf-8",
@@ -1002,6 +1056,14 @@ class ConverterTests(unittest.TestCase):
                 ),
             )
             self.assertFalse((second_chunk / "state.tsv").exists())
+            self.assertEqual(
+                (first_chunk / "review-log.tsv").read_text(encoding="utf-8"),
+                (
+                    review_log_row(old_cards[0].card_id, 1)
+                    + review_log_row(old_cards[1].card_id, 2)
+                ),
+            )
+            self.assertFalse((second_chunk / "review-log.tsv").exists())
             self.assertEqual(
                 (first_chunk / "settings.tsv").read_text(encoding="utf-8"),
                 "new_limit\t3\nreview_limit\t4\n",

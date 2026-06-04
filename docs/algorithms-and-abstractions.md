@@ -547,15 +547,16 @@ Algorithm:
     chunk folders after the current single-folder or split-folder output has
     been written.
 12. When a converter-generated single-folder deck becomes split output, copy
-    matching `state.tsv` rows and daily-limit settings into new chunk folders
-    before deleting the obsolete single folder.
+    matching `state.tsv` rows, `review-log.tsv` rows, and daily-limit settings
+    into new chunk folders before deleting the obsolete single folder.
 13. When converter-generated split chunks become one single-folder output,
-    combine matching `state.tsv` rows and copy daily-limit settings into the
-    new single folder before deleting the obsolete chunk folders.
+    combine matching `state.tsv` rows and `review-log.tsv` rows, then copy
+    daily-limit settings into the new single folder before deleting the
+    obsolete chunk folders.
 14. When split output stays split but card boundaries move between numbered
-    chunks, rewrite matching `state.tsv` rows into the chunk that now owns each
-    card. If a rewritten chunk has no matching rows, remove stale state files so
-    the chunk starts fresh.
+    chunks, rewrite matching `state.tsv` rows and complete `review-log.tsv`
+    rows into the chunk that now owns each card. If a rewritten chunk has no
+    matching rows, remove stale state/log files so the chunk starts fresh.
 
 During same-folder re-import, the converter deliberately does not open or
 rewrite existing `state.tsv`, `review-log.tsv`, or `settings.tsv`, so review
