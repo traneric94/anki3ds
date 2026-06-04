@@ -265,8 +265,9 @@ suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
 progress after opening the reset action and confirming with `X`. The top screen
 shows deck/card text with readable dark-terminal color cues that avoid
-blue/cyan accents; headings and safe states use green, selected rows and Easy
-ratings use magenta, warnings use yellow, and destructive/error states use red.
+blue/cyan accents; headings and safe states use green, selected rows and
+cautions use yellow, Easy ratings plus new/suspended count labels use magenta,
+and destructive/error states use red.
 The bottom screen
 shows controls, active deck context for deck-specific actions, review status,
 save feedback, and battery state, including an unavailable state before the

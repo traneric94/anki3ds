@@ -212,11 +212,11 @@ The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
 framework yet. Rendering uses libctru's bright ANSI foreground colors: green
-headings/status labels and successful, restored, or safe state, magenta
-selected or focused items and Easy ratings, white neutral status and separators,
-yellow cautions, and red errors and destructive reset prompts. Blue and cyan
-are intentionally avoided because they are hard to read on the dark 3DS console
-background.
+headings/status labels and successful, restored, review, or safe state, yellow
+selected/focused items and cautions, magenta Easy ratings plus new/suspended
+count labels, white neutral status and separators, and red errors and
+destructive reset prompts. Blue and cyan are intentionally avoided because they
+are hard to read on the dark 3DS console background.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without

@@ -757,6 +757,12 @@ static void copy_string(char *destination, size_t destination_size, const char *
 	if (destination_size == 0)
 		return;
 
+	if (source == NULL)
+	{
+		destination[0] = '\0';
+		return;
+	}
+
 	snprintf(destination, destination_size, "%s", source);
 }
 
