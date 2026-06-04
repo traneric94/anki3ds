@@ -326,3 +326,33 @@ Notes:
 - The controls screen now shows prompts for the screen that opened it, including
   separate review-front and review-rating variants. Full button/render
   acceptance is deferred to the final manual pass.
+
+## 2026-06-04 - Pre-Manual Daily-Use Gate
+
+Build: `ccfb97f`
+Command: `make verify-local`
+Gate: pass
+Sample prep: `make verify-local` ran `prepare-local-samples-fresh` for the
+local SD mirror and `package-sd` for the copy-ready payload.
+Decks: `limits-demo`, `sample`
+Steps:
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, and package payload
+  verification.
+Observed:
+- Host tests passed, including the M7-shaped two-deck workflow.
+- Converter and text-deck verifier tests passed.
+- Tracked sample decks verified in source, local SD mirror, and `dist/sdmc/`.
+- Input coverage now checks per-screen repeat axes: deck select repeats all
+  D-pad directions, review/actions repeat Up/Down only, and daily limits repeat
+  Left/Right value changes while keeping Up/Down field changes single-step.
+Expected:
+- Current code-complete artifact remains ready for the final manual M7
+  emulator or hardware pass.
+Evidence:
+- `make verify-local` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Button-level review, rendered colors, save-feedback visibility, SD-card
+  behavior, and relaunch persistence still need the final manual emulator or
+  hardware acceptance pass.
