@@ -1685,6 +1685,13 @@ static void draw_controls_screen(const struct app_state *app)
 		printf("\x1b[9;1HA: save limits");
 		printf("\x1b[11;1HB or SELECT: actions");
 		printf("\x1b[13;1HY: controls");
+		if (app_settings_have_unsaved_changes(app))
+		{
+			printf(
+				"\x1b[15;1H" APP_COLOR_WARNING
+				"Unsaved limit edits" APP_COLOR_RESET
+			);
+		}
 		break;
 	case APP_MODE_REVIEW:
 	default:
