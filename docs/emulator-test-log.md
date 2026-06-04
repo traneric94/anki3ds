@@ -757,6 +757,42 @@ Notes:
 - Manual emulator or hardware rendering is still needed for true 3DS screen
   contrast.
 
+## 2026-06-04 - Current M7 Preflight Gate
+
+Build: `0d2b636`
+Command: `make verify-m7-preflight`
+Gate: pass for automated pre-manual gate
+Sample prep: `verify-local` plus `prepare-azahar-samples-fresh`
+Decks: `limits-demo`, `sample`
+Steps:
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, package payload
+  verification, and Azahar fresh-sample staging.
+- Built or reused the current `app-3ds/anki3ds.3dsx` and `anki3ds.smdh`.
+- Staged the copy-ready SD-card payload in `dist/sdmc/3ds/anki3ds/`.
+- Cleared tracked sample progress and diagnostic files in the local SD mirror
+  and Azahar sample folders.
+Observed:
+- Host C tests passed, including the 3DS key-translation branch.
+- Converter and text-deck verifier tests passed.
+- `limits-demo` verified as 6 cards with `new_limit` 2/day and `review_limit`
+  5/day in source, local SD, package payload, and Azahar SDMC staging.
+- `sample` verified as 11 cards with `new_limit` 20/day and `review_limit`
+  200/day in source, local SD, package payload, and Azahar SDMC staging.
+- `dist/sdmc/3ds/anki3ds/` contains only the app artifacts and tracked sample
+  deck source files for the current manual-copy payload.
+Expected:
+- The current artifact is ready for `make run-emulator-fresh-samples` or a
+  CTR-001 SD-card copy using `dist/sdmc/3ds/anki3ds/`.
+Evidence:
+- `make verify-m7-preflight` completed with exit code 0.
+Result: pass for automated pre-manual gate only
+Notes:
+- The emulator app was not launched in this gate. Button-level review,
+  rendered palette contrast, save-feedback visibility, SD-card behavior,
+  relaunch persistence, and CTR-001 battery-line rendering still need the final
+  manual emulator or hardware acceptance pass.
+
 ## 2026-06-04 - Contextual Key Prompt Palette Local Gate
 
 Build: local working tree
