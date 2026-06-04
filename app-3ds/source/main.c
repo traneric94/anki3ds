@@ -331,7 +331,7 @@ static void draw_flashcard_panel(int row, int height, const char *title)
 		console_move(body_row, APP_LAYOUT_REVIEW_CARD_LEFT);
 		printf(APP_COLOR_ACCENT "|" APP_COLOR_CARD_PAPER);
 		print_repeated_char(' ', inner_width);
-		printf(APP_COLOR_ACCENT "|" APP_COLOR_RESET);
+		printf(APP_COLOR_RESET APP_COLOR_ACCENT "|" APP_COLOR_RESET);
 	}
 
 	console_move(row + height - 1, APP_LAYOUT_REVIEW_CARD_LEFT);
