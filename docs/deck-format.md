@@ -59,7 +59,9 @@ The 3DS app reads the optional `name` string for deck-list and review-screen
 display, falling back to the folder id when metadata is missing or malformed.
 Converter and package verification require this name to be non-empty, free of
 control characters, and no longer than 63 UTF-8 bytes so it fits the app's fixed
-display buffer.
+display buffer. Store `name` as literal UTF-8; the 3DS display parser only
+accepts `\"`, `\\`, and `\/` JSON escapes. Other escapes, including `\u00e9`,
+pass JSON parsing but fall back to the folder id on device.
 
 ## cards.tsv
 

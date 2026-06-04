@@ -149,6 +149,24 @@ class VerifyTextDeckTests(unittest.TestCase):
 
             self.assert_error_contains(errors, "name cannot contain control characters")
 
+    def test_rejects_runtime_unsupported_deck_name_escapes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "deck.json").write_text(
+                (
+                    '{"format_version":1,'
+                    '"deck_id":"sample",'
+                    '"name":"Caf\\u00e9",'
+                    '"card_count":1}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            self.assert_error_contains(
+                self.verify(deck_dir),
+                "name uses a JSON escape unsupported by the 3DS display parser",
+            )
+
     def test_rejects_progress_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             deck_dir = self.write_deck(Path(temp_dir))

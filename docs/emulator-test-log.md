@@ -683,6 +683,23 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Deck Name Preflight Escape Gate
+
+Build: local working tree
+Command: `python3 -m unittest tests/test_verify_text_deck.py`
+Steps:
+- Tightened the text-deck verifier to reject deck display names that rely on
+  JSON escapes unsupported by the 3DS display-name parser.
+Observed:
+- Text-deck verifier tests passed.
+Expected:
+- Preflight verification should catch deck names that Python JSON accepts but
+  the app would display as the folder id.
+Result: pass for verifier gate
+Notes:
+- Converter output already writes literal UTF-8 names, so normal converted
+  decks are unaffected.
+
 ## 2026-06-04 - Converter Review-Log Migration Gate
 
 Build: local working tree

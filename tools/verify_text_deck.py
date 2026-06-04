@@ -32,6 +32,7 @@ PROGRESS_FILES = (
 )
 
 TEXT_DECK_FILES = frozenset(("deck.json", "cards.tsv", "settings.tsv"))
+RUNTIME_SUPPORTED_JSON_NAME_ESCAPES = frozenset(('"', "\\", "/"))
 
 
 class DeckSummary(NamedTuple):
@@ -134,6 +135,38 @@ def read_text_rows(path: Path, errors: list[str]) -> list[str]:
         return []
 
 
+def raw_json_string_value(document: str, key: str) -> str | None:
+    match = re.search(
+        r'"' + re.escape(key) + r'"\s*:\s*"((?:[^"\\]|\\.)*)"',
+        document,
+        re.DOTALL,
+    )
+
+    if match is None:
+        return None
+
+    return match.group(1)
+
+
+def runtime_supports_raw_json_name(raw_name: str) -> bool:
+    index = 0
+
+    while index < len(raw_name):
+        if raw_name[index] != "\\":
+            index += 1
+            continue
+
+        index += 1
+        if index >= len(raw_name):
+            return False
+        if raw_name[index] not in RUNTIME_SUPPORTED_JSON_NAME_ESCAPES:
+            return False
+
+        index += 1
+
+    return True
+
+
 def verify_deck_json(
     deck_dir: Path,
     deck_json: dict[str, object],
@@ -144,6 +177,15 @@ def verify_deck_json(
     deck_id = deck_dir.name
     card_count = deck_json.get("card_count")
     deck_name = deck_json.get("name")
+    raw_deck_name: str | None = None
+
+    try:
+        raw_deck_name = raw_json_string_value(
+            deck_json_path.read_text(encoding="utf-8"),
+            "name",
+        )
+    except OSError:
+        raw_deck_name = None
 
     if deck_json.get("format_version") != 1:
         append_file_error(errors, deck_json_path, "format_version must be 1")
@@ -162,6 +204,12 @@ def verify_deck_json(
             errors,
             deck_json_path,
             f"name exceeds {DECK_MAX_NAME_LENGTH - 1} UTF-8 bytes",
+        )
+    elif raw_deck_name is not None and not runtime_supports_raw_json_name(raw_deck_name):
+        append_file_error(
+            errors,
+            deck_json_path,
+            "name uses a JSON escape unsupported by the 3DS display parser",
         )
     if not isinstance(card_count, int) or isinstance(card_count, bool):
         append_file_error(errors, deck_json_path, "card_count must be an integer")
