@@ -183,14 +183,18 @@ Rules:
 - `lapses` must be less than or equal to `review_count`
 - unreviewed cards must have `interval_days=0`, `lapses=0`, and no
   first/last review day
-- if first/last review days are known, `first_review_day` must be less than or
-  equal to `last_review_day`
+- `first_review_day` may be `0` while `last_review_day` is known for reviewed
+  cards migrated from older state formats
+- if `first_review_day` is known, `last_review_day` must also be known and
+  `first_review_day` must be less than or equal to `last_review_day`
 - unknown card IDs are ignored when loading state
 - if a valid state file has rows but none match current card IDs, the app starts
   a fresh queue and shows an unmatched-state warning
 - duplicate rows for the same current deck `card_id` are malformed
 - footerless ten-column state rows still load as migration data
-- previous eight-column state rows still load with first/last review day as `0`
+- previous eight-column state rows still load with first/last review day as `0`;
+  after the next review, migrated reviewed cards keep first day unknown and
+  record the new last review day
 - previous seven-column state rows still load with `suspended=0`
 - old four-column state rows, `card_id done review_count last_rating`, still load
   as a migration path

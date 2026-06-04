@@ -580,7 +580,7 @@ bool scheduler_restore_card(
 	{
 		return false;
 	}
-	if ((first_review_day == 0) != (last_review_day == 0))
+	if (first_review_day != 0 && last_review_day == 0)
 		return false;
 	if (first_review_day != 0 && first_review_day > last_review_day)
 		return false;
@@ -779,6 +779,8 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 	struct scheduler_card *card;
 	bool use_initial_schedule;
 	bool use_relearning_schedule;
+	bool first_review_day_unknown;
+	bool already_reviewed;
 
 	if (!scheduler_has_current(session))
 		return;
@@ -790,8 +792,10 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 
 	use_initial_schedule = scheduler_card_is_in_initial_learning(card);
 	use_relearning_schedule = scheduler_card_is_in_relearning(card);
+	first_review_day_unknown = card->first_review_day == 0;
+	already_reviewed = card->review_count > 0;
 	card->last_rating = rating;
-	if (card->first_review_day == 0)
+	if (first_review_day_unknown && !already_reviewed)
 		card->first_review_day = session->today;
 	card->last_review_day = session->today;
 	session->rating_counts[rating]++;

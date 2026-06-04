@@ -3454,31 +3454,37 @@ static void test_review_state_migrated_review_round_trips_after_rating(void)
 		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
 		"previous format due review loads"
 	);
+	scheduler_set_daily_limits(&session, 1, 1);
 	check(session.cards[0].first_review_day == 0, "migrated review starts unknown first day");
 	check(session.cards[0].last_review_day == 0, "migrated review starts unknown last day");
 	check(scheduler_current_index(&session) == 0, "migrated due review selected");
 
 	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
 	check(
-		session.cards[0].first_review_day == TEST_TODAY,
-		"migrated review rating fills first day"
+		session.cards[0].first_review_day == 0,
+		"migrated review keeps unknown first day"
 	);
 	check(
 		session.cards[0].last_review_day == TEST_TODAY,
 		"migrated review rating fills last day"
 	);
+	check(session.new_count_today == 0, "migrated review does not count as new");
+	check(session.review_count_today == 1, "migrated review counts as review");
 	check(
 		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
 		"migrated review saves after rating"
 	);
 
 	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(&loaded, 1, 1);
 	check(
 		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
 		"migrated review reloads after save"
 	);
-	check(loaded.cards[0].first_review_day == TEST_TODAY, "migrated first day reloads");
+	check(loaded.cards[0].first_review_day == 0, "migrated first day remains unknown");
 	check(loaded.cards[0].last_review_day == TEST_TODAY, "migrated last day reloads");
+	check(loaded.new_count_today == 0, "migrated reload keeps new count clear");
+	check(loaded.review_count_today == 1, "migrated reload restores review count");
 
 	remove(TEST_STATE_PATH);
 	remove(TEST_STATE_TEMP_PATH);

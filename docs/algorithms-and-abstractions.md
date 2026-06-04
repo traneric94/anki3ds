@@ -461,9 +461,11 @@ learning/relearning cards remain due even when the review limit is full, and a
 card already started today is allowed to remain due. This lets same-day Again
 loops finish instead of hiding half-reviewed cards behind a limit.
 Previous state formats can load reviewed cards with unknown first/last review
-days. The next rating initializes both review-day fields to the current local
-day before saving, so migrated cards do not create a one-sided review-day row
-that would fail on the next reload.
+days. If the migrated card was already reviewed, the next rating keeps
+`first_review_day` unknown and records `last_review_day` as the current local
+day. That preserves review-limit accounting: migrated reviewed cards count as
+reviews, not as newly introduced cards. Truly new cards still initialize both
+review-day fields to the current local day on their first rating.
 When daily limits hide otherwise calendar-due cards and the visible queue is
 empty, the summary shows `Daily limit reached` plus the count of new and review
 cards past the limit instead of presenting the deck as simply done.

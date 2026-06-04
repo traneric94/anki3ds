@@ -388,6 +388,31 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Migrated Review Limit Gate
+
+Build: local working tree
+Command: `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Fixed migrated reviewed cards from older state formats so their next rating
+  records a known `last_review_day` while keeping `first_review_day` unknown.
+- Kept truly new cards recording both review-day fields on their first rating.
+Observed:
+- Host C tests passed, including migrated review save/reload behavior and daily
+  review-limit accounting.
+- The 3DS target rebuilt successfully.
+Expected:
+- A reviewed card loaded from older state rows should count against the review
+  daily limit after rating, not the new-card daily limit.
+Evidence:
+- `make test-host` completed with exit code 0.
+- `make -C app-3ds` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Manual emulator or hardware acceptance is still needed for the full M7 path.
+
 ## 2026-06-04 - Longer Idle Backoff Gate
 
 Build: local working tree
