@@ -8,8 +8,8 @@ describes the repo as public free-to-use, with an F2U/F2E distinction:
 - F2E assets are safe for this app's crop, resize, and darkening import path.
 - Unlisted assets are treated conservatively as F2U.
 
-`anki3ds` currently has a conversion-only FE asset checkpoint. The 3DS app does
-not render these backgrounds yet.
+`anki3ds` currently has a conversion and isolated-renderer FE asset checkpoint.
+The main 3DS app does not render these backgrounds yet.
 
 The isolated FE background viewer has been manually verified in Azahar: the
 generated top and bottom framebuffer assets render upright on both screens.
@@ -64,8 +64,8 @@ Outputs:
 - Matching `.png` previews are generated next to the BMPs for tools that do not
   open BMP files.
 
-Do not put the raw files under `app-3ds/data/` until the renderer is ready:
-the app Makefile links every file in that directory into the `.3dsx`.
+Do not put the raw files under `app-3ds/data/`: the app Makefile links every
+file in that directory into the `.3dsx`.
 
 The default 3DS framebuffer is sideways BGR888. If a normal `400x240` desktop
 image is copied directly into the framebuffer, it can display as scrambled or
