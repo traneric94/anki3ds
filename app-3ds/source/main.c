@@ -24,8 +24,8 @@
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
 /*
- * High-contrast terminal palette for the dark 3DS console. Avoid blue/cyan:
- * they wash out on 3DS LCDs, especially at low brightness.
+ * High-contrast terminal palette for the dark 3DS console. Avoid blue, cyan,
+ * and magenta: they wash out on 3DS LCDs, especially at low brightness.
  */
 #define APP_COLOR_ACCENT CONSOLE_GREEN
 #define APP_COLOR_NEUTRAL CONSOLE_WHITE
@@ -33,11 +33,11 @@
 #define APP_COLOR_SUCCESS CONSOLE_GREEN
 #define APP_COLOR_DANGER CONSOLE_RED
 #define APP_COLOR_WARNING CONSOLE_YELLOW
-#define APP_COLOR_EASY CONSOLE_MAGENTA
-#define APP_COLOR_NEW CONSOLE_MAGENTA
+#define APP_COLOR_EASY APP_COLOR_NEUTRAL
+#define APP_COLOR_NEW APP_COLOR_NEUTRAL
 #define APP_COLOR_LEARNING APP_COLOR_WARNING
 #define APP_COLOR_REVIEW APP_COLOR_SUCCESS
-#define APP_COLOR_SUSPENDED APP_COLOR_EASY
+#define APP_COLOR_SUSPENDED APP_COLOR_DANGER
 #define APP_COLOR_RULE APP_COLOR_NEUTRAL
 static const unsigned int daily_limit_presets[] = {
 	5,

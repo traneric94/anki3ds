@@ -37,12 +37,12 @@ when another button is active or held.
 The deck selector shows the current position as `selected/total` on both
 screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
 list size and wraps between the first and last decks. Basic terminal-style
-colors are used for status: green headings/status labels and saved/safe state,
-yellow selected or focused items and cautions, magenta Easy ratings plus
-new/suspended count labels, white neutral status and separators, green review
-or safe-state labels, and red errors/reset actions. Blue and cyan are
-intentionally avoided because they are hard to read on the dark 3DS console
-background.
+colors are used for status: green headings/status labels, Good ratings, review
+counts, and saved/safe state; yellow selected or focused items, Hard ratings,
+learning counts, and cautions; red Again ratings, suspended counts, errors, and
+reset actions; and white neutral status, separators, Easy ratings, and new
+counts. Blue, cyan, and magenta are intentionally avoided because they are hard
+to read on the dark 3DS console background.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
 If a deck has both ignored settings and unmatched saved state, the selector row
