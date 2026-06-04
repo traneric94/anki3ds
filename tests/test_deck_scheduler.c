@@ -1377,6 +1377,85 @@ static void test_app_controls_classifies_app_actions(void)
 	check(action == APP_CONTROL_ACTION_NONE, "unsafe review blocks suspend");
 }
 
+static void test_app_controls_settings_actions_stay_local(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+	enum app_control_action action;
+
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y,
+		APP_CONTROL_BUTTON_Y,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_CONTROLS, "Y opens settings controls");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_START,
+		APP_CONTROL_BUTTON_START,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_OPEN_EXIT, "START opens settings exit");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings A remains local save");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings B remains local cancel");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings SELECT remains local cancel");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_RIGHT,
+		APP_CONTROL_BUTTON_RIGHT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings value change remains local");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_Y | APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings controls ignores chords");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_START | APP_CONTROL_BUTTON_A,
+		APP_CONTROL_BUTTON_START | APP_CONTROL_BUTTON_A,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings exit ignores chords");
+}
+
 static void test_app_controls_navigation_repeat(void)
 {
 	struct app_control_repeat repeat;
@@ -5276,6 +5355,7 @@ int main(void)
 	test_app_controls_requires_single_command();
 	test_app_controls_modal_controls();
 	test_app_controls_classifies_app_actions();
+	test_app_controls_settings_actions_stay_local();
 	test_app_controls_navigation_repeat();
 	test_app_controls_navigation_repeat_modes();
 	test_app_controls_input_activity();
