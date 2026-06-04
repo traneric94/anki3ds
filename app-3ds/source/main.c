@@ -2812,6 +2812,7 @@ static bool save_daily_limits(struct app_state *app)
 		app->settings.new_limit,
 		app->settings.review_limit
 	);
+	app_refresh_selected_deck_summary(app);
 	app->revealed = false;
 	reset_review_scroll(app);
 	app->mode = app_review_mode_for_session(app);
