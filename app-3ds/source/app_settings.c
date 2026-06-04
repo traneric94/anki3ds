@@ -17,7 +17,7 @@ void app_settings_default(struct app_settings *settings)
 	settings->review_limit = APP_SETTINGS_DEFAULT_REVIEW_LIMIT;
 }
 
-static void app_settings_load_report_init(struct app_settings_load_report *report)
+void app_settings_load_report_clear(struct app_settings_load_report *report)
 {
 	if (report == NULL)
 		return;
@@ -202,7 +202,7 @@ static enum app_settings_load_result app_settings_load_file(
 	bool read_review_limit = false;
 	unsigned int line_number = 0;
 
-	app_settings_load_report_init(report);
+	app_settings_load_report_clear(report);
 	app_settings_default(&staged);
 
 	file = fopen(path, "r");
@@ -291,8 +291,8 @@ enum app_settings_load_result app_settings_load_with_report(
 	struct app_settings_load_report bad_report;
 	struct app_settings_load_report attempt_report;
 
-	app_settings_load_report_init(report);
-	app_settings_load_report_init(&bad_report);
+	app_settings_load_report_clear(report);
+	app_settings_load_report_clear(&bad_report);
 	if (settings == NULL)
 	{
 		app_settings_load_report_set(report, 0, APP_SETTINGS_PARSE_READ_ERROR);

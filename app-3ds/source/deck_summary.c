@@ -8,8 +8,7 @@ void deck_summary_init(struct deck_summary *summary)
 	summary->deck_load_report.line_number = 0;
 	summary->deck_load_report.parse_result = DECK_PARSE_OK;
 	summary->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
-	summary->settings_load_report.line_number = 0;
-	summary->settings_load_report.parse_result = APP_SETTINGS_PARSE_OK;
+	app_settings_load_report_clear(&summary->settings_load_report);
 	summary->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	summary->card_count = 0;
 	summary->due_count = 0;

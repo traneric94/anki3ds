@@ -899,8 +899,7 @@ static void app_load_selected_deck(struct app_state *app)
 	reset_review_scroll(app);
 	app_settings_default(&app->settings);
 	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
-	app->settings_load_report.line_number = 0;
-	app->settings_load_report.parse_result = APP_SETTINGS_PARSE_OK;
+	app_settings_load_report_clear(&app->settings_load_report);
 	app->settings_save_result = APP_SETTINGS_SAVE_OK;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
@@ -2604,6 +2603,7 @@ static bool save_daily_limits(struct app_state *app)
 
 	app->settings = app->edited_settings;
 	app->settings_load_result = APP_SETTINGS_LOAD_OK;
+	app_settings_load_report_clear(&app->settings_load_report);
 	scheduler_set_daily_limits(
 		&app->session,
 		app->settings.new_limit,

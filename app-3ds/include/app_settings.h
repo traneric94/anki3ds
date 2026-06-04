@@ -45,6 +45,7 @@ struct app_settings_load_report
 };
 
 void app_settings_default(struct app_settings *settings);
+void app_settings_load_report_clear(struct app_settings_load_report *report);
 enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path);
 enum app_settings_load_result app_settings_load_with_report(
 	struct app_settings *settings,
