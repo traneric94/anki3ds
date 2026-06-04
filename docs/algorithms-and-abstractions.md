@@ -223,7 +223,9 @@ or safe state; yellow selected/focused items, Hard ratings, learning counts,
 and cautions; red Again ratings, suspended counts, errors, and destructive
 reset prompts; and white neutral status, separators, Easy ratings, and new
 counts. Blue, cyan, and magenta are intentionally avoided because they are hard
-to read on the dark 3DS console background.
+to read on the dark 3DS console background. Moving through the deck selector
+keeps the status line aligned with the selected row, including load errors,
+ignored settings, unmatched state, and daily-limit-blocked decks.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without

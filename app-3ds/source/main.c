@@ -479,6 +479,66 @@ static bool deck_summary_daily_limit_blocks_cards(const struct deck_summary *sum
 	);
 }
 
+static bool settings_load_result_needs_warning(enum app_settings_load_result result)
+{
+	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
+}
+
+static bool state_load_result_needs_warning(enum review_state_load_result result)
+{
+	return result == REVIEW_STATE_LOAD_UNMATCHED;
+}
+
+static const char *deck_selection_status_suffix(const struct deck_summary *summary)
+{
+	if (summary == NULL)
+		return "";
+	if (summary->deck_load_result != DECK_LOAD_OK)
+		return "; load error";
+	if (
+		settings_load_result_needs_warning(summary->settings_load_result) &&
+		state_load_result_needs_warning(summary->state_load_result)
+	)
+	{
+		return "; settings/state";
+	}
+	if (settings_load_result_needs_warning(summary->settings_load_result))
+		return "; settings ignored";
+	if (state_load_result_needs_warning(summary->state_load_result))
+		return "; state unmatched";
+	if (deck_summary_daily_limit_blocks_cards(summary))
+		return "; limit reached";
+
+	return "";
+}
+
+static void app_set_deck_selection_status(struct app_state *app)
+{
+	const char *suffix = "";
+
+	if (app->deck_index.count == 0)
+	{
+		app_set_status(app, "No deck selected");
+		return;
+	}
+
+	if (app->selected_deck_index < app->deck_index.count)
+	{
+		suffix = deck_selection_status_suffix(
+			&app->deck_summaries[app->selected_deck_index]
+		);
+	}
+
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Deck %lu/%lu%s",
+		(unsigned long)(app->selected_deck_index + 1),
+		(unsigned long)app->deck_index.count,
+		suffix
+	);
+}
+
 static bool app_settings_have_unsaved_changes(const struct app_state *app)
 {
 	return (
@@ -535,16 +595,6 @@ static void app_set_context_status(
 			"Unsaved limit edits" :
 			fallback_message
 	);
-}
-
-static bool settings_load_result_needs_warning(enum app_settings_load_result result)
-{
-	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
-}
-
-static bool state_load_result_needs_warning(enum review_state_load_result result)
-{
-	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
 static void draw_deck_due_counts_inline(
@@ -2668,13 +2718,7 @@ static bool move_deck_selection_by_page(struct app_state *app, bool move_right)
 	if (app->selected_deck_index == old_index)
 		return false;
 
-	snprintf(
-		app->status_message,
-		sizeof(app->status_message),
-		"Deck %lu/%lu",
-		(unsigned long)(app->selected_deck_index + 1),
-		(unsigned long)app->deck_index.count
-	);
+	app_set_deck_selection_status(app);
 	return true;
 }
 
@@ -3011,13 +3055,7 @@ static bool app_handle_deck_select_input(
 			app->selected_deck_index--;
 		}
 
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			"Deck %lu/%lu",
-			(unsigned long)(app->selected_deck_index + 1),
-			(unsigned long)app->deck_index.count
-		);
+		app_set_deck_selection_status(app);
 		return true;
 	}
 

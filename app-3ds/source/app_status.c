@@ -29,6 +29,7 @@ enum app_status_color app_status_message_color(const char *message)
 		strstr(message, "kept") != NULL ||
 		strstr(message, "reset state") != NULL ||
 		strstr(message, "limit reached") != NULL ||
+		strstr(message, "settings/state") != NULL ||
 		strstr(message, "unmatched") != NULL ||
 		strstr(message, "ignored") != NULL ||
 		strstr(message, "unsaved") != NULL ||

@@ -4065,6 +4065,31 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status limit reached is warning"
 	);
 	check(
+		app_status_message_color("Deck 2/3; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status deck limit reached is warning"
+	);
+	check(
+		app_status_message_color("Deck 2/3; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status deck settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Deck 2/3; settings/state") ==
+			APP_STATUS_COLOR_WARNING,
+		"status deck settings/state is warning"
+	);
+	check(
+		app_status_message_color("Deck 2/3; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status deck state unmatched is warning"
+	);
+	check(
+		app_status_message_color("Deck 2/3; load error") ==
+			APP_STATUS_COLOR_DANGER,
+		"status deck load error is danger"
+	);
+	check(
 		app_status_message_color("Actions canceled") == APP_STATUS_COLOR_WARNING,
 		"status cancel is warning"
 	);

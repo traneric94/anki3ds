@@ -46,9 +46,11 @@ to read on the dark 3DS console background.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
 If daily limits hide otherwise due cards, the deck row shows a `limit` warning
-and the bottom selected-deck details show the hidden new/review counts.
+and the bottom selected-deck details show the hidden new/review counts. Moving
+onto that deck also reports `limit reached` in the status line.
 If a deck has both ignored settings and unmatched saved state, the selector row
-uses the compact `settings! state!` warning and the bottom screen shows details.
+uses the compact `settings! state!` warning, deck-move status reports the
+warning, and the bottom screen shows details.
 
 ## Review Flow
 
