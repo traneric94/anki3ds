@@ -699,9 +699,11 @@ static const char *status_message_color(const char *message)
 	if (
 		strstr(message, "requires") != NULL ||
 		strstr(message, "Nothing") != NULL ||
+		strstr(message, "No deck") != NULL ||
 		strstr(message, "skipped") != NULL ||
 		strstr(message, "same card due") != NULL ||
 		strstr(message, "same due") != NULL ||
+		strstr(message, "canceled") != NULL ||
 		strstr(message, "kept") != NULL ||
 		strstr(message, "reset state") != NULL ||
 		strstr(message, "limit reached") != NULL ||
