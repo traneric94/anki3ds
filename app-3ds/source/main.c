@@ -3141,6 +3141,8 @@ static bool app_handle_settings_input(
 	{
 		bool discarded_changes = app_settings_have_unsaved_changes(app);
 
+		app->edited_settings = app->settings;
+		app->settings_message = "no changes";
 		app->mode = APP_MODE_ACTIONS;
 		app_set_status(
 			app,
