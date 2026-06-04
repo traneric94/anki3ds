@@ -683,6 +683,25 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Warm High-Contrast Palette Gate
+
+Build: local working tree
+Command: `make -C app-3ds`
+Steps:
+- Replaced violet/magenta focus and Easy/New accents with a warmer
+  high-contrast terminal palette.
+- Selected/focused rows now use bright white reverse video; Easy ratings use
+  the same positive green as Good; new counts use bright white neutral text.
+Observed:
+- The 3DS target rebuilt successfully.
+Expected:
+- The UI should stay readable on the dark 3DS console without relying on blue,
+  cyan, or violet-like colors.
+Result: pass for build only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
+
 ## 2026-06-04 - Complementary Dark Palette Focus Gate
 
 Build: local working tree

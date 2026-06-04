@@ -219,13 +219,12 @@ for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
 framework yet. Rendering uses a compact dark-terminal palette: warm amber
 headings/status labels, Hard ratings, learning counts, and cautions; bright
-violet reverse-video selected/focused items; green Good ratings, review
+white reverse-video selected/focused items; green Good/Easy ratings, review
 counts, and successful, restored, or safe state; red reverse-video selected
 destructive actions; red Again ratings, suspended counts, errors, and
-destructive reset prompts; bright violet Easy ratings and new counts; and
-bright white neutral status, with dim white separators. Blue and cyan are
-intentionally avoided because they are hard to read on the dark 3DS console
-background. Moving
+destructive reset prompts; bright white new counts and neutral status, with dim
+white separators. Blue, cyan, and violet are intentionally avoided because they
+are hard to read on the dark 3DS console background. Moving
 through the deck selector keeps the status line aligned
 with the selected row, including load errors,
 ignored settings, unmatched state, and daily-limit-blocked decks. Controls
