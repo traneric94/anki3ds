@@ -193,8 +193,9 @@ Rules:
 - duplicate rows for the same current deck `card_id` are malformed
 - footerless ten-column state rows still load as migration data
 - previous eight-column state rows still load with first/last review day as `0`;
-  after the next review, migrated reviewed cards keep first day unknown and
-  record the new last review day
+  after the next rating, migrated initial-learning cards record both review
+  days, while migrated normal review/relearning cards keep first day unknown
+  and record the new last review day
 - previous seven-column state rows still load with `suspended=0`
 - old four-column state rows, `card_id done review_count last_rating`, still load
   as a migration path

@@ -388,6 +388,31 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Migrated Learning Daily-Count Gate
+
+Build: local working tree
+Command: `git diff --check`, `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Classified migrated zero-day initial-learning rows as newly introduced after
+  their next rating, even when older state already had `review_count > 0`.
+- Preserved migrated normal review/relearning behavior where unknown first-day
+  state remains unknown and the next rating counts as review work.
+Observed:
+- Whitespace check passed.
+- Host C tests passed, including migrated initial-learning daily-count
+  regression coverage and migrated-review accounting coverage.
+- The 3DS target rebuilt successfully.
+Expected:
+- Older saved cards still inside the new-card learning loop should count
+  against the new-card daily limit after rating and after reload, while older
+  mature review cards keep counting against the review limit.
+Result: pass for automated host/build gate only
+Notes:
+- Manual emulator or hardware review remains pending for end-to-end acceptance.
+
 ## 2026-06-04 - Latest Local Pre-Manual Gate
 
 Build: `2fbc8ae`

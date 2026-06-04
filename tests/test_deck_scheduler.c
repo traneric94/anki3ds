@@ -3491,6 +3491,78 @@ static void test_review_state_migrated_review_round_trips_after_rating(void)
 	remove(TEST_STATE_BACKUP_PATH);
 }
 
+static void test_review_state_migrated_learning_counts_as_new_after_rating(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t1\t0\t20000\t0\t2300\t0\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"previous format due learning card loads"
+	);
+	scheduler_set_daily_limits(&session, 1, 1);
+	check(
+		session.cards[0].first_review_day == 0,
+		"migrated learning starts unknown first day"
+	);
+	check(
+		session.cards[0].last_review_day == 0,
+		"migrated learning starts unknown last day"
+	);
+	check(scheduler_current_index(&session) == 0, "migrated learning selected");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(
+		session.cards[0].first_review_day == TEST_TODAY,
+		"migrated learning rating fills first day"
+	);
+	check(
+		session.cards[0].last_review_day == TEST_TODAY,
+		"migrated learning rating fills last day"
+	);
+	check(session.new_count_today == 1, "migrated learning counts as new");
+	check(
+		session.review_count_today == 0,
+		"migrated learning does not count as review"
+	);
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"migrated learning saves after rating"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	scheduler_set_daily_limits(&loaded, 1, 1);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"migrated learning reloads after save"
+	);
+	check(
+		loaded.cards[0].first_review_day == TEST_TODAY,
+		"migrated learning first day reloads"
+	);
+	check(
+		loaded.cards[0].last_review_day == TEST_TODAY,
+		"migrated learning last day reloads"
+	);
+	check(loaded.new_count_today == 1, "migrated learning reload restores new count");
+	check(
+		loaded.review_count_today == 0,
+		"migrated learning reload keeps review count clear"
+	);
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
 static void test_review_state_loads_suspended_format(void)
 {
 	struct deck deck;
@@ -6105,6 +6177,7 @@ int main(void)
 	test_review_state_rejects_inconsistent_current_rows();
 	test_review_state_loads_previous_current_format();
 	test_review_state_migrated_review_round_trips_after_rating();
+	test_review_state_migrated_learning_counts_as_new_after_rating();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();
