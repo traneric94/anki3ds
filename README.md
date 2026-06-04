@@ -264,10 +264,11 @@ cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
 progress after opening the reset action and confirming with `X`. The top screen
-shows deck/card text with basic terminal-style color cues, while the bottom screen
-shows controls, review status, save feedback, and battery state, including an
-unavailable state before the first valid sample plus charging and low-battery
-states once sampled. Successful ratings, suspend actions, undo actions, and
+shows deck/card text with terminal-style color cues, while the bottom screen
+shows controls, active deck context for deck-specific actions, review status,
+save feedback, and battery state, including an unavailable state before the
+first valid sample plus charging and low-battery states once sampled.
+Successful ratings, suspend actions, undo actions, and
 restore-suspended actions append best-effort `review-log.tsv` rows for
 debugging. The no-due summary separates current-session rating counts from the
 persisted count of cards reviewed today and distinguishes daily-limit exhaustion

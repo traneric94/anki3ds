@@ -308,6 +308,16 @@ static void print_truncated(const char *text, size_t max_columns)
 	printf("...");
 }
 
+static void draw_deck_name_line(
+	const struct app_state *app,
+	int row,
+	size_t name_width
+)
+{
+	printf("\x1b[%d;1HDeck: ", row);
+	print_truncated(app->deck.name, name_width);
+}
+
 static unsigned int review_count_total(const struct scheduler_session *session)
 {
 	unsigned int total = 0;
@@ -1109,8 +1119,7 @@ static enum app_power_battery_sample_result app_init(struct app_state *app)
 static void draw_header(const struct app_state *app)
 {
 	draw_app_title("Review");
-	printf("\x1b[2;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 2, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[3;1HDue %lu  New %lu  Done %u",
 		(unsigned long)app->session.due_count,
@@ -1318,6 +1327,7 @@ static void draw_summary_screen(const struct app_state *app)
 
 	app_console_clear();
 	draw_app_title("Review");
+	draw_deck_name_line(app, 2, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	if (!app_state_allows_study(app))
 	{
 		printf("\x1b[3;1H" APP_COLOR_DANGER "Review state error" APP_COLOR_RESET);
@@ -1412,8 +1422,7 @@ static void draw_actions_screen(const struct app_state *app)
 		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? APP_COLOR_DANGER : "",
 		reset_marker
 	);
-	printf("\x1b[13;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 13, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 
 	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
 	{
@@ -1463,8 +1472,7 @@ static void draw_settings_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily limits" APP_COLOR_RESET);
-	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 5, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[8;1H%s%s New cards:    %s" APP_COLOR_RESET,
 		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? APP_COLOR_SUCCESS : "",
@@ -1500,8 +1508,7 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_DANGER "Reset deck progress?" APP_COLOR_RESET);
-	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 5, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf("\x1b[8;1HThis removes saved review");
 	printf("\x1b[9;1Hstate for this deck.");
 	printf("\x1b[12;1HCards stay in cards.tsv.");
@@ -1514,8 +1521,7 @@ static void draw_restore_confirmation_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_WARNING "Restore suspended cards?" APP_COLOR_RESET);
-	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 5, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[8;1HSuspended: %lu",
 		(unsigned long)scheduler_suspended_count(&app->session)
@@ -1533,8 +1539,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_WARNING "Suspend current card?" APP_COLOR_RESET);
-	printf("\x1b[5;1HDeck: ");
-	print_truncated(app->deck.name, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
+	draw_deck_name_line(app, 5, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	if (card != NULL)
 	{
 		printf("\x1b[8;1HCard: ");
@@ -2204,6 +2209,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[7;1HB or SELECT: cancel");
 		printf("\x1b[9;1HSTART: confirm exit");
 		printf("\x1b[11;1HY: controls");
+		draw_deck_name_line(app, 13, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[1;1H" APP_COLOR_ACCENT "Daily limits" APP_COLOR_RESET);
@@ -2213,6 +2219,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[9;1HB or SELECT: actions");
 		printf("\x1b[11;1HSTART: confirm exit");
 		printf("\x1b[13;1HY: controls");
+		draw_deck_name_line(app, 15, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_CONTROLS:
 		printf("\x1b[1;1H" APP_COLOR_ACCENT "Controls" APP_COLOR_RESET);
@@ -2224,18 +2231,21 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1H" APP_COLOR_SUCCESS "X: restore cards" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
+		draw_deck_name_line(app, 9, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_CONFIRM_SUSPEND:
 		printf("\x1b[1;1H" APP_COLOR_WARNING "Confirm suspend" APP_COLOR_RESET);
 		printf("\x1b[3;1H" APP_COLOR_WARNING "X: suspend card" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
+		draw_deck_name_line(app, 9, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_CONFIRM_RESET:
 		printf("\x1b[1;1H" APP_COLOR_DANGER "Confirm reset" APP_COLOR_RESET);
 		printf("\x1b[3;1H" APP_COLOR_DANGER "X: reset progress" APP_COLOR_RESET);
 		printf("\x1b[5;1HB or SELECT: cancel");
 		printf("\x1b[7;1HSTART: confirm exit");
+		draw_deck_name_line(app, 9, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_CONFIRM_EXIT:
 		printf("\x1b[1;1H" APP_COLOR_WARNING "Confirm exit" APP_COLOR_RESET);

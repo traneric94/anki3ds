@@ -82,6 +82,8 @@ daily limits.
 From review or summary, `SELECT` opens actions. The default selected action is
 restore suspended cards. If a deck opens with malformed saved state, reset is
 selected by default so the repair flow is immediately reachable.
+The action, daily-limit, and restore/suspend/reset confirmation screens show
+the active deck name on the bottom controls screen as well as the top screen.
 
 - Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
 - Press `A` to choose the selected action.

@@ -316,6 +316,8 @@ Acceptance steps:
 - suspend one card, then restore suspended cards from the actions screen
 - undo one rating and confirm the queue/status updates sensibly
 - change `new_limit` and `review_limit` from the actions screen
+- confirm action, daily-limit, restore, suspend, and reset screens show the
+  expected active deck before taking deck-specific actions
 - exit, relaunch, and confirm review state and daily limits persisted
 - check that no manual file edits were needed during the session
 
