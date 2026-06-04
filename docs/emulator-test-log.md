@@ -388,6 +388,36 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Azahar Fresh Samples Preflight
+
+Build: `515f995`
+Command: `make verify-azahar-fresh-samples`
+Gate: pass for emulator SD staging only
+Sample prep: `prepare-azahar-samples-fresh`
+Decks: `limits-demo`, `sample`
+Steps:
+- Verified tracked sample decks in source.
+- Installed tracked sample decks into Azahar's SDMC directory.
+- Removed stale progress and diagnostic files for the tracked sample decks.
+- Verified the Azahar SDMC sample deck folders after staging.
+Observed:
+- `limits-demo` verified as text-only with 6 cards, new limit 2/day, review
+  limit 5/day.
+- `sample` verified as text-only with 11 cards, new limit 20/day, review limit
+  200/day.
+- `media-demo` was removed from Azahar's sample deck root if present.
+Expected:
+- `make run-emulator-fresh-samples` should launch against clean tracked sample
+  deck progress for the final manual M7 emulator pass.
+Evidence:
+- `make verify-azahar-fresh-samples` completed with exit code 0.
+Result: pass for emulator SD staging only
+Notes:
+- The emulator app was not launched in this preflight. Button-level review,
+  rendered palette contrast, save-feedback visibility, SD-card behavior, and
+  relaunch persistence still need the final manual emulator or hardware
+  acceptance pass.
+
 ## 2026-06-04 - Current Local Pre-Manual Gate
 
 Build: `3dd47b3`
