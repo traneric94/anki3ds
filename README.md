@@ -265,12 +265,14 @@ cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
 progress after opening the reset action and confirming with `X`. The top screen
-shows deck/card text with readable dark-terminal color cues that avoid
-blue, cyan, and violet accents; headings, status labels, and selected rows use
-warm amber or amber reverse video, Good ratings, review counts, and safe states
-use green, Hard ratings, learning counts, and cautions use yellow/amber, Again
-ratings, suspended counts, and destructive/error states use red, and neutral
-text plus Easy ratings and new counts use white with dim white separators.
+shows review card text in an original light paper panel with amber trim and
+black text, while deck lists, prompts, and status chrome keep readable
+dark-terminal color cues that avoid blue, cyan, and violet accents. Headings,
+status labels, and selected rows use warm amber or amber reverse video, Good
+ratings, review counts, and safe states use green, Hard ratings, learning
+counts, and cautions use yellow/amber, Again ratings, suspended counts, and
+destructive/error states use red, and neutral text plus Easy ratings and new
+counts use white with dim white separators.
 The bottom screen
 shows controls, active deck context for deck-specific actions, review status,
 save feedback, and battery state, including an unavailable state before the

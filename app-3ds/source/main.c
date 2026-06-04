@@ -44,6 +44,7 @@
 #define APP_COLOR_NEUTRAL APP_COLOR_TEXT
 #define APP_COLOR_SELECTED APP_COLOR_FOCUS
 #define APP_COLOR_SELECTED_DANGER CONSOLE_ESC(31;1;7m)
+#define APP_COLOR_CARD_PAPER CONSOLE_ESC(30;47m)
 #define APP_COLOR_EASY APP_COLOR_TEXT
 #define APP_COLOR_NEW APP_COLOR_TEXT
 #define APP_COLOR_LEARNING APP_COLOR_WARNING
@@ -240,12 +241,13 @@ static void draw_wrapped_text_columns(
 	const char *text,
 	int row,
 	int max_rows,
+	int left_column,
 	int max_columns,
 	size_t scroll_offset
 )
 {
 	size_t text_row = 0;
-	int column = APP_LAYOUT_TEXT_LEFT;
+	int column = left_column;
 
 	if (text == NULL || max_rows <= 0 || max_columns <= 0)
 		return;
@@ -265,7 +267,7 @@ static void draw_wrapped_text_columns(
 		if (value == '\n')
 		{
 			text_row++;
-			column = APP_LAYOUT_TEXT_LEFT;
+			column = left_column;
 			index += char_length;
 			continue;
 		}
@@ -275,10 +277,10 @@ static void draw_wrapped_text_columns(
 			char_length = 1;
 		}
 
-		if (column >= APP_LAYOUT_TEXT_LEFT + max_columns)
+		if (column >= left_column + max_columns)
 		{
 			text_row++;
-			column = APP_LAYOUT_TEXT_LEFT;
+			column = left_column;
 		}
 
 		if (
@@ -299,6 +301,43 @@ static void draw_wrapped_text_columns(
 		index += char_length;
 		column++;
 	}
+}
+
+static void print_repeated_char(char value, int count)
+{
+	for (int index = 0; index < count; index++)
+		putchar(value);
+}
+
+static void draw_flashcard_panel(int row, int height, const char *title)
+{
+	int inner_width = APP_LAYOUT_REVIEW_CARD_WIDTH - 2;
+
+	if (height < 3 || inner_width <= 0)
+		return;
+
+	console_move(row, APP_LAYOUT_REVIEW_CARD_LEFT);
+	printf(APP_COLOR_ACCENT "+");
+	print_repeated_char('-', inner_width);
+	printf("+" APP_COLOR_RESET);
+	if (title != NULL && title[0] != '\0')
+	{
+		console_move(row, APP_LAYOUT_REVIEW_CARD_LEFT + 2);
+		printf(APP_COLOR_ACCENT " %s " APP_COLOR_RESET, title);
+	}
+
+	for (int body_row = row + 1; body_row < row + height - 1; body_row++)
+	{
+		console_move(body_row, APP_LAYOUT_REVIEW_CARD_LEFT);
+		printf(APP_COLOR_ACCENT "|" APP_COLOR_CARD_PAPER);
+		print_repeated_char(' ', inner_width);
+		printf(APP_COLOR_ACCENT "|" APP_COLOR_RESET);
+	}
+
+	console_move(row + height - 1, APP_LAYOUT_REVIEW_CARD_LEFT);
+	printf(APP_COLOR_ACCENT "+");
+	print_repeated_char('-', inner_width);
+	printf("+" APP_COLOR_RESET);
 }
 
 static void draw_review_scroll_hint(
@@ -1195,13 +1234,13 @@ static bool review_scroll_metrics(
 	if (app->revealed)
 	{
 		*text = card->back;
-		*max_columns = APP_LAYOUT_TEXT_WIDTH;
+		*max_columns = APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH;
 		*visible_rows = APP_LAYOUT_REVIEW_BACK_TEXT_ROWS;
 		return true;
 	}
 
 	*text = card->front;
-	*max_columns = APP_LAYOUT_TEXT_WIDTH;
+	*max_columns = APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH;
 	*visible_rows = APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS;
 	return true;
 }
@@ -1938,39 +1977,47 @@ static void draw_review_screen(const struct app_state *app)
 
 	max_scroll_offset = review_max_scroll_offset(app);
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
-	printf("\x1b[7;1H" APP_COLOR_ACCENT "Front" APP_COLOR_RESET);
-	printf("\x1b[8;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
 
 	if (app->revealed)
 	{
+		draw_flashcard_panel(7, 8, "Front");
+		printf(APP_COLOR_CARD_PAPER);
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
 			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS,
-			APP_LAYOUT_TEXT_WIDTH,
+			APP_LAYOUT_REVIEW_CARD_TEXT_LEFT,
+			APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH,
 			0
 		);
-		printf("\x1b[15;1H" APP_COLOR_ACCENT "Back" APP_COLOR_RESET);
+		printf(APP_COLOR_RESET);
+		draw_flashcard_panel(15, 9, "Back");
 		draw_review_scroll_hint(15, app->review_scroll_offset, max_scroll_offset);
-		printf("\x1b[16;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
+		printf(APP_COLOR_CARD_PAPER);
 		draw_wrapped_text_columns(
 			card->back,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROWS,
-			APP_LAYOUT_TEXT_WIDTH,
+			APP_LAYOUT_REVIEW_CARD_TEXT_LEFT,
+			APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH,
 			app->review_scroll_offset
 		);
+		printf(APP_COLOR_RESET);
 	}
 	else
 	{
+		draw_flashcard_panel(7, 18, "Front");
 		draw_review_scroll_hint(7, app->review_scroll_offset, max_scroll_offset);
+		printf(APP_COLOR_CARD_PAPER);
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS,
-			APP_LAYOUT_TEXT_WIDTH,
+			APP_LAYOUT_REVIEW_CARD_TEXT_LEFT,
+			APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH,
 			app->review_scroll_offset
 		);
+		printf(APP_COLOR_RESET);
 	}
 }
 

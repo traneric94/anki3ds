@@ -867,6 +867,34 @@ Notes:
   emulator keys were pressed, rendered contrast, status readability, relaunch
   persistence, or the full two-deck M7 path.
 
+## 2026-06-04 - Paper Flashcard Panel Local Gate
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make test`
+- `make verify-package-sd`
+Steps:
+- Replaced the review screen's plain separator-line card area with an original
+  light paper flashcard panel.
+- Kept the surrounding app shell dark and console-native, with amber panel trim
+  and black text on the card face.
+- Reduced review text wrapping width to match the padded card panel so scroll
+  hints and rendered text stay aligned.
+Observed:
+- The 3DS target rebuilt successfully.
+- Host C tests, converter tests, and text-deck verifier tests passed through
+  `make test`.
+- `dist/sdmc/3ds/anki3ds/` was refreshed and verified with the current app
+  artifact and tracked text sample decks.
+Expected:
+- The review surface should feel more like a physical flashcard while
+  preserving the existing low-overhead console renderer and key workflow.
+Result: pass for automated build/test only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
+
 ## 2026-06-04 - Contextual Key Prompt Palette Local Gate
 
 Build: local working tree
