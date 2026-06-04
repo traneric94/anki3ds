@@ -39,8 +39,10 @@ screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
 list size and wraps between the first and last decks. Basic terminal-style
 colors use an amber/chalk/green/red palette. Review text appears in an original
 light paper flashcard panel with amber trim and black text, while the rest of
-the app stays in a dark terminal shell. Warm amber is used for headings, labels,
-key prompts, Hard ratings, learning counts, cautions, and normal reverse-video
+the app stays in a dark terminal shell. Revealed review cards show the four
+rating buttons as bracketed chips on the bottom screen and controls reference.
+Warm amber is used for headings, labels, key prompts, Hard ratings, learning
+counts, cautions, and normal reverse-video
 selected or focused items; green for Good ratings, review counts, and
 saved/safe state; red reverse-video for selected reset actions; red for Again
 ratings, suspended counts, errors, and reset actions; bright white for Easy

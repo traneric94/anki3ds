@@ -237,6 +237,50 @@ static void draw_use_key_prompt(int row, const char *keys, const char *action)
 	);
 }
 
+static void draw_button_chip(
+	int row,
+	int column,
+	const char *color,
+	const char *key,
+	const char *label
+)
+{
+	console_move(row, column);
+	printf("%s[%s %s]" APP_COLOR_RESET, color, key, label);
+}
+
+static void draw_review_rating_grid(int first_row)
+{
+	draw_button_chip(
+		first_row,
+		APP_LAYOUT_RATING_CHIP_LEFT_COLUMN,
+		APP_COLOR_DANGER,
+		"Y",
+		"Again"
+	);
+	draw_button_chip(
+		first_row,
+		APP_LAYOUT_RATING_CHIP_RIGHT_COLUMN,
+		APP_COLOR_WARNING,
+		"X",
+		"Hard"
+	);
+	draw_button_chip(
+		first_row + 2,
+		APP_LAYOUT_RATING_CHIP_LEFT_COLUMN,
+		APP_COLOR_SUCCESS,
+		"B",
+		"Good"
+	);
+	draw_button_chip(
+		first_row + 2,
+		APP_LAYOUT_RATING_CHIP_RIGHT_COLUMN,
+		APP_COLOR_EASY,
+		"A",
+		"Easy"
+	);
+}
+
 static void draw_wrapped_text_columns(
 	const char *text,
 	int row,
@@ -2395,14 +2439,7 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[3;1H" APP_COLOR_ACCENT
 				"Review rating controls" APP_COLOR_RESET
 			);
-			printf(
-				"\x1b[5;1H" APP_COLOR_DANGER "Y: Again" APP_COLOR_RESET
-				"      " APP_COLOR_WARNING "X: Hard" APP_COLOR_RESET
-			);
-			printf(
-				"\x1b[7;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_EASY "A: Easy" APP_COLOR_RESET
-			);
+			draw_review_rating_grid(5);
 			draw_key_prompt(9, "L", "undo last action");
 			draw_key_prompt(11, "R", "confirm suspend");
 			draw_key_prompt(13, "SELECT", "actions");
@@ -2835,14 +2872,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 
 		if (app->revealed)
 		{
-			printf(
-				"\x1b[6;1H" APP_COLOR_DANGER "Y: Again" APP_COLOR_RESET
-				"      " APP_COLOR_WARNING "X: Hard" APP_COLOR_RESET
-			);
-			printf(
-				"\x1b[8;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_EASY "A: Easy" APP_COLOR_RESET
-			);
+			draw_review_rating_grid(6);
 			printf("\x1b[10;1H" APP_COLOR_KEY "L" APP_COLOR_RESET ": undo last action");
 			printf("\x1b[12;1H" APP_COLOR_KEY "R" APP_COLOR_RESET ": confirm suspend");
 			printf("\x1b[14;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": actions");
