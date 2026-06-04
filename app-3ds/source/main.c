@@ -2662,7 +2662,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 	{
 		app->state_message = "nothing suspended";
 		app_set_status(app, "Nothing suspended");
-		app->mode = app->action_return_mode;
+		app->mode = APP_MODE_ACTIONS;
 		return true;
 	}
 
