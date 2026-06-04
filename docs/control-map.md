@@ -66,12 +66,13 @@ warning, and the bottom screen shows details.
 
 After a rating, the bottom status line shows whether the rating saved and which
 card is next. If saving fails, the app keeps the old scheduler state and shows
-that the card did not advance. Undo save feedback keeps active deck warning
-context visible. Navigation, action selection, daily-limit value changes, and
-answer reveal also update the bottom status line so manual input has immediate
-feedback. If daily limits hide more calendar-due cards after the visible queue
-empties, the summary says `Daily limit reached` and shows new and review cards
-past the limit.
+that the card did not advance. Successful rating, suspend, restore, and undo
+save feedback keep active deck warning context visible unless a stronger
+save-failure or daily-limit-complete message takes priority. Navigation, action
+selection, daily-limit value changes, and answer reveal also update the bottom
+status line so manual input has immediate feedback. If daily limits hide more
+calendar-due cards after the visible queue empties, the summary says
+`Daily limit reached` and shows new and review cards past the limit.
 
 ## Controls Screen
 

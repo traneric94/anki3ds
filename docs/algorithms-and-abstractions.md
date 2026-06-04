@@ -355,8 +355,8 @@ problem.
 scheduler stores a single snapshot of the affected card plus queue/session
 counters before applying the action. Undo restores that snapshot, clears the
 undo slot, returns to review mode, and saves the restored `state.tsv`. Successful
-undo feedback preserves active-deck warning context. Loading a deck or
-restoring saved card state clears the undo slot.
+undo feedback preserves active-deck warning context. Loading a deck or restoring
+saved card state clears the undo slot.
 
 The app keeps a scheduler rollback snapshot before review actions that mutate
 state and then save `state.tsv`. If the save fails after a rating, suspend,
@@ -380,6 +380,9 @@ The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant
 with the top-screen state string because SD-card save failures are otherwise
 easy to mistake for scheduler bugs during emulator or hardware testing.
+Successful rating, suspend, restore, and undo feedback appends active-deck
+warning context unless a save-failure or daily-limit-complete message has
+priority.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
 opens a confirmation screen. Pressing `X` there removes active state recovery

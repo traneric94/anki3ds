@@ -4070,6 +4070,31 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status undo saved log skipped limit reached is warning"
 	);
 	check(
+		app_status_message_color("Good saved; card 2/3; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status rating saved settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Easy saved; no cards due; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status rating saved state unmatched is warning"
+	);
+	check(
+		app_status_message_color("Suspend saved; settings/state") ==
+			APP_STATUS_COLOR_WARNING,
+		"status suspend saved settings/state is warning"
+	);
+	check(
+		app_status_message_color("Suspend saved; no cards due; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status suspend saved no due settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Restored 1 suspended; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status restore saved state unmatched is warning"
+	);
+	check(
 		app_status_message_color("No decks found; 2 ignored") ==
 			APP_STATUS_COLOR_WARNING,
 		"status no decks found is warning"

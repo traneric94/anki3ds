@@ -565,6 +565,26 @@ static const char *active_deck_status_suffix(const struct app_state *app)
 	return "";
 }
 
+static void app_append_active_deck_status_suffix(struct app_state *app)
+{
+	const char *suffix = active_deck_status_suffix(app);
+	size_t length;
+
+	if (suffix[0] == '\0')
+		return;
+
+	length = strlen(app->status_message);
+	if (length >= sizeof(app->status_message) - 1)
+		return;
+
+	snprintf(
+		app->status_message + length,
+		sizeof(app->status_message) - length,
+		"%s",
+		suffix
+	);
+}
+
 static void app_set_actions_status(struct app_state *app)
 {
 	snprintf(
@@ -664,10 +684,10 @@ static void app_set_undo_saved_status(struct app_state *app, bool log_saved)
 	snprintf(
 		app->status_message,
 		sizeof(app->status_message),
-		"%s%s",
-		log_saved ? "Undo saved" : "Undo saved; log skipped",
-		active_deck_status_suffix(app)
+		"%s",
+		log_saved ? "Undo saved" : "Undo saved; log skipped"
 	);
+	app_append_active_deck_status_suffix(app);
 }
 
 static void app_set_canceled_status(struct app_state *app, const char *label)
@@ -2999,6 +3019,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		scheduler_current_index(&app->session),
 		app->session.card_count
 	);
+	app_append_active_deck_status_suffix(app);
 	if (queue_complete && app_daily_limit_blocks_cards(app))
 	{
 		app_set_status(
@@ -3141,6 +3162,7 @@ static bool suspend_current_card(struct app_state *app)
 	}
 	app->state_message = "suspended";
 	app_set_status(app, log_saved ? "Suspend saved" : "Suspend saved; log skipped");
+	app_append_active_deck_status_suffix(app);
 	app->revealed = false;
 	reset_review_scroll(app);
 
@@ -3154,6 +3176,8 @@ static bool suspend_current_card(struct app_state *app)
 					"Suspend saved; limit reached; log skipped") :
 				(log_saved ? "Suspend saved; no cards due" : "Suspend saved; log skipped")
 		);
+		if (!app_daily_limit_blocks_cards(app))
+			app_append_active_deck_status_suffix(app);
 		app->mode = APP_MODE_SUMMARY;
 	}
 	else
@@ -3249,6 +3273,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 		logs_saved ? "Restored %u suspended" : "Restored %u; log skipped",
 		unsuspended_count
 	);
+	app_append_active_deck_status_suffix(app);
 	app->revealed = false;
 	reset_review_scroll(app);
 
