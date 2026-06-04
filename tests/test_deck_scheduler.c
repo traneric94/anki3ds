@@ -4100,6 +4100,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status controls load error is danger"
 	);
 	check(
+		app_status_message_color("Actions; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status actions reset state/settings is warning"
+	);
+	check(
+		app_status_message_color("Actions; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status actions limit reached is warning"
+	);
+	check(
 		app_status_message_color("Actions canceled") == APP_STATUS_COLOR_WARNING,
 		"status cancel is warning"
 	);

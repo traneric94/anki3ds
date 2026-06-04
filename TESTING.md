@@ -324,6 +324,8 @@ Acceptance steps:
 - confirm controls opened from unsaved daily-limit edits show an unsaved warning
 - confirm exit from daily limits and from its controls screen warns before
   losing unsaved edits
+- confirm opening actions from reset-needed, ignored-settings, or limit-blocked
+  decks preserves that warning context in the status line
 - confirm action, daily-limit, restore, suspend, and reset screens show the
   expected active deck before taking deck-specific actions
 - exit, relaunch, and confirm review state and daily limits persisted

@@ -539,6 +539,37 @@ static void app_set_deck_selection_status(struct app_state *app)
 	);
 }
 
+static const char *active_deck_status_suffix(const struct app_state *app)
+{
+	bool settings_warning = settings_load_result_needs_warning(
+		app->settings_load_result
+	);
+	bool state_warning = state_load_result_needs_warning(app->state_load_result);
+
+	if (!app_state_allows_study(app))
+		return settings_warning ? "; reset state/settings" : "; reset state";
+	if (settings_warning && state_warning)
+		return "; settings/state";
+	if (settings_warning)
+		return "; settings ignored";
+	if (state_warning)
+		return "; state unmatched";
+	if (app_daily_limit_blocks_cards(app))
+		return "; limit reached";
+
+	return "";
+}
+
+static void app_set_actions_status(struct app_state *app)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Actions%s",
+		active_deck_status_suffix(app)
+	);
+}
+
 static bool app_settings_have_unsaved_changes(const struct app_state *app)
 {
 	return (
@@ -1311,7 +1342,7 @@ static void app_open_actions(struct app_state *app)
 	app->selected_action = app_state_allows_study(app) ?
 		ACTION_ITEM_UNSUSPEND_ALL :
 		ACTION_ITEM_RESET_PROGRESS;
-	app_set_status(app, "Actions");
+	app_set_actions_status(app);
 	app->mode = APP_MODE_ACTIONS;
 }
 
