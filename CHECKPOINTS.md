@@ -191,6 +191,8 @@ Pass condition:
   `M7_NO_REQUIRED_EVENTS=1`
 - any deck reset at the end verifies with `M7_RESET_DECKS` and still has valid
   `settings.tsv`
+- the root `session.tsv` proves the app scanned decks, opened the tested decks,
+  saved the required daily-use actions, and exited through the confirmation flow
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result

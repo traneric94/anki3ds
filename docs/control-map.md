@@ -152,7 +152,7 @@ active deck name on the bottom help/status screen as well as the top screen.
   and reports `Nothing suspended` with active deck warning context when present.
 - Reset progress requires `X` on the reset confirmation screen.
 - A successful reset reloads the deck and shows `Progress reset` with active
-  deck warning context when present; if only the diagnostic log cleanup fails,
+  deck warning context when present; if only review-log cleanup fails,
   it shows `Progress reset; log kept`.
 - If a deck opens with malformed saved state, use this reset flow before study;
   normal study controls such as undo remain disabled until reset succeeds.

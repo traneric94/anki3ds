@@ -67,6 +67,7 @@ test-host:
 	$(HOST_CC) $(HOST_CFLAGS) \
 		tests/test_deck_scheduler.c \
 		app-3ds/source/app_controls.c \
+		app-3ds/source/app_diagnostics.c \
 		app-3ds/source/app_power.c \
 		app-3ds/source/app_review.c \
 		app-3ds/source/app_settings.c \
@@ -82,6 +83,12 @@ test-host:
 		app-3ds/source/storage.c \
 		-o /tmp/anki3ds-test-deck-scheduler
 	/tmp/anki3ds-test-deck-scheduler
+	$(HOST_CC) $(HOST_CFLAGS) \
+		tests/test_app_diagnostics.c \
+		app-3ds/source/app_diagnostics.c \
+		app-3ds/source/storage.c \
+		-o /tmp/anki3ds-test-app-diagnostics
+	/tmp/anki3ds-test-app-diagnostics
 	$(HOST_CC) $(HOST_CFLAGS) -D__3DS__ -Itests/stubs \
 		tests/test_app_controls_3ds_keys.c \
 		app-3ds/source/app_controls.c \

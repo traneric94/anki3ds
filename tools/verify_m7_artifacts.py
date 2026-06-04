@@ -37,6 +37,76 @@ STATE_HEADER = "#anki3ds-state-v1"
 STATE_FOOTER = "#anki3ds-state-complete"
 STATE_FIELD_COUNT = 10
 REVIEW_LOG_FIELD_COUNT = 21
+SESSION_HEADER = "#anki3ds-session-v1"
+SESSION_FOOTER = "#anki3ds-session-complete"
+VALID_SESSION_EVENTS = frozenset(
+    (
+        "boot",
+        "scan",
+        "deck_open",
+        "deck_review",
+        "deck_summary",
+        "deck_load_error",
+        "answer_shown",
+        "rating_saved",
+        "undo_saved",
+        "suspend_saved",
+        "restore_saved",
+        "settings_saved",
+        "reset_progress",
+        "exit_confirmed",
+    )
+)
+SESSION_TIME_KEYS = frozenset(("started_at", "updated_at"))
+SESSION_DAY_KEYS = frozenset(("started_day", "current_day"))
+SESSION_BOOLEAN_KEYS = frozenset(("scan_completed", "exit_confirmed"))
+SESSION_COUNTER_KEYS = frozenset(
+    (
+        "deck_count",
+        "ignored_count",
+        "deck_open_count",
+        "review_screen_count",
+        "summary_screen_count",
+        "load_error_count",
+        "answer_shown_count",
+        "rating_saved_count",
+        "undo_saved_count",
+        "suspend_saved_count",
+        "restore_saved_count",
+        "settings_saved_count",
+        "reset_progress_count",
+    )
+)
+SESSION_TEXT_KEYS = frozenset(("last_deck_id", "last_event"))
+SESSION_REQUIRED_KEYS = (
+    "started_at",
+    "updated_at",
+    "started_day",
+    "current_day",
+    "scan_completed",
+    "deck_count",
+    "ignored_count",
+    "deck_open_count",
+    "review_screen_count",
+    "summary_screen_count",
+    "load_error_count",
+    "answer_shown_count",
+    "rating_saved_count",
+    "undo_saved_count",
+    "suspend_saved_count",
+    "restore_saved_count",
+    "settings_saved_count",
+    "reset_progress_count",
+    "exit_confirmed",
+    "last_deck_id",
+    "last_event",
+)
+SESSION_EVENT_COUNTER_KEYS = {
+    "rating": "rating_saved_count",
+    "undo": "undo_saved_count",
+    "suspend": "suspend_saved_count",
+    "restore": "restore_saved_count",
+}
 RESET_PROGRESS_FILES = (
     "state.tsv",
     "state.tsv.tmp",
@@ -364,6 +434,111 @@ def load_review_log(
     return events
 
 
+def load_session(sdmc: Path, errors: list[str]) -> dict[str, str]:
+    path = sdmc / APP_SD_DIR / "session.tsv"
+    rows = read_required_rows(path, errors)
+    if rows is None:
+        return {}
+    values: dict[str, str] = {}
+
+    if len(rows) < 2:
+        append_error(errors, path, "must include header, rows, and footer")
+        return values
+    if rows[0] != SESSION_HEADER:
+        append_error(errors, path, "bad session header")
+    if rows[-1] != SESSION_FOOTER:
+        append_error(errors, path, "bad session footer")
+
+    valid_keys = (
+        SESSION_TIME_KEYS
+        | SESSION_DAY_KEYS
+        | SESSION_BOOLEAN_KEYS
+        | SESSION_COUNTER_KEYS
+        | SESSION_TEXT_KEYS
+    )
+    for line_number, row in enumerate(rows[1:-1], start=2):
+        fields = row.split("\t")
+        if len(fields) != 2:
+            append_error(errors, path, f"line {line_number}: expected 2 fields")
+            continue
+
+        key, value = fields
+        if key not in valid_keys:
+            append_error(errors, path, f"line {line_number}: unknown session key")
+            continue
+        if key in values:
+            append_error(errors, path, f"line {line_number}: duplicate session key")
+            continue
+
+        values[key] = value
+        if key in SESSION_TIME_KEYS:
+            if parse_unsigned(value, MAX_TIMESTAMP) is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+        elif key in SESSION_DAY_KEYS:
+            if parse_unsigned(value, MAX_DAY) is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+        elif key in SESSION_BOOLEAN_KEYS:
+            if parse_unsigned(value, 1) is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+        elif key in SESSION_COUNTER_KEYS:
+            if parse_unsigned(value, MAX_LIMIT) is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+        elif key == "last_event" and value not in VALID_SESSION_EVENTS:
+            append_error(errors, path, f"line {line_number}: bad last_event")
+        elif key == "last_deck_id" and value == "":
+            append_error(errors, path, f"line {line_number}: empty last_deck_id")
+
+    for key in SESSION_REQUIRED_KEYS:
+        if key not in values:
+            append_error(errors, path, f"missing {key}")
+
+    return values
+
+
+def session_unsigned(session: dict[str, str], key: str) -> int:
+    value = session.get(key)
+    if value is None:
+        return 0
+    parsed = parse_unsigned(value, MAX_LIMIT)
+    return 0 if parsed is None else parsed
+
+
+def verify_session(
+    session: dict[str, str],
+    checked_deck_ids: set[str],
+    required_events: list[str],
+    expected_settings: list[tuple[str, int, int]],
+    reset_deck_ids: list[str],
+    errors: list[str],
+) -> None:
+    if not session:
+        return
+
+    if session.get("scan_completed") != "1":
+        errors.append("session.tsv: scan_completed must be 1")
+    if session.get("exit_confirmed") != "1":
+        errors.append("session.tsv: exit_confirmed must be 1")
+    if session_unsigned(session, "deck_open_count") < len(checked_deck_ids):
+        errors.append("session.tsv: deck_open_count below checked deck count")
+    if session_unsigned(session, "deck_count") < len(checked_deck_ids):
+        errors.append("session.tsv: deck_count below checked deck count")
+
+    for required_event in required_events:
+        counter_key = SESSION_EVENT_COUNTER_KEYS.get(required_event)
+        if counter_key is None:
+            continue
+        if session_unsigned(session, counter_key) == 0:
+            errors.append(f"session.tsv: missing {counter_key}")
+
+    if expected_settings and session_unsigned(session, "settings_saved_count") == 0:
+        errors.append("session.tsv: missing settings_saved_count")
+    if (
+        reset_deck_ids
+        and session_unsigned(session, "reset_progress_count") < len(reset_deck_ids)
+    ):
+        errors.append("session.tsv: reset_progress_count below reset deck count")
+
+
 def parse_expected_settings(value: str) -> tuple[str, int, int]:
     parts = value.split(":")
     if len(parts) != 3:
@@ -445,6 +620,7 @@ def verify_m7_artifacts(
     all_events: set[str] = set()
     reset_deck_ids = reset_deck_ids or []
     checked_deck_ids = set(deck_ids) | set(reset_deck_ids)
+    session = load_session(sdmc, errors)
 
     if len(checked_deck_ids) == 0:
         errors.append("no decks selected for verification")
@@ -488,6 +664,15 @@ def verify_m7_artifacts(
             errors.append(
                 f"{deck_id}/settings.tsv: expected review_limit {review_limit}"
             )
+
+    verify_session(
+        session,
+        checked_deck_ids,
+        required_events,
+        expected_settings,
+        reset_deck_ids,
+        errors,
+    )
 
     return errors
 

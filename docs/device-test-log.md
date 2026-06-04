@@ -75,7 +75,8 @@ Pass conditions:
 - On the SD card, the active test decks have expected app-owned files:
   `state.tsv` after saved study, `settings.tsv` after limit edits, and
   `review-log.tsv` after saved study actions unless the status reported
-  `log skipped`.
+  `log skipped`. The root `3ds/anki3ds/session.tsv` has a complete session
+  snapshot with scan, deck-open, action, reset, and exit counters.
 - After the pass, `make verify-m7-artifacts M7_SDMC=/path/to/sdmc` accepts the
   tested SD root. For Azahar, omit `M7_SDMC` to use the configured
   `AZAHAR_SDMC`. Include `M7_EXPECT_SETTINGS="deck:new:review ..."` for the

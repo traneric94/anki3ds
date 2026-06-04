@@ -149,6 +149,51 @@ def write_deck(
     return deck_dir
 
 
+def write_session(
+    sdmc: Path,
+    deck_count: int = 2,
+    deck_open_count: int = 2,
+    rating_saved_count: int = 1,
+    undo_saved_count: int = 1,
+    suspend_saved_count: int = 1,
+    restore_saved_count: int = 1,
+    settings_saved_count: int = 1,
+    reset_progress_count: int = 1,
+    scan_completed: int = 1,
+    exit_confirmed: int = 1,
+) -> Path:
+    app_dir = sdmc / verify_m7_artifacts.APP_SD_DIR
+    app_dir.mkdir(parents=True, exist_ok=True)
+    path = app_dir / "session.tsv"
+    rows = [
+        "#anki3ds-session-v1",
+        "started_at\t1800000000",
+        "updated_at\t1800000001",
+        "started_day\t20000",
+        "current_day\t20000",
+        f"scan_completed\t{scan_completed}",
+        f"deck_count\t{deck_count}",
+        "ignored_count\t0",
+        f"deck_open_count\t{deck_open_count}",
+        "review_screen_count\t1",
+        "summary_screen_count\t1",
+        "load_error_count\t0",
+        "answer_shown_count\t1",
+        f"rating_saved_count\t{rating_saved_count}",
+        f"undo_saved_count\t{undo_saved_count}",
+        f"suspend_saved_count\t{suspend_saved_count}",
+        f"restore_saved_count\t{restore_saved_count}",
+        f"settings_saved_count\t{settings_saved_count}",
+        f"reset_progress_count\t{reset_progress_count}",
+        f"exit_confirmed\t{exit_confirmed}",
+        "last_deck_id\tsample",
+        "last_event\texit_confirmed",
+        "#anki3ds-session-complete",
+    ]
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    return path
+
+
 def reset_deck_progress_files(deck_dir: Path) -> None:
     for name in RESET_PROGRESS_FILES:
         path = deck_dir / name
@@ -161,6 +206,7 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
         sdmc = root / "sdmc"
         write_deck(sdmc, "sample", ["rating", "undo"])
         write_deck(sdmc, "limits-demo", ["suspend", "restore"])
+        write_session(sdmc)
         return sdmc
 
     def test_accepts_two_deck_m7_artifacts(self):
@@ -232,6 +278,7 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             sdmc = Path(temp_dir) / "sdmc"
             write_deck(sdmc, "sample", ["rating"])
             write_deck(sdmc, "limits-demo", ["suspend"])
+            write_session(sdmc)
 
             errors = verify_m7_artifacts.verify_m7_artifacts(
                 sdmc,
@@ -248,6 +295,44 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
                 any("missing required restore event" in error for error in errors),
                 errors,
             )
+
+    def test_rejects_missing_session(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            (sdmc / verify_m7_artifacts.APP_SD_DIR / "session.tsv").unlink()
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["sample", "limits-demo"],
+                REQUIRED_EVENTS,
+                [],
+            )
+
+            self.assertTrue(any("session.tsv: missing" in error for error in errors), errors)
+
+    def test_rejects_incomplete_session_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            write_session(
+                sdmc,
+                deck_open_count=1,
+                rating_saved_count=0,
+                exit_confirmed=0,
+            )
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["sample", "limits-demo"],
+                ["rating"],
+                [],
+            )
+
+            self.assertIn("session.tsv: exit_confirmed must be 1", errors)
+            self.assertIn(
+                "session.tsv: deck_open_count below checked deck count",
+                errors,
+            )
+            self.assertIn("session.tsv: missing rating_saved_count", errors)
 
     def test_rejects_bad_settings_row(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -489,6 +574,7 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
     def test_cli_can_verify_only_reset_decks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             sdmc = self.write_valid_sdmc(Path(temp_dir))
+            write_session(sdmc, reset_progress_count=2)
             for deck_id in ("sample", "limits-demo"):
                 reset_dir = (
                     sdmc

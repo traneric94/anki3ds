@@ -6,6 +6,7 @@
 
 #include "app_settings.h"
 #include "app_controls.h"
+#include "app_diagnostics.h"
 #include "app_layout.h"
 #include "app_power.h"
 #include "app_review.h"
@@ -116,6 +117,7 @@ struct app_state
 	bool battery_status_available;
 	bool battery_low;
 	bool battery_charging;
+	bool diagnostics_save_failed;
 	u8 battery_level;
 	unsigned int current_day;
 	enum deck_load_result load_result;
@@ -142,6 +144,7 @@ struct app_state
 	struct deck deck;
 	struct scheduler_session session;
 	struct scheduler_session save_rollback_session;
+	struct app_diagnostics diagnostics;
 	char status_message[STATUS_MESSAGE_SIZE];
 };
 
@@ -1417,6 +1420,20 @@ static void app_set_status(struct app_state *app, const char *message)
 	copy_string(app->status_message, sizeof(app->status_message), message);
 }
 
+static bool app_save_diagnostics(struct app_state *app)
+{
+	bool saved;
+
+	if (app == NULL)
+		return false;
+
+	saved = app_diagnostics_write(APP_DIAGNOSTICS_PATH, &app->diagnostics);
+	if (!saved)
+		app->diagnostics_save_failed = true;
+
+	return saved;
+}
+
 static void app_set_scan_complete_status(struct app_state *app)
 {
 	if (app->deck_index.count == 0)
@@ -1866,6 +1883,14 @@ static void app_load_selected_deck(struct app_state *app)
 	}
 
 	app_refresh_selected_deck_summary(app);
+	app_diagnostics_mark_deck_open(
+		&app->diagnostics,
+		entry->id,
+		app->load_result == DECK_LOAD_OK,
+		app->mode == APP_MODE_REVIEW,
+		app->mode == APP_MODE_SUMMARY
+	);
+	app_save_diagnostics(app);
 }
 
 static void app_open_actions(struct app_state *app)
@@ -1947,9 +1972,11 @@ static enum app_power_battery_sample_result app_init(struct app_state *app)
 
 	memset(app, 0, sizeof(*app));
 	app->current_day = app_time_current_day();
+	app_diagnostics_init(&app->diagnostics, app->current_day, time(NULL));
 	battery_sample_result = app_sample_battery(app);
 	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;
+	app_save_diagnostics(app);
 	return battery_sample_result;
 }
 
@@ -2709,6 +2736,13 @@ static void show_scan_then_scan_decks(struct app_state *app)
 	present_current_frame();
 	app_scan_decks(app);
 	app_set_scan_complete_status(app);
+	app_diagnostics_mark_scan(
+		&app->diagnostics,
+		app->current_day,
+		app->deck_index.count,
+		app->deck_index.ignored_count
+	);
+	app_save_diagnostics(app);
 }
 
 static void app_update_review_return_modes_for_day_change(
@@ -3453,6 +3487,8 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		);
 	}
 	app->mode = queue_complete ? APP_MODE_SUMMARY : APP_MODE_REVIEW;
+	app_diagnostics_mark_rating_saved(&app->diagnostics);
+	app_save_diagnostics(app);
 
 	return true;
 }
@@ -3536,6 +3572,8 @@ static bool undo_last_action(struct app_state *app)
 	app->revealed = false;
 	reset_review_scroll(app);
 	app->mode = APP_MODE_REVIEW;
+	app_diagnostics_mark_undo_saved(&app->diagnostics);
+	app_save_diagnostics(app);
 	return true;
 }
 
@@ -3608,6 +3646,9 @@ static bool suspend_current_card(struct app_state *app)
 		app->mode = APP_MODE_REVIEW;
 	}
 
+	app_diagnostics_mark_suspend_saved(&app->diagnostics);
+	app_save_diagnostics(app);
+
 	return true;
 }
 
@@ -3632,6 +3673,8 @@ static bool reset_progress(struct app_state *app)
 	log_deleted = review_log_delete(app->active_review_log_path);
 
 	app_load_selected_deck(app);
+	app_diagnostics_mark_reset_progress(&app->diagnostics);
+	app_save_diagnostics(app);
 	if (app->load_result == DECK_LOAD_OK)
 	{
 		app_set_status(
@@ -3719,6 +3762,9 @@ static bool unsuspend_all_cards(struct app_state *app)
 		app->mode = APP_MODE_REVIEW;
 	}
 
+	app_diagnostics_mark_restore_saved(&app->diagnostics, unsuspended_count);
+	app_save_diagnostics(app);
+
 	return true;
 }
 
@@ -3775,6 +3821,9 @@ static bool save_daily_limits(struct app_state *app)
 		app_set_status(app, "Limits saved");
 		app_append_active_deck_status_suffix(app);
 	}
+
+	app_diagnostics_mark_settings_saved(&app->diagnostics);
+	app_save_diagnostics(app);
 
 	return true;
 }
@@ -4011,6 +4060,8 @@ static bool app_handle_input(
 	switch (action)
 	{
 	case APP_CONTROL_ACTION_CONFIRM_EXIT:
+		app_diagnostics_mark_exit_confirmed(&app->diagnostics);
+		app_save_diagnostics(app);
 		app->exit_requested = true;
 		return true;
 	case APP_CONTROL_ACTION_CANCEL_EXIT:
@@ -4049,6 +4100,8 @@ static bool app_handle_input(
 		reset_review_scroll(app);
 		app_set_status(app, "Answer shown; choose rating");
 		app_append_active_deck_status_suffix(app);
+		app_diagnostics_mark_answer_shown(&app->diagnostics);
+		app_save_diagnostics(app);
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);
