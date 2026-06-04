@@ -255,12 +255,14 @@ the two fields. In review mode, D-pad Up/Down scrolls the active text pane:
 front before reveal, back after reveal. Ratings and destructive actions stay
 single-press. Long active panes draw a compact `^ current/total v` cue in the
 top-screen section header so scrollability is visible without moving the
-controls off the bottom screen. Held input keeps the idle wait counter short
-while a repeatable button is down, so selector movement, action selection, value
-changes, and text scrolling do not slow down as if the app were idle. This short
-wait only applies to a clean single-direction D-pad hold on a repeatable axis;
-diagonal holds, non-repeatable axes, and command chords fall back to the
-adaptive idle path. While a repeatable D-pad key was held on the previous scan,
+controls off the bottom screen. Answer reveal and review-text scroll feedback
+append active-deck warning context when present. Held input keeps the idle wait
+counter short while a repeatable button is down, so selector movement, action
+selection, value changes, and text scrolling do not slow down as if the app were
+idle. This short wait only applies to a clean single-direction D-pad hold on a
+repeatable axis; diagonal holds, non-repeatable axes, and command chords fall
+back to the adaptive idle path. While a repeatable D-pad key was held on the
+previous scan,
 the unchanged-screen path waits for one VBlank instead of entering the longer
 HID idle wait; after release it returns to the adaptive low-power idle path.
 Repeat buttons stay in the abstract

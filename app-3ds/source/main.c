@@ -1317,6 +1317,7 @@ static bool scroll_review_text(struct app_state *app, bool scroll_down)
 	if (max_offset == 0)
 	{
 		app_set_status(app, "Text fits");
+		app_append_active_deck_status_suffix(app);
 		return true;
 	}
 
@@ -1350,6 +1351,7 @@ static bool scroll_review_text(struct app_state *app, bool scroll_down)
 			(unsigned long)(max_offset + 1)
 		);
 	}
+	app_append_active_deck_status_suffix(app);
 
 	return true;
 }
@@ -3748,6 +3750,7 @@ static bool app_handle_input(
 		app->revealed = true;
 		reset_review_scroll(app);
 		app_set_status(app, "Answer shown; choose rating");
+		app_append_active_deck_status_suffix(app);
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);

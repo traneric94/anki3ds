@@ -4140,6 +4140,21 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status limits saved daily limit state unmatched is warning"
 	);
 	check(
+		app_status_message_color("Answer shown; choose rating; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status answer shown settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Text 2/3; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status text scroll state unmatched is warning"
+	);
+	check(
+		app_status_message_color("Text bottom; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status text bottom limit reached is warning"
+	);
+	check(
 		app_status_message_color("No decks found; 2 ignored") ==
 			APP_STATUS_COLOR_WARNING,
 		"status no decks found is warning"

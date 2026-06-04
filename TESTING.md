@@ -315,6 +315,8 @@ Acceptance steps:
 - review due cards from two different decks
 - reveal and rate with each rating path needed for the pass
 - scroll the long text card in the tracked `sample` deck with D-pad Up/Down
+  and confirm reveal/scroll feedback preserves active warning context when
+  present
 - suspend one card, then restore suspended cards from the actions screen
 - confirm restore with no suspended cards stays on the actions screen and
   preserves active warning context when present
