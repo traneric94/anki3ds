@@ -3495,6 +3495,33 @@ static bool app_handle_deck_select_input(
 	return false;
 }
 
+static bool app_choose_selected_action(struct app_state *app)
+{
+	if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
+	{
+		if (scheduler_suspended_count(&app->session) == 0)
+			return unsuspend_all_cards(app);
+
+		app_open_restore_confirmation(app);
+		return true;
+	}
+	if (app->selected_action == ACTION_ITEM_DAILY_LIMITS)
+	{
+		app_open_settings(app);
+		return true;
+	}
+
+	app_open_reset_confirmation(app);
+	return true;
+}
+
+static bool app_cancel_actions(struct app_state *app)
+{
+	app->mode = app->action_return_mode;
+	app_set_canceled_status(app, "Actions");
+	return true;
+}
+
 static bool app_handle_actions_input(
 	struct app_state *app,
 	unsigned int buttons_down,
@@ -3522,129 +3549,46 @@ static bool app_handle_actions_input(
 		return true;
 	}
 
-	if (
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_A
-		)
-	)
-	{
-		if (app->selected_action == ACTION_ITEM_UNSUSPEND_ALL)
-		{
-			if (scheduler_suspended_count(&app->session) == 0)
-				return unsuspend_all_cards(app);
-
-			app_open_restore_confirmation(app);
-			return true;
-		}
-		if (app->selected_action == ACTION_ITEM_DAILY_LIMITS)
-		{
-			app_open_settings(app);
-			return true;
-		}
-
-		app_open_reset_confirmation(app);
-		return true;
-	}
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = app->action_return_mode;
-		app_set_canceled_status(app, "Actions");
-		return true;
-	}
-
 	return false;
 }
 
-static bool app_handle_restore_confirmation_input(
-	struct app_state *app,
-	unsigned int buttons_down,
-	unsigned int buttons_active
-)
+static bool app_cancel_restore_confirmation(struct app_state *app)
 {
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
-		return unsuspend_all_cards(app);
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = APP_MODE_ACTIONS;
-		app_set_canceled_status(app, "Restore");
-		return true;
-	}
-
-	return false;
+	app->mode = APP_MODE_ACTIONS;
+	app_set_canceled_status(app, "Restore");
+	return true;
 }
 
-static bool app_handle_reset_confirmation_input(
-	struct app_state *app,
-	unsigned int buttons_down,
-	unsigned int buttons_active
-)
+static bool app_confirm_reset_progress(struct app_state *app)
 {
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
-	{
-		if (!reset_progress(app))
-			app->mode = APP_MODE_CONFIRM_RESET;
-		return true;
-	}
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = APP_MODE_ACTIONS;
-		app_set_canceled_status(app, "Reset");
-		return true;
-	}
-
-	return false;
+	if (!reset_progress(app))
+		app->mode = APP_MODE_CONFIRM_RESET;
+	return true;
 }
 
-static bool app_handle_suspend_confirmation_input(
-	struct app_state *app,
-	unsigned int buttons_down,
-	unsigned int buttons_active
-)
+static bool app_cancel_reset_confirmation(struct app_state *app)
 {
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_X))
-		return suspend_current_card(app);
+	app->mode = APP_MODE_ACTIONS;
+	app_set_canceled_status(app, "Reset");
+	return true;
+}
 
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		app->mode = APP_MODE_REVIEW;
-		app_set_canceled_status(app, "Suspend");
-		return true;
-	}
+static bool app_cancel_suspend_confirmation(struct app_state *app)
+{
+	app->mode = APP_MODE_REVIEW;
+	app_set_canceled_status(app, "Suspend");
+	return true;
+}
 
-	return false;
+static bool app_cancel_settings(struct app_state *app)
+{
+	bool discarded_changes = app_settings_have_unsaved_changes(app);
+
+	app->edited_settings = app->settings;
+	app->settings_message = "no changes";
+	app->mode = APP_MODE_ACTIONS;
+	app_set_limits_canceled_status(app, discarded_changes);
+	return true;
 }
 
 static bool app_handle_settings_input(
@@ -3682,27 +3626,6 @@ static bool app_handle_settings_input(
 			"unsaved changes" :
 			"no changes";
 		app_set_setting_value_status(app, limit_text, unsaved_changes);
-		return true;
-	}
-
-	if (app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_A))
-		return save_daily_limits(app);
-
-	if (
-		app_command_pressed(buttons_down, buttons_active, APP_CONTROL_BUTTON_B) ||
-		app_command_pressed(
-			buttons_down,
-			buttons_active,
-			APP_CONTROL_BUTTON_SELECT
-		)
-	)
-	{
-		bool discarded_changes = app_settings_have_unsaved_changes(app);
-
-		app->edited_settings = app->settings;
-		app->settings_message = "no changes";
-		app->mode = APP_MODE_ACTIONS;
-		app_set_limits_canceled_status(app, discarded_changes);
 		return true;
 	}
 
@@ -3766,6 +3689,26 @@ static bool app_handle_input(
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);
+	case APP_CONTROL_ACTION_CHOOSE_ACTION:
+		return app_choose_selected_action(app);
+	case APP_CONTROL_ACTION_CANCEL_ACTIONS:
+		return app_cancel_actions(app);
+	case APP_CONTROL_ACTION_SAVE_SETTINGS:
+		return save_daily_limits(app);
+	case APP_CONTROL_ACTION_CANCEL_SETTINGS:
+		return app_cancel_settings(app);
+	case APP_CONTROL_ACTION_CONFIRM_RESTORE:
+		return unsuspend_all_cards(app);
+	case APP_CONTROL_ACTION_CANCEL_RESTORE:
+		return app_cancel_restore_confirmation(app);
+	case APP_CONTROL_ACTION_CONFIRM_SUSPEND:
+		return suspend_current_card(app);
+	case APP_CONTROL_ACTION_CANCEL_SUSPEND:
+		return app_cancel_suspend_confirmation(app);
+	case APP_CONTROL_ACTION_CONFIRM_RESET:
+		return app_confirm_reset_progress(app);
+	case APP_CONTROL_ACTION_CANCEL_RESET:
+		return app_cancel_reset_confirmation(app);
 	case APP_CONTROL_ACTION_NONE:
 		break;
 	}
@@ -3776,24 +3719,6 @@ static bool app_handle_input(
 		return app_handle_actions_input(app, buttons_down, buttons_active);
 	if (app->mode == APP_MODE_SETTINGS)
 		return app_handle_settings_input(app, buttons_down, buttons_active);
-	if (app->mode == APP_MODE_CONFIRM_RESTORE)
-		return app_handle_restore_confirmation_input(
-			app,
-			buttons_down,
-			buttons_active
-		);
-	if (app->mode == APP_MODE_CONFIRM_SUSPEND)
-		return app_handle_suspend_confirmation_input(
-			app,
-			buttons_down,
-			buttons_active
-		);
-	if (app->mode == APP_MODE_CONFIRM_RESET)
-		return app_handle_reset_confirmation_input(
-			app,
-			buttons_down,
-			buttons_active
-		);
 
 	return false;
 }

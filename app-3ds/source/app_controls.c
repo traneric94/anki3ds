@@ -354,6 +354,49 @@ bool app_controls_command_pressed(unsigned int buttons, unsigned int command_but
 	);
 }
 
+static bool app_controls_cancel_command_triggered(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons
+)
+{
+	return (
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_B
+		) ||
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_SELECT
+		)
+	);
+}
+
+static enum app_control_action app_controls_confirm_or_cancel_action(
+	unsigned int trigger_buttons,
+	unsigned int active_buttons,
+	unsigned int confirm_button,
+	enum app_control_action confirm_action,
+	enum app_control_action cancel_action
+)
+{
+	if (
+		app_controls_command_triggered(
+			trigger_buttons,
+			active_buttons,
+			confirm_button
+		)
+	)
+	{
+		return confirm_action;
+	}
+	if (app_controls_cancel_command_triggered(trigger_buttons, active_buttons))
+		return cancel_action;
+
+	return APP_CONTROL_ACTION_NONE;
+}
+
 bool app_controls_should_show_answer_triggered(
 	unsigned int trigger_buttons,
 	unsigned int active_buttons,
@@ -451,35 +494,13 @@ enum app_control_action app_controls_classify_action(
 	bool scroll_down;
 
 	if (mode == APP_CONTROL_MODE_CONFIRM_EXIT)
-	{
-		if (
-			app_controls_command_triggered(
-				trigger_buttons,
-				active_buttons,
-				APP_CONTROL_BUTTON_A
-			)
-		)
-		{
-			return APP_CONTROL_ACTION_CONFIRM_EXIT;
-		}
-		if (
-			app_controls_command_triggered(
-				trigger_buttons,
-				active_buttons,
-				APP_CONTROL_BUTTON_B
-			) ||
-			app_controls_command_triggered(
-				trigger_buttons,
-				active_buttons,
-				APP_CONTROL_BUTTON_SELECT
-			)
-		)
-		{
-			return APP_CONTROL_ACTION_CANCEL_EXIT;
-		}
-
-		return APP_CONTROL_ACTION_NONE;
-	}
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_ACTION_CONFIRM_EXIT,
+			APP_CONTROL_ACTION_CANCEL_EXIT
+		);
 
 	if (
 		app_controls_command_triggered(
@@ -588,6 +609,51 @@ enum app_control_action app_controls_classify_action(
 	{
 		return APP_CONTROL_ACTION_UNDO;
 	}
+
+	if (mode == APP_CONTROL_MODE_ACTIONS)
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_ACTION_CHOOSE_ACTION,
+			APP_CONTROL_ACTION_CANCEL_ACTIONS
+		);
+
+	if (mode == APP_CONTROL_MODE_SETTINGS)
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_A,
+			APP_CONTROL_ACTION_SAVE_SETTINGS,
+			APP_CONTROL_ACTION_CANCEL_SETTINGS
+		);
+
+	if (mode == APP_CONTROL_MODE_CONFIRM_RESTORE)
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_X,
+			APP_CONTROL_ACTION_CONFIRM_RESTORE,
+			APP_CONTROL_ACTION_CANCEL_RESTORE
+		);
+
+	if (mode == APP_CONTROL_MODE_CONFIRM_SUSPEND)
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_X,
+			APP_CONTROL_ACTION_CONFIRM_SUSPEND,
+			APP_CONTROL_ACTION_CANCEL_SUSPEND
+		);
+
+	if (mode == APP_CONTROL_MODE_CONFIRM_RESET)
+		return app_controls_confirm_or_cancel_action(
+			trigger_buttons,
+			active_buttons,
+			APP_CONTROL_BUTTON_X,
+			APP_CONTROL_ACTION_CONFIRM_RESET,
+			APP_CONTROL_ACTION_CANCEL_RESET
+		);
 
 	if (mode != APP_CONTROL_MODE_REVIEW)
 		return APP_CONTROL_ACTION_NONE;

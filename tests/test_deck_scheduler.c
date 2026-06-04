@@ -1377,7 +1377,7 @@ static void test_app_controls_classifies_app_actions(void)
 	check(action == APP_CONTROL_ACTION_NONE, "unsafe review blocks suspend");
 }
 
-static void test_app_controls_settings_actions_stay_local(void)
+static void test_app_controls_settings_classifies_local_commands(void)
 {
 	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
 	enum app_control_action action;
@@ -1408,7 +1408,7 @@ static void test_app_controls_settings_actions_stay_local(void)
 		APP_CONTROL_BUTTON_A,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "settings A remains local save");
+	check(action == APP_CONTROL_ACTION_SAVE_SETTINGS, "settings A saves");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_SETTINGS,
 		false,
@@ -1417,7 +1417,7 @@ static void test_app_controls_settings_actions_stay_local(void)
 		APP_CONTROL_BUTTON_B,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "settings B remains local cancel");
+	check(action == APP_CONTROL_ACTION_CANCEL_SETTINGS, "settings B cancels");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_SETTINGS,
 		false,
@@ -1426,7 +1426,7 @@ static void test_app_controls_settings_actions_stay_local(void)
 		APP_CONTROL_BUTTON_SELECT,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "settings SELECT remains local cancel");
+	check(action == APP_CONTROL_ACTION_CANCEL_SETTINGS, "settings SELECT cancels");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_SETTINGS,
 		false,
@@ -1436,6 +1436,15 @@ static void test_app_controls_settings_actions_stay_local(void)
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_NONE, "settings value change remains local");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SETTINGS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_RIGHT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "settings save ignores value chord");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_SETTINGS,
 		false,
@@ -1456,7 +1465,7 @@ static void test_app_controls_settings_actions_stay_local(void)
 	check(action == APP_CONTROL_ACTION_NONE, "settings exit ignores chords");
 }
 
-static void test_app_controls_action_confirm_actions_stay_local(void)
+static void test_app_controls_action_confirm_classifies_local_commands(void)
 {
 	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
 	enum app_control_action action;
@@ -1487,7 +1496,7 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_A,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "actions A remains local choose");
+	check(action == APP_CONTROL_ACTION_CHOOSE_ACTION, "actions A chooses item");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_ACTIONS,
 		false,
@@ -1496,7 +1505,7 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_B,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "actions B remains local cancel");
+	check(action == APP_CONTROL_ACTION_CANCEL_ACTIONS, "actions B cancels");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_ACTIONS,
 		false,
@@ -1505,7 +1514,7 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_SELECT,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "actions SELECT remains local cancel");
+	check(action == APP_CONTROL_ACTION_CANCEL_ACTIONS, "actions SELECT cancels");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_ACTIONS,
 		false,
@@ -1515,6 +1524,15 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_NONE, "actions movement remains local");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_ACTIONS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_DOWN,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_DOWN,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "actions choose ignores movement chord");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_ACTIONS,
 		false,
@@ -1542,7 +1560,7 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_X,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "restore X remains local confirm");
+	check(action == APP_CONTROL_ACTION_CONFIRM_RESTORE, "restore X confirms");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONFIRM_RESTORE,
 		false,
@@ -1551,7 +1569,25 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_B,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "restore B remains local cancel");
+	check(action == APP_CONTROL_ACTION_CANCEL_RESTORE, "restore B cancels");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_RESTORE,
+		false,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CANCEL_RESTORE, "restore SELECT cancels");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_RESTORE,
+		false,
+		true,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "restore confirm ignores cancel chord");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONFIRM_RESTORE,
 		false,
@@ -1579,7 +1615,25 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_X,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "suspend X remains local confirm");
+	check(action == APP_CONTROL_ACTION_CONFIRM_SUSPEND, "suspend X confirms");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_SUSPEND,
+		false,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CANCEL_SUSPEND, "suspend SELECT cancels");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_SUSPEND,
+		false,
+		true,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "suspend confirm ignores cancel chord");
 
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONFIRM_RESET,
@@ -1598,7 +1652,25 @@ static void test_app_controls_action_confirm_actions_stay_local(void)
 		APP_CONTROL_BUTTON_X,
 		&rating
 	);
-	check(action == APP_CONTROL_ACTION_NONE, "reset X remains local confirm");
+	check(action == APP_CONTROL_ACTION_CONFIRM_RESET, "reset X confirms");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_RESET,
+		false,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CANCEL_RESET, "reset B cancels");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_RESET,
+		false,
+		true,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_X | APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "reset confirm ignores cancel chord");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONFIRM_RESET,
 		false,
@@ -5977,8 +6049,8 @@ int main(void)
 	test_app_controls_requires_single_command();
 	test_app_controls_modal_controls();
 	test_app_controls_classifies_app_actions();
-	test_app_controls_settings_actions_stay_local();
-	test_app_controls_action_confirm_actions_stay_local();
+	test_app_controls_settings_classifies_local_commands();
+	test_app_controls_action_confirm_classifies_local_commands();
 	test_app_controls_navigation_repeat();
 	test_app_controls_navigation_repeat_modes();
 	test_app_controls_input_activity();

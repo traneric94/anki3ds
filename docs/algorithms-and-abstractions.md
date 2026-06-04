@@ -246,6 +246,11 @@ return, actions, undo, suspend confirmation, reveal, and rating. The stable
 review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
 Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
 ignored so a fat-fingered rating does not save the wrong answer.
+Actions, daily-limit settings, restore, suspend, reset, and exit confirmations
+use the same centralized confirm-or-cancel classifier: the confirm button must
+be the only active input, and `B`/`SELECT` cancel only as clean single-button
+presses. Mixed confirm/cancel, confirm/navigation, or command chords resolve to
+no action.
 D-pad hold repeat also lives in `app_controls`; repeatable axes are declared per
 mode. Deck select repeats Up/Down movement and Left/Right paging; review
 repeats only Up/Down text scrolling; actions repeat only Up/Down selection; and

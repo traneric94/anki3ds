@@ -217,10 +217,13 @@ deck settings, relaunch persistence, and the review key map for reveal and
 Again/Hard/Good/Easy ratings. It also checks
 app-level input priority for controls, exit confirmation, deck-list return,
 actions, undo gating, suspend confirmation, review text scrolling, reveal, and
-rating dispatch. The input coverage also checks which screens accept held-D-pad
-repeat and which D-pad axes repeat on those screens. The power coverage checks
-battery polling cadence and the adaptive idle input wait tiers used to avoid
-busy polling while the screen is unchanged. That
+rating dispatch. It also checks centralized save/cancel/confirm command
+classification for actions, daily-limit settings, restore, suspend, and reset
+screens, including mixed-button chord rejection. The input coverage also checks
+which screens accept held-D-pad repeat and which D-pad axes repeat on those
+screens. The power coverage checks battery polling cadence and the adaptive
+idle input wait tiers used to avoid busy polling while the screen is unchanged.
+That
 workflow checks per-deck review-log rows for rating, undo, suspend, and restore
 actions. Status-feedback coverage checks the warning/success/error classes
 used by daily-use messages such as unsaved limits, missing decks, restored

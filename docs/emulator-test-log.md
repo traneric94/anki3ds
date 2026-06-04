@@ -388,6 +388,34 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Local Command Classifier Gate
+
+Build: local working tree
+Command: `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Centralized actions, daily-limit settings, restore, suspend, reset, and exit
+  confirm-or-cancel commands in the app-controls classifier.
+- Removed duplicated save/cancel/confirm command handling from the app-local
+  action, settings, and confirmation handlers.
+Observed:
+- Host C tests passed, including centralized local command classification and
+  mixed-button chord rejection.
+- The 3DS target rebuilt successfully.
+Expected:
+- Save, choose, restore, suspend, reset, and cancel commands should only fire
+  on clean single-button presses, while screen-specific movement remains local.
+Evidence:
+- `make test-host` completed with exit code 0.
+- `make -C app-3ds` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Button-level review, rendered palette contrast, save-feedback visibility,
+  SD-card behavior, and relaunch persistence still need the final manual
+  emulator or hardware acceptance pass.
+
 ## 2026-06-04 - Warm Dark Palette Refresh
 
 Build: local working tree
