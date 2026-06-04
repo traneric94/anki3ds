@@ -1509,3 +1509,24 @@ Expected:
 Result: pass for automated target wiring only
 Notes:
 - Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - M7 Settings Expectation Guard
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make -n verify-m7-artifacts M7_SDMC=/tmp/sd M7_DECKS="sample limits-demo"
+  M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`
+Steps:
+- Hardened the M7 artifact verifier so `--expect-settings` must name a deck
+  that is actually being verified as either a study deck or a reset deck.
+- Added a guard against empty deck selections.
+Observed:
+- A typoed expected-settings deck id now fails instead of being silently
+  skipped.
+Expected:
+- Manual M7 commands that claim to verify exact daily-limit edits must now
+  prove those settings on a selected deck.
+Result: pass for automated verifier guard only
+Notes:
+- Manual M7 interaction acceptance remains pending.

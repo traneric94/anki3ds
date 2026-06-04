@@ -330,6 +330,40 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             self.assertIn("sample/settings.tsv: expected new_limit 5", stderr.getvalue())
             self.assertNotIn("Traceback", stderr.getvalue())
 
+    def test_rejects_expected_settings_for_unselected_deck(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["sample"],
+                ["rating"],
+                [("limits-demo", 7, 9)],
+            )
+
+            self.assertTrue(
+                any(
+                    "limits-demo/settings.tsv: expected settings deck not selected"
+                    in error
+                    for error in errors
+                ),
+                errors,
+            )
+
+    def test_rejects_empty_deck_selection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                [],
+                [],
+                [],
+                reset_deck_ids=[],
+            )
+
+            self.assertIn("no decks selected for verification", errors)
+
     def test_cli_can_skip_required_events_for_log_skipped_case(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             sdmc = self.write_valid_sdmc(Path(temp_dir))

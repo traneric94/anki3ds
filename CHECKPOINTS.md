@@ -179,7 +179,8 @@ Acceptance test:
    against the tested SD root. For Azahar, the default `M7_SDMC` is the
    configured `AZAHAR_SDMC`. To prove exact daily-limit edits, pass settings
    expectations such as
-   `M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`.
+   `M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`; each expected-settings
+   deck must be part of `M7_DECKS` or `M7_RESET_DECKS`.
 
 Pass condition:
 

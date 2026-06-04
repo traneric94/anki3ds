@@ -444,7 +444,10 @@ def verify_m7_artifacts(
     decks: dict[str, DeckArtifacts] = {}
     all_events: set[str] = set()
     reset_deck_ids = reset_deck_ids or []
+    checked_deck_ids = set(deck_ids) | set(reset_deck_ids)
 
+    if len(checked_deck_ids) == 0:
+        errors.append("no decks selected for verification")
     for deck_id in sorted(set(deck_ids).intersection(reset_deck_ids)):
         errors.append(f"{deck_id}: cannot be both study and reset deck")
 
@@ -473,6 +476,9 @@ def verify_m7_artifacts(
             errors.append(f"review-log.tsv: missing required {required_event} event")
 
     for deck_id, new_limit, review_limit in expected_settings:
+        if deck_id not in checked_deck_ids:
+            errors.append(f"{deck_id}/settings.tsv: expected settings deck not selected")
+            continue
         artifacts = decks.get(deck_id)
         if artifacts is None:
             continue

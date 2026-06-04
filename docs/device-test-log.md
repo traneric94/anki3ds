@@ -79,8 +79,9 @@ Pass conditions:
 - After the pass, `make verify-m7-artifacts M7_SDMC=/path/to/sdmc` accepts the
   tested SD root. For Azahar, omit `M7_SDMC` to use the configured
   `AZAHAR_SDMC`. Include `M7_EXPECT_SETTINGS="deck:new:review ..."` for the
-  exact daily-limit values changed during the pass. If the app reported
-  `log skipped`, also pass `M7_ALLOW_MISSING_REVIEW_LOG=1` and
+  exact daily-limit values changed during the pass; each expected-settings deck
+  must be part of `M7_DECKS` or `M7_RESET_DECKS`. If the app reported
+  `log skipped`, pass `M7_ALLOW_MISSING_REVIEW_LOG=1` and
   `M7_NO_REQUIRED_EVENTS=1`. If reset was the final state for a deck, also
   pass `M7_RESET_DECKS="deck-id"` so the verifier expects no progress files
   while still checking `settings.tsv`.
