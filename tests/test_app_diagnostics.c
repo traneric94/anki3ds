@@ -89,6 +89,7 @@ int main(void)
 
 	require_contains(text, "#anki3ds-session-v1\n");
 	require_contains(text, "started_at\t1800000000\n");
+	require_contains(text, "launch_count\t1\n");
 	require_contains(text, "started_day\t20000\n");
 	require_contains(text, "scan_completed\t1\n");
 	require_contains(text, "deck_count\t2\n");
@@ -106,6 +107,30 @@ int main(void)
 	require_contains(text, "last_deck_id\tsample\n");
 	require_contains(text, "last_event\texit_confirmed\n");
 	require_contains(text, "#anki3ds-session-complete\n");
+
+	require_true(
+		app_diagnostics_load(path, &diagnostics),
+		"diagnostics load failed"
+	);
+	app_diagnostics_mark_launch(&diagnostics, 20001, 1800000100);
+	require_true(
+		app_diagnostics_write(path, &diagnostics),
+		"relaunch diagnostics write failed"
+	);
+	read_file(text, sizeof(text), path);
+
+	require_contains(text, "started_at\t1800000000\n");
+	require_contains(text, "updated_at\t1800000100\n");
+	require_contains(text, "launch_count\t2\n");
+	require_contains(text, "current_day\t20001\n");
+	require_contains(text, "rating_saved_count\t1\n");
+	require_contains(text, "undo_saved_count\t1\n");
+	require_contains(text, "suspend_saved_count\t1\n");
+	require_contains(text, "restore_saved_count\t3\n");
+	require_contains(text, "settings_saved_count\t1\n");
+	require_contains(text, "reset_progress_count\t1\n");
+	require_contains(text, "exit_confirmed\t1\n");
+	require_contains(text, "last_event\tboot\n");
 
 	remove_session_files(path);
 	return 0;

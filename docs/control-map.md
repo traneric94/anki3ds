@@ -102,6 +102,9 @@ The root `session.tsv` diagnostic snapshot is written at boot, deck scan, deck
 open, durable save actions, reset, and confirmed exit. Revealing an answer only
 updates the in-memory session counter; it is flushed by the next snapshot write
 so ordinary card flips do not add SD-card writes.
+If a fresh pass exits and relaunches, the app loads the existing complete
+snapshot, increments `launch_count`, and keeps earlier saved-action counters so
+the final verifier can prove the whole pass instead of only the last launch.
 
 ## Help Screen
 

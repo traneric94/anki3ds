@@ -13,6 +13,7 @@ struct app_diagnostics
 {
 	time_t started_at;
 	time_t updated_at;
+	unsigned int launch_count;
 	unsigned int started_day;
 	unsigned int current_day;
 	bool scan_completed;
@@ -35,6 +36,15 @@ struct app_diagnostics
 };
 
 void app_diagnostics_init(
+	struct app_diagnostics *diagnostics,
+	unsigned int current_day,
+	time_t timestamp
+);
+bool app_diagnostics_load(
+	const char *path,
+	struct app_diagnostics *diagnostics
+);
+void app_diagnostics_mark_launch(
 	struct app_diagnostics *diagnostics,
 	unsigned int current_day,
 	time_t timestamp

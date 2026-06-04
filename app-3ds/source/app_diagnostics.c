@@ -79,6 +79,7 @@ void app_diagnostics_init(
 		timestamp = 0;
 	diagnostics->started_at = timestamp;
 	diagnostics->updated_at = timestamp;
+	diagnostics->launch_count = 1;
 	diagnostics->started_day = current_day;
 	diagnostics->current_day = current_day;
 	app_diagnostics_copy_clean(
@@ -87,6 +88,310 @@ void app_diagnostics_init(
 		"-",
 		"-"
 	);
+	app_diagnostics_copy_clean(
+		diagnostics->last_event,
+		sizeof(diagnostics->last_event),
+		"boot",
+		"boot"
+	);
+}
+
+static void app_diagnostics_strip_newline(char *text)
+{
+	size_t length;
+
+	if (text == NULL)
+		return;
+
+	length = strlen(text);
+	while (
+		length > 0 &&
+		(text[length - 1] == '\n' || text[length - 1] == '\r')
+	)
+	{
+		text[length - 1] = '\0';
+		length--;
+	}
+}
+
+static bool app_diagnostics_parse_unsigned(
+	const char *text,
+	unsigned int *value
+)
+{
+	unsigned int parsed = 0;
+
+	if (text == NULL || text[0] == '\0' || value == NULL)
+		return false;
+
+	for (size_t index = 0; text[index] != '\0'; index++)
+	{
+		unsigned int digit;
+
+		if (text[index] < '0' || text[index] > '9')
+			return false;
+
+		digit = (unsigned int)(text[index] - '0');
+		if (parsed > (4294967295u - digit) / 10u)
+			return false;
+		parsed = parsed * 10u + digit;
+	}
+
+	*value = parsed;
+	return true;
+}
+
+static bool app_diagnostics_parse_time(const char *text, time_t *value)
+{
+	unsigned int parsed;
+
+	if (value == NULL)
+		return false;
+	if (!app_diagnostics_parse_unsigned(text, &parsed))
+		return false;
+
+	*value = (time_t)parsed;
+	return true;
+}
+
+static bool app_diagnostics_parse_bool(const char *text, bool *value)
+{
+	unsigned int parsed;
+
+	if (value == NULL)
+		return false;
+	if (!app_diagnostics_parse_unsigned(text, &parsed))
+		return false;
+	if (parsed > 1)
+		return false;
+
+	*value = parsed != 0;
+	return true;
+}
+
+static bool app_diagnostics_read_key_value(
+	char *row,
+	char **key,
+	char **value
+)
+{
+	char *separator;
+
+	if (row == NULL || key == NULL || value == NULL)
+		return false;
+
+	app_diagnostics_strip_newline(row);
+	separator = strchr(row, '\t');
+	if (separator == NULL)
+		return false;
+
+	*separator = '\0';
+	*key = row;
+	*value = separator + 1;
+	return (*key)[0] != '\0' && (*value)[0] != '\0';
+}
+
+static bool app_diagnostics_apply_field(
+	struct app_diagnostics *diagnostics,
+	const char *key,
+	const char *value
+)
+{
+	if (diagnostics == NULL || key == NULL || value == NULL)
+		return false;
+
+	if (strcmp(key, "started_at") == 0)
+		return app_diagnostics_parse_time(value, &diagnostics->started_at);
+	if (strcmp(key, "updated_at") == 0)
+		return app_diagnostics_parse_time(value, &diagnostics->updated_at);
+	if (strcmp(key, "launch_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->launch_count);
+	if (strcmp(key, "started_day") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->started_day);
+	if (strcmp(key, "current_day") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->current_day);
+	if (strcmp(key, "scan_completed") == 0)
+		return app_diagnostics_parse_bool(value, &diagnostics->scan_completed);
+	if (strcmp(key, "deck_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->deck_count);
+	if (strcmp(key, "ignored_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->ignored_count);
+	if (strcmp(key, "deck_open_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->deck_open_count);
+	if (strcmp(key, "review_screen_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->review_screen_count
+		);
+	}
+	if (strcmp(key, "summary_screen_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->summary_screen_count
+		);
+	}
+	if (strcmp(key, "load_error_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->load_error_count);
+	if (strcmp(key, "answer_shown_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->answer_shown_count
+		);
+	}
+	if (strcmp(key, "rating_saved_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->rating_saved_count);
+	if (strcmp(key, "undo_saved_count") == 0)
+		return app_diagnostics_parse_unsigned(value, &diagnostics->undo_saved_count);
+	if (strcmp(key, "suspend_saved_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->suspend_saved_count
+		);
+	}
+	if (strcmp(key, "restore_saved_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->restore_saved_count
+		);
+	}
+	if (strcmp(key, "settings_saved_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->settings_saved_count
+		);
+	}
+	if (strcmp(key, "reset_progress_count") == 0)
+	{
+		return app_diagnostics_parse_unsigned(
+			value,
+			&diagnostics->reset_progress_count
+		);
+	}
+	if (strcmp(key, "exit_confirmed") == 0)
+		return app_diagnostics_parse_bool(value, &diagnostics->exit_confirmed);
+	if (strcmp(key, "last_deck_id") == 0)
+	{
+		app_diagnostics_copy_clean(
+			diagnostics->last_deck_id,
+			sizeof(diagnostics->last_deck_id),
+			value,
+			"-"
+		);
+		return true;
+	}
+	if (strcmp(key, "last_event") == 0)
+	{
+		app_diagnostics_copy_clean(
+			diagnostics->last_event,
+			sizeof(diagnostics->last_event),
+			value,
+			"unknown"
+		);
+		return true;
+	}
+
+	return true;
+}
+
+bool app_diagnostics_load(
+	const char *path,
+	struct app_diagnostics *diagnostics
+)
+{
+	FILE *file;
+	char row[128];
+	bool footer_seen = false;
+	struct app_diagnostics loaded;
+
+	if (path == NULL || diagnostics == NULL)
+		return false;
+
+	file = fopen(path, "rb");
+	if (file == NULL)
+		return false;
+
+	if (fgets(row, sizeof(row), file) == NULL)
+	{
+		fclose(file);
+		return false;
+	}
+	app_diagnostics_strip_newline(row);
+	if (strcmp(row, APP_DIAGNOSTICS_HEADER) != 0)
+	{
+		fclose(file);
+		return false;
+	}
+
+	loaded = *diagnostics;
+	while (fgets(row, sizeof(row), file) != NULL)
+	{
+		char *key;
+		char *value;
+
+		if (strchr(row, '\n') == NULL && !feof(file))
+		{
+			fclose(file);
+			return false;
+		}
+		app_diagnostics_strip_newline(row);
+		if (strcmp(row, APP_DIAGNOSTICS_FOOTER) == 0)
+		{
+			footer_seen = true;
+			break;
+		}
+		if (!app_diagnostics_read_key_value(row, &key, &value))
+		{
+			fclose(file);
+			return false;
+		}
+		if (!app_diagnostics_apply_field(&loaded, key, value))
+		{
+			fclose(file);
+			return false;
+		}
+	}
+
+	if (ferror(file))
+	{
+		fclose(file);
+		return false;
+	}
+	if (fclose(file) != 0)
+		return false;
+	if (!footer_seen)
+		return false;
+	if (loaded.launch_count == 0)
+		loaded.launch_count = 1;
+
+	*diagnostics = loaded;
+	return true;
+}
+
+void app_diagnostics_mark_launch(
+	struct app_diagnostics *diagnostics,
+	unsigned int current_day,
+	time_t timestamp
+)
+{
+	if (diagnostics == NULL)
+		return;
+
+	if (timestamp == (time_t)-1)
+		timestamp = 0;
+	if (diagnostics->started_at == 0)
+		diagnostics->started_at = timestamp;
+	if (diagnostics->started_day == 0)
+		diagnostics->started_day = current_day;
+	if (diagnostics->launch_count < 4294967295u)
+		diagnostics->launch_count++;
+	diagnostics->current_day = current_day;
+	diagnostics->updated_at = timestamp;
 	app_diagnostics_copy_clean(
 		diagnostics->last_event,
 		sizeof(diagnostics->last_event),
@@ -298,6 +603,7 @@ bool app_diagnostics_write(
 	ok = ok && app_diagnostics_write_header(file);
 	ok = ok && app_diagnostics_write_time(file, "started_at", diagnostics->started_at);
 	ok = ok && app_diagnostics_write_time(file, "updated_at", diagnostics->updated_at);
+	ok = ok && app_diagnostics_write_unsigned(file, "launch_count", diagnostics->launch_count);
 	ok = ok && app_diagnostics_write_unsigned(file, "started_day", diagnostics->started_day);
 	ok = ok && app_diagnostics_write_unsigned(file, "current_day", diagnostics->current_day);
 	ok = ok && app_diagnostics_write_bool(file, "scan_completed", diagnostics->scan_completed);

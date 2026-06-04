@@ -1988,10 +1988,14 @@ static void app_cycle_theme(struct app_state *app)
 static enum app_power_battery_sample_result app_init(struct app_state *app)
 {
 	enum app_power_battery_sample_result battery_sample_result;
+	time_t timestamp;
 
 	memset(app, 0, sizeof(*app));
 	app->current_day = app_time_current_day();
-	app_diagnostics_init(&app->diagnostics, app->current_day, time(NULL));
+	timestamp = time(NULL);
+	app_diagnostics_init(&app->diagnostics, app->current_day, timestamp);
+	if (app_diagnostics_load(APP_DIAGNOSTICS_PATH, &app->diagnostics))
+		app_diagnostics_mark_launch(&app->diagnostics, app->current_day, timestamp);
 	battery_sample_result = app_sample_battery(app);
 	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;

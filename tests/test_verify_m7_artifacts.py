@@ -151,6 +151,7 @@ def write_deck(
 
 def write_session(
     sdmc: Path,
+    launch_count: int = 2,
     deck_count: int = 2,
     deck_open_count: int = 2,
     rating_saved_count: int = 1,
@@ -169,6 +170,7 @@ def write_session(
         "#anki3ds-session-v1",
         "started_at\t1800000000",
         "updated_at\t1800000001",
+        f"launch_count\t{launch_count}",
         "started_day\t20000",
         "current_day\t20000",
         f"scan_completed\t{scan_completed}",
@@ -315,6 +317,7 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             sdmc = self.write_valid_sdmc(Path(temp_dir))
             write_session(
                 sdmc,
+                launch_count=1,
                 deck_open_count=1,
                 rating_saved_count=0,
                 exit_confirmed=0,
@@ -328,6 +331,7 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             )
 
             self.assertIn("session.tsv: exit_confirmed must be 1", errors)
+            self.assertIn("session.tsv: launch_count must prove relaunch", errors)
             self.assertIn(
                 "session.tsv: deck_open_count below checked deck count",
                 errors,

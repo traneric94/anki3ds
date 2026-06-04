@@ -62,6 +62,7 @@ SESSION_DAY_KEYS = frozenset(("started_day", "current_day"))
 SESSION_BOOLEAN_KEYS = frozenset(("scan_completed", "exit_confirmed"))
 SESSION_COUNTER_KEYS = frozenset(
     (
+        "launch_count",
         "deck_count",
         "ignored_count",
         "deck_open_count",
@@ -81,6 +82,7 @@ SESSION_TEXT_KEYS = frozenset(("last_deck_id", "last_event"))
 SESSION_REQUIRED_KEYS = (
     "started_at",
     "updated_at",
+    "launch_count",
     "started_day",
     "current_day",
     "scan_completed",
@@ -518,6 +520,8 @@ def verify_session(
         errors.append("session.tsv: scan_completed must be 1")
     if session.get("exit_confirmed") != "1":
         errors.append("session.tsv: exit_confirmed must be 1")
+    if session_unsigned(session, "launch_count") < 2:
+        errors.append("session.tsv: launch_count must prove relaunch")
     if session_unsigned(session, "deck_open_count") < len(checked_deck_ids):
         errors.append("session.tsv: deck_open_count below checked deck count")
     if session_unsigned(session, "deck_count") < len(checked_deck_ids):
