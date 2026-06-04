@@ -315,6 +315,21 @@ static void test_app_power_battery_sample_policy(void)
 	next_poll_time = 1600;
 	app_power_schedule_next_battery_poll_after_sample(
 		&next_poll_time,
+		(time_t)-1,
+		APP_POWER_BATTERY_SAMPLE_READ_FAILED
+	);
+	check(
+		!app_power_battery_poll_is_due(&next_poll_time, (time_t)-1),
+		"battery read failure waits while clock is unavailable"
+	);
+	check(
+		app_power_battery_poll_is_due(&next_poll_time, 1700),
+		"battery read failure retries as soon as clock returns"
+	);
+
+	next_poll_time = 1600;
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
 		1600,
 		APP_POWER_BATTERY_SAMPLE_SKIPPED_CLOSED
 	);
