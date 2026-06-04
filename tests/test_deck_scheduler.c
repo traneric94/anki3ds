@@ -2912,6 +2912,54 @@ static void test_review_state_loads_previous_current_format(void)
 	remove(TEST_STATE_PATH);
 }
 
+static void test_review_state_migrated_review_round_trips_after_rating(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+	build_test_deck(&deck);
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+	write_file(TEST_STATE_PATH, "card-1\t1\t2\t20000\t1\t2500\t0\n");
+
+	check(
+		review_state_load(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"previous format due review loads"
+	);
+	check(session.cards[0].first_review_day == 0, "migrated review starts unknown first day");
+	check(session.cards[0].last_review_day == 0, "migrated review starts unknown last day");
+	check(scheduler_current_index(&session) == 0, "migrated due review selected");
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	check(
+		session.cards[0].first_review_day == TEST_TODAY,
+		"migrated review rating fills first day"
+	);
+	check(
+		session.cards[0].last_review_day == TEST_TODAY,
+		"migrated review rating fills last day"
+	);
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"migrated review saves after rating"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"migrated review reloads after save"
+	);
+	check(loaded.cards[0].first_review_day == TEST_TODAY, "migrated first day reloads");
+	check(loaded.cards[0].last_review_day == TEST_TODAY, "migrated last day reloads");
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_TEMP_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
 static void test_review_state_loads_suspended_format(void)
 {
 	struct deck deck;
@@ -4016,6 +4064,7 @@ static void remove_test_deck_dir(const char *deck_id)
 static void cleanup_deck_index_test_root(void)
 {
 	remove_test_deck_dir("alpha");
+	remove_test_deck_dir("bad id");
 	remove_test_deck_dir("bad-settings");
 	remove_test_deck_dir("bad-state");
 	remove_test_deck_dir("beta");
@@ -4951,6 +5000,7 @@ int main(void)
 	test_review_state_marked_file_requires_complete_footer();
 	test_review_state_rejects_inconsistent_current_rows();
 	test_review_state_loads_previous_current_format();
+	test_review_state_migrated_review_round_trips_after_rating();
 	test_review_state_loads_suspended_format();
 	test_review_state_loads_legacy_done_format();
 	test_review_state_bad_load_does_not_mutate_session();

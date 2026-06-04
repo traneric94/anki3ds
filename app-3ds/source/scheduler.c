@@ -791,7 +791,7 @@ void scheduler_rate_current(struct scheduler_session *session, enum scheduler_ra
 	use_initial_schedule = scheduler_card_is_in_initial_learning(card);
 	use_relearning_schedule = scheduler_card_is_in_relearning(card);
 	card->last_rating = rating;
-	if (card->review_count == 0 && card->first_review_day == 0)
+	if (card->first_review_day == 0)
 		card->first_review_day = session->today;
 	card->last_review_day = session->today;
 	session->rating_counts[rating]++;
