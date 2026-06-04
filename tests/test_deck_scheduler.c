@@ -2770,6 +2770,7 @@ static void test_review_state_duplicate_card_row_is_bad_format(void)
 {
 	struct deck deck;
 	struct scheduler_session session;
+	struct review_state_load_report report;
 
 	build_test_deck(&deck);
 	scheduler_init(&session, deck.card_count, TEST_TODAY);
@@ -2780,9 +2781,18 @@ static void test_review_state_duplicate_card_row_is_bad_format(void)
 	);
 
 	check(
-		review_state_load(&deck, &session, TEST_STATE_PATH) ==
-			REVIEW_STATE_LOAD_BAD_FORMAT,
+		review_state_load_with_report(
+			&deck,
+			&session,
+			TEST_STATE_PATH,
+			&report
+		) == REVIEW_STATE_LOAD_BAD_FORMAT,
 		"duplicate state card row is bad format"
+	);
+	check(report.line_number == 2, "duplicate state card row reports line");
+	check(
+		report.parse_result == REVIEW_STATE_PARSE_DUPLICATE_CARD,
+		"duplicate state card row reports reason"
 	);
 	check(session.cards[0].review_count == 0, "duplicate state leaves session unchanged");
 	check(session.due_count == deck.card_count, "duplicate state leaves due count unchanged");

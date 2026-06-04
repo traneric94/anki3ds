@@ -16,6 +16,7 @@ struct deck_summary
 	enum app_settings_load_result settings_load_result;
 	struct app_settings_load_report settings_load_report;
 	enum review_state_load_result state_load_result;
+	struct review_state_load_report state_load_report;
 	size_t card_count;
 	size_t due_count;
 	size_t new_due_count;

@@ -71,7 +71,7 @@ reject invalid ids, scan a temporary root, and verify only folders containing
 After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, total due count, new/learning/review due
-counts from scheduler policy, suspended-card count, and any deck/settings load
+counts from scheduler policy, suspended-card count, and deck/settings/state load
 reports for the selector. This keeps the deck list useful for daily study while
 preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits. The
 summary loader allocates its temporary deck and scheduler on the heap so larger
@@ -179,7 +179,8 @@ to start fresh while showing a warning. If every available state copy is
 malformed, review-state saves are blocked until the user resets deck progress.
 Opening that deck enters a reset-needed summary screen instead of a review
 queue, and normal study controls such as undo remain disabled until reset
-succeeds. Reset removes `state.tsv.tmp` and
+succeeds. The reset-needed screens show the first malformed state line or
+aggregate state-file reason when available. Reset removes `state.tsv.tmp` and
 `state.tsv.bak` before the primary `state.tsv` for the active deck. The shared
 `storage` module owns the remove/rename order for both review state and
 settings. This remains simple to inspect on the SD card while avoiding the

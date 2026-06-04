@@ -30,6 +30,43 @@ struct parsed_state
 	unsigned int lapses;
 };
 
+void review_state_load_report_clear(struct review_state_load_report *report)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = 0;
+	report->parse_result = REVIEW_STATE_PARSE_OK;
+}
+
+static void review_state_load_report_set(
+	struct review_state_load_report *report,
+	unsigned int line_number,
+	enum review_state_parse_result parse_result
+)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = line_number;
+	report->parse_result = parse_result;
+}
+
+static void review_state_remember_bad_report(
+	struct review_state_load_report *destination,
+	bool *has_destination,
+	const struct review_state_load_report *source
+)
+{
+	if (destination == NULL || has_destination == NULL || source == NULL)
+		return;
+	if (*has_destination)
+		return;
+
+	*destination = *source;
+	*has_destination = true;
+}
+
 static const char *rating_to_field(enum scheduler_rating rating)
 {
 	switch (rating)
@@ -312,7 +349,8 @@ static enum review_state_load_result review_state_load_file(
 	const struct deck *deck,
 	struct scheduler_session *session,
 	const char *path,
-	bool *loaded_file
+	bool *loaded_file,
+	struct review_state_load_report *report
 )
 {
 	FILE *file = fopen(path, "r");
@@ -325,7 +363,9 @@ static enum review_state_load_result review_state_load_file(
 	unsigned int footer_row_count = 0;
 	bool saw_header = false;
 	bool saw_footer = false;
+	unsigned int line_number = 0;
 
+	review_state_load_report_clear(report);
 	if (file == NULL)
 		return REVIEW_STATE_LOAD_NOT_FOUND;
 
@@ -340,9 +380,15 @@ static enum review_state_load_result review_state_load_file(
 		struct parsed_state state;
 		size_t card_index;
 
+		line_number++;
 		if (line_needs_more_input(file, line))
 		{
 			consume_line_remainder(file);
+			review_state_load_report_set(
+				report,
+				line_number,
+				REVIEW_STATE_PARSE_LINE_TOO_LONG
+			);
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
@@ -351,6 +397,11 @@ static enum review_state_load_result review_state_load_file(
 		{
 			if (!saw_header && parsed_row_count > 0)
 			{
+				review_state_load_report_set(
+					report,
+					line_number,
+					REVIEW_STATE_PARSE_METADATA_AFTER_ROWS
+				);
 				fclose(file);
 				return REVIEW_STATE_LOAD_BAD_FORMAT;
 			}
@@ -364,6 +415,11 @@ static enum review_state_load_result review_state_load_file(
 				)
 			)
 			{
+				review_state_load_report_set(
+					report,
+					line_number,
+					REVIEW_STATE_PARSE_BAD_METADATA
+				);
 				fclose(file);
 				return REVIEW_STATE_LOAD_BAD_FORMAT;
 			}
@@ -372,11 +428,21 @@ static enum review_state_load_result review_state_load_file(
 		}
 		if (saw_footer)
 		{
+			review_state_load_report_set(
+				report,
+				line_number,
+				REVIEW_STATE_PARSE_DATA_AFTER_FOOTER
+			);
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
 		if (!parse_state_line(line, &state, session->today))
 		{
+			review_state_load_report_set(
+				report,
+				line_number,
+				REVIEW_STATE_PARSE_BAD_ROW
+			);
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
@@ -387,6 +453,11 @@ static enum review_state_load_result review_state_load_file(
 			continue;
 		if (matched_cards[card_index])
 		{
+			review_state_load_report_set(
+				report,
+				line_number,
+				REVIEW_STATE_PARSE_DUPLICATE_CARD
+			);
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
@@ -410,6 +481,11 @@ static enum review_state_load_result review_state_load_file(
 			)
 		)
 		{
+			review_state_load_report_set(
+				report,
+				line_number,
+				REVIEW_STATE_PARSE_BAD_SCHEDULER_STATE
+			);
 			fclose(file);
 			return REVIEW_STATE_LOAD_BAD_FORMAT;
 		}
@@ -417,6 +493,7 @@ static enum review_state_load_result review_state_load_file(
 
 	if (ferror(file))
 	{
+		review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_READ_ERROR);
 		fclose(file);
 		return REVIEW_STATE_LOAD_BAD_FORMAT;
 	}
@@ -431,12 +508,19 @@ static enum review_state_load_result review_state_load_file(
 		)
 	)
 	{
+		review_state_load_report_set(
+			report,
+			0,
+			REVIEW_STATE_PARSE_ROW_COUNT_MISMATCH
+		);
 		fclose(file);
 		return REVIEW_STATE_LOAD_BAD_FORMAT;
 	}
 	if (matched_row_count == 0 && deck->card_count > 0)
 	{
 		fclose(file);
+		if (parsed_row_count == 0)
+			review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_EMPTY);
 		return parsed_row_count == 0 ?
 			REVIEW_STATE_LOAD_BAD_FORMAT :
 			REVIEW_STATE_LOAD_UNMATCHED;
@@ -448,29 +532,52 @@ static enum review_state_load_result review_state_load_file(
 	return REVIEW_STATE_LOAD_OK;
 }
 
-enum review_state_load_result review_state_load(
+enum review_state_load_result review_state_load_with_report(
 	const struct deck *deck,
 	struct scheduler_session *session,
-	const char *path
+	const char *path,
+	struct review_state_load_report *report
 )
 {
 	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	bool loaded_file = false;
+	bool has_bad_report = false;
 	bool has_temp_path;
 	bool has_backup_path;
 	bool primary_missing;
 	bool found_unmatched = false;
 	enum review_state_load_result result;
+	struct review_state_load_report bad_report;
+	struct review_state_load_report attempt_report;
 
+	review_state_load_report_clear(report);
+	review_state_load_report_clear(&bad_report);
 	if (deck == NULL || session == NULL || path == NULL)
+	{
+		review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_READ_ERROR);
 		return REVIEW_STATE_LOAD_BAD_FORMAT;
+	}
 
-	result = review_state_load_file(deck, session, path, &loaded_file);
+	result = review_state_load_file(
+		deck,
+		session,
+		path,
+		&loaded_file,
+		&attempt_report
+	);
 	if (result == REVIEW_STATE_LOAD_OK)
 		return REVIEW_STATE_LOAD_OK;
 	if (result == REVIEW_STATE_LOAD_UNMATCHED)
 		found_unmatched = true;
+	if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
+	{
+		review_state_remember_bad_report(
+			&bad_report,
+			&has_bad_report,
+			&attempt_report
+		);
+	}
 	primary_missing = result == REVIEW_STATE_LOAD_NOT_FOUND;
 	has_temp_path = storage_build_suffixed_path(
 		temp_path,
@@ -487,28 +594,22 @@ enum review_state_load_result review_state_load(
 
 	if (primary_missing && has_temp_path)
 	{
-		result = review_state_load_file(deck, session, temp_path, &loaded_file);
+		result = review_state_load_file(
+			deck,
+			session,
+			temp_path,
+			&loaded_file,
+			&attempt_report
+		);
 		if (result == REVIEW_STATE_LOAD_OK)
 		{
 			if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))
-				return REVIEW_STATE_LOAD_BAD_FORMAT;
-
-			return REVIEW_STATE_LOAD_OK;
-		}
-		if (result == REVIEW_STATE_LOAD_UNMATCHED)
-			found_unmatched = true;
-	}
-
-	if (has_backup_path)
-	{
-		result = review_state_load_file(deck, session, backup_path, &loaded_file);
-		if (result == REVIEW_STATE_LOAD_OK)
-		{
-			if (
-				primary_missing &&
-				!storage_promote_recovery_file(path, STORAGE_BACKUP_SUFFIX)
-			)
 			{
+				review_state_load_report_set(
+					report,
+					0,
+					REVIEW_STATE_PARSE_RECOVERY_ERROR
+				);
 				return REVIEW_STATE_LOAD_BAD_FORMAT;
 			}
 
@@ -516,22 +617,93 @@ enum review_state_load_result review_state_load(
 		}
 		if (result == REVIEW_STATE_LOAD_UNMATCHED)
 			found_unmatched = true;
+		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
+		{
+			review_state_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
+	}
+
+	if (has_backup_path)
+	{
+		result = review_state_load_file(
+			deck,
+			session,
+			backup_path,
+			&loaded_file,
+			&attempt_report
+		);
+		if (result == REVIEW_STATE_LOAD_OK)
+		{
+			if (
+				primary_missing &&
+				!storage_promote_recovery_file(path, STORAGE_BACKUP_SUFFIX)
+			)
+			{
+				review_state_load_report_set(
+					report,
+					0,
+					REVIEW_STATE_PARSE_RECOVERY_ERROR
+				);
+				return REVIEW_STATE_LOAD_BAD_FORMAT;
+			}
+
+			return REVIEW_STATE_LOAD_OK;
+		}
+		if (result == REVIEW_STATE_LOAD_UNMATCHED)
+			found_unmatched = true;
+		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
+		{
+			review_state_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
 	}
 
 	if (!primary_missing && has_temp_path)
 	{
-		result = review_state_load_file(deck, session, temp_path, &loaded_file);
+		result = review_state_load_file(
+			deck,
+			session,
+			temp_path,
+			&loaded_file,
+			&attempt_report
+		);
 		if (result == REVIEW_STATE_LOAD_OK)
 			return REVIEW_STATE_LOAD_OK;
 		if (result == REVIEW_STATE_LOAD_UNMATCHED)
 			found_unmatched = true;
+		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
+		{
+			review_state_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
 	}
 	if (found_unmatched)
 		return REVIEW_STATE_LOAD_UNMATCHED;
 	if (!loaded_file)
 		return REVIEW_STATE_LOAD_NOT_FOUND;
 
+	if (has_bad_report && report != NULL)
+		*report = bad_report;
 	return REVIEW_STATE_LOAD_BAD_FORMAT;
+}
+
+enum review_state_load_result review_state_load(
+	const struct deck *deck,
+	struct scheduler_session *session,
+	const char *path
+)
+{
+	return review_state_load_with_report(deck, session, path, NULL);
 }
 
 enum review_state_save_result review_state_save(
@@ -616,6 +788,39 @@ enum review_state_save_result review_state_save(
 bool review_state_delete(const char *path)
 {
 	return storage_delete_save_files(path);
+}
+
+const char *review_state_parse_result_name(enum review_state_parse_result result)
+{
+	switch (result)
+	{
+	case REVIEW_STATE_PARSE_OK:
+		return "ok";
+	case REVIEW_STATE_PARSE_LINE_TOO_LONG:
+		return "line too long";
+	case REVIEW_STATE_PARSE_BAD_METADATA:
+		return "bad metadata";
+	case REVIEW_STATE_PARSE_METADATA_AFTER_ROWS:
+		return "metadata after rows";
+	case REVIEW_STATE_PARSE_DATA_AFTER_FOOTER:
+		return "data after footer";
+	case REVIEW_STATE_PARSE_BAD_ROW:
+		return "bad row";
+	case REVIEW_STATE_PARSE_DUPLICATE_CARD:
+		return "duplicate card";
+	case REVIEW_STATE_PARSE_BAD_SCHEDULER_STATE:
+		return "bad scheduler state";
+	case REVIEW_STATE_PARSE_READ_ERROR:
+		return "read error";
+	case REVIEW_STATE_PARSE_ROW_COUNT_MISMATCH:
+		return "row count mismatch";
+	case REVIEW_STATE_PARSE_EMPTY:
+		return "empty";
+	case REVIEW_STATE_PARSE_RECOVERY_ERROR:
+		return "recovery error";
+	}
+
+	return "unknown";
 }
 
 const char *review_state_load_result_name(enum review_state_load_result result)

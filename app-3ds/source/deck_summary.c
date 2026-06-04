@@ -10,6 +10,7 @@ void deck_summary_init(struct deck_summary *summary)
 	summary->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
 	app_settings_load_report_clear(&summary->settings_load_report);
 	summary->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
+	review_state_load_report_clear(&summary->state_load_report);
 	summary->card_count = 0;
 	summary->due_count = 0;
 	summary->new_due_count = 0;
@@ -54,6 +55,7 @@ void deck_summary_load(
 	struct app_settings settings;
 	struct app_settings_load_report settings_load_report;
 	struct deck_load_report deck_load_report;
+	struct review_state_load_report state_load_report;
 	struct deck *deck;
 	struct scheduler_session *session;
 	enum deck_load_result deck_load_result;
@@ -98,7 +100,12 @@ void deck_summary_load(
 	);
 	scheduler_init(session, deck->card_count, today);
 	scheduler_set_daily_limits(session, settings.new_limit, settings.review_limit);
-	state_load_result = review_state_load(deck, session, entry->state_path);
+	state_load_result = review_state_load_with_report(
+		deck,
+		session,
+		entry->state_path,
+		&state_load_report
+	);
 	deck_summary_from_session(
 		summary,
 		deck_load_result,
@@ -108,6 +115,7 @@ void deck_summary_load(
 	);
 	summary->deck_load_report = deck_load_report;
 	summary->settings_load_report = settings_load_report;
+	summary->state_load_report = state_load_report;
 
 	free(session);
 	free(deck);

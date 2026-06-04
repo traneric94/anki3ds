@@ -89,6 +89,7 @@ struct app_state
 	struct app_settings_load_report settings_load_report;
 	enum app_settings_save_result settings_save_result;
 	enum review_state_load_result state_load_result;
+	struct review_state_load_report state_load_report;
 	enum review_state_save_result state_save_result;
 	const char *state_message;
 	const char *settings_message;
@@ -525,6 +526,38 @@ static bool draw_settings_load_error_detail(
 	return false;
 }
 
+static bool draw_review_state_load_error_detail(
+	enum review_state_load_result load_result,
+	const struct review_state_load_report *report,
+	int row
+)
+{
+	if (load_result != REVIEW_STATE_LOAD_BAD_FORMAT || report == NULL)
+		return false;
+
+	if (report->line_number > 0)
+	{
+		printf(
+			"\x1b[%d;1HLine %u: %s",
+			row,
+			report->line_number,
+			review_state_parse_result_name(report->parse_result)
+		);
+		return true;
+	}
+	if (report->parse_result != REVIEW_STATE_PARSE_OK)
+	{
+		printf(
+			"\x1b[%d;1HState: %s",
+			row,
+			review_state_parse_result_name(report->parse_result)
+		);
+		return true;
+	}
+
+	return false;
+}
+
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
 {
 	return app_review_should_show_queue(app->state_load_result, &app->session) ?
@@ -844,6 +877,8 @@ static void app_refresh_selected_deck_summary(struct app_state *app)
 		app->load_report;
 	app->deck_summaries[app->selected_deck_index].settings_load_report =
 		app->settings_load_report;
+	app->deck_summaries[app->selected_deck_index].state_load_report =
+		app->state_load_report;
 }
 
 static void app_return_to_deck_select(struct app_state *app)
@@ -902,6 +937,7 @@ static void app_load_selected_deck(struct app_state *app)
 	app_settings_load_report_clear(&app->settings_load_report);
 	app->settings_save_result = APP_SETTINGS_SAVE_OK;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
+	review_state_load_report_clear(&app->state_load_report);
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
 	app->state_message = "State: not loaded";
 	app->settings_message = "settings not saved";
@@ -924,10 +960,11 @@ static void app_load_selected_deck(struct app_state *app)
 			app->settings.new_limit,
 			app->settings.review_limit
 		);
-		app->state_load_result = review_state_load(
+		app->state_load_result = review_state_load_with_report(
 			&app->deck,
 			&app->session,
-			app->active_state_path
+			app->active_state_path,
+			&app->state_load_report
 		);
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
@@ -1251,6 +1288,11 @@ static void draw_summary_screen(const struct app_state *app)
 		printf("\x1b[3;1H" APP_COLOR_DANGER "Review state error" APP_COLOR_RESET);
 		printf("\x1b[5;1HCards:         %lu", (unsigned long)session->card_count);
 		printf("\x1b[7;1HState:         %s", app->state_message);
+		draw_review_state_load_error_detail(
+			app->state_load_result,
+			&app->state_load_report,
+			8
+		);
 		printf("\x1b[10;1HUse SELECT actions, then");
 		printf("\x1b[11;1Hreset deck progress.");
 		if (settings_load_result_needs_warning(app->settings_load_result))
@@ -1898,6 +1940,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					"\x1b[14;1HState: " APP_COLOR_DANGER "%s" APP_COLOR_RESET,
 					review_state_load_result_name(summary->state_load_result)
 				);
+				draw_review_state_load_error_detail(
+					summary->state_load_result,
+					&summary->state_load_report,
+					15
+				);
 				printf(
 					"\x1b[16;1H" APP_COLOR_WARNING
 					"Open deck, then reset progress." APP_COLOR_RESET
@@ -2051,6 +2098,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[5;1HB: deck list");
 			printf("\x1b[7;1HSTART: confirm exit");
 			printf("\x1b[9;1HY: controls");
+			draw_review_state_load_error_detail(
+				app->state_load_result,
+				&app->state_load_report,
+				11
+			);
 			printf(
 				"\x1b[13;1H" APP_COLOR_WARNING
 				"Reset progress to study." APP_COLOR_RESET
