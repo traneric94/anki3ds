@@ -1922,14 +1922,54 @@ static void show_scan_then_scan_decks(struct app_state *app)
 	draw_scanning_screen(app);
 	present_current_frame();
 	app_scan_decks(app);
-	if (app->deck_index.overflowed)
+	if (app->deck_index.count == 0)
+	{
+		if (app->deck_index.ignored_count > 0)
+		{
+			snprintf(
+				app->status_message,
+				sizeof(app->status_message),
+				"No decks found; %lu ignored",
+				(unsigned long)app->deck_index.ignored_count
+			);
+		}
+		else
+		{
+			app_set_status(app, "No decks found");
+		}
+	}
+	else if (app->deck_index.overflowed)
+	{
+		if (app->deck_index.ignored_count > 0)
+		{
+			snprintf(
+				app->status_message,
+				sizeof(app->status_message),
+				"Scan: %lu/%lu shown; %lu ignored",
+				(unsigned long)app->deck_index.count,
+				(unsigned long)app->deck_index.total_count,
+				(unsigned long)app->deck_index.ignored_count
+			);
+		}
+		else
+		{
+			snprintf(
+				app->status_message,
+				sizeof(app->status_message),
+				"Scan done; %lu/%lu decks shown",
+				(unsigned long)app->deck_index.count,
+				(unsigned long)app->deck_index.total_count
+			);
+		}
+	}
+	else if (app->deck_index.ignored_count > 0)
 	{
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"Scan done; %lu/%lu decks shown",
+			"Scan: %lu decks; %lu ignored",
 			(unsigned long)app->deck_index.count,
-			(unsigned long)app->deck_index.total_count
+			(unsigned long)app->deck_index.ignored_count
 		);
 	}
 	else

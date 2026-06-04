@@ -3742,6 +3742,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status unsaved limit is warning"
 	);
 	check(
+		app_status_message_color("No decks found; 2 ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status no decks found is warning"
+	);
+	check(
+		app_status_message_color("Scan: 2 decks; 1 ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status ignored decks is warning"
+	);
+	check(
 		app_status_message_color("Exit loses unsaved limits") ==
 			APP_STATUS_COLOR_WARNING,
 		"status exit losing limits is warning"
