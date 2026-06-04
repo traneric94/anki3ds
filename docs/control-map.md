@@ -49,7 +49,9 @@ uses the compact `settings! state!` warning and the bottom screen shows details.
 
 1. Press `A` to reveal the answer.
 2. Rate the card with `Y` Again, `X` Hard, `B` Good, or `A` Easy.
-3. Use D-pad Up/Down to scroll long front text before reveal or long back text after reveal.
+3. Use D-pad Up/Down to scroll long front text before reveal or long back text
+   after reveal. The active text pane shows a compact `^ 1/3 v` style cue when
+   more rows are available.
 4. Press `L` to undo the last rating or suspend action.
 5. Press `R`, then `X`, to suspend the current card.
 6. Press `SELECT` to open deck actions.

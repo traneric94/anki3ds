@@ -260,6 +260,31 @@ static void draw_wrapped_text_columns(
 	}
 }
 
+static void draw_review_scroll_hint(
+	int row,
+	size_t scroll_offset,
+	size_t max_scroll_offset
+)
+{
+	char up_marker;
+	char down_marker;
+
+	if (max_scroll_offset == 0)
+		return;
+
+	up_marker = scroll_offset > 0 ? '^' : ' ';
+	down_marker = scroll_offset < max_scroll_offset ? 'v' : ' ';
+	printf(
+		"\x1b[%d;%dH" APP_COLOR_WARNING "%c %lu/%lu %c" APP_COLOR_RESET,
+		row,
+		APP_LAYOUT_REVIEW_SCROLL_HINT_COLUMN,
+		up_marker,
+		(unsigned long)(scroll_offset + 1),
+		(unsigned long)(max_scroll_offset + 1),
+		down_marker
+	);
+}
+
 static void print_truncated(const char *text, size_t max_columns)
 {
 	size_t columns = app_text_column_count(text);
@@ -1235,6 +1260,7 @@ static void draw_load_error_screen(const struct app_state *app)
 static void draw_review_screen(const struct app_state *app)
 {
 	const struct card *card = current_card(app);
+	size_t max_scroll_offset;
 
 	app_console_clear();
 	draw_header(app);
@@ -1245,6 +1271,7 @@ static void draw_review_screen(const struct app_state *app)
 		return;
 	}
 
+	max_scroll_offset = review_max_scroll_offset(app);
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
 	printf("\x1b[7;1H" APP_COLOR_ACCENT "Front" APP_COLOR_RESET);
 	printf("\x1b[8;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
@@ -1259,6 +1286,7 @@ static void draw_review_screen(const struct app_state *app)
 			0
 		);
 		printf("\x1b[15;1H" APP_COLOR_ACCENT "Back" APP_COLOR_RESET);
+		draw_review_scroll_hint(15, app->review_scroll_offset, max_scroll_offset);
 		printf("\x1b[16;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
 		draw_wrapped_text_columns(
 			card->back,
@@ -1270,6 +1298,7 @@ static void draw_review_screen(const struct app_state *app)
 	}
 	else
 	{
+		draw_review_scroll_hint(7, app->review_scroll_offset, max_scroll_offset);
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
