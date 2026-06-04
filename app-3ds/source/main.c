@@ -778,7 +778,8 @@ static const char *status_message_color(const char *message)
 		strstr(message, "limit reached") != NULL ||
 		strstr(message, "unmatched") != NULL ||
 		strstr(message, "ignored") != NULL ||
-		strstr(message, "unsaved") != NULL
+		strstr(message, "unsaved") != NULL ||
+		strstr(message, "Unsaved") != NULL
 	)
 	{
 		return APP_COLOR_WARNING;
@@ -1137,6 +1138,17 @@ static void app_open_controls(struct app_state *app)
 	app->controls_return_mode = app->mode;
 	app_set_status(app, "Controls");
 	app->mode = APP_MODE_CONTROLS;
+}
+
+static void app_close_controls(struct app_state *app)
+{
+	enum app_mode return_mode = app->controls_return_mode;
+
+	app->mode = return_mode;
+	if (return_mode == APP_MODE_SETTINGS && app_settings_have_unsaved_changes(app))
+		app_set_status(app, "Unsaved limit edits");
+	else
+		app_set_status(app, "Controls closed");
 }
 
 static enum app_power_battery_sample_result app_init(struct app_state *app)
@@ -3159,8 +3171,7 @@ static bool app_handle_input(
 		app_open_exit_confirmation(app);
 		return true;
 	case APP_CONTROL_ACTION_CLOSE_CONTROLS:
-		app->mode = app->controls_return_mode;
-		app_set_status(app, "Controls closed");
+		app_close_controls(app);
 		return true;
 	case APP_CONTROL_ACTION_OPEN_CONTROLS:
 		app_open_controls(app);
