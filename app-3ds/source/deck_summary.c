@@ -16,6 +16,8 @@ void deck_summary_init(struct deck_summary *summary)
 	summary->new_due_count = 0;
 	summary->learning_due_count = 0;
 	summary->review_due_count = 0;
+	summary->new_limit_blocked_count = 0;
+	summary->review_limit_blocked_count = 0;
 	summary->suspended_count = 0;
 }
 
@@ -43,6 +45,9 @@ void deck_summary_from_session(
 	summary->new_due_count = scheduler_new_due_count(session);
 	summary->learning_due_count = scheduler_learning_due_count(session);
 	summary->review_due_count = scheduler_review_due_count(session);
+	summary->new_limit_blocked_count = scheduler_new_limit_blocked_count(session);
+	summary->review_limit_blocked_count =
+		scheduler_review_limit_blocked_count(session);
 	summary->suspended_count = scheduler_suspended_count(session);
 }
 

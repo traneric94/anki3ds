@@ -471,6 +471,14 @@ static bool app_daily_limit_blocks_cards(const struct app_state *app)
 	);
 }
 
+static bool deck_summary_daily_limit_blocks_cards(const struct deck_summary *summary)
+{
+	return (
+		summary->new_limit_blocked_count > 0 ||
+		summary->review_limit_blocked_count > 0
+	);
+}
+
 static bool app_settings_have_unsaved_changes(const struct app_state *app)
 {
 	return (
@@ -584,6 +592,8 @@ static void draw_deck_selector_study_suffix(const struct deck_summary *summary)
 		summary->review_due_count,
 		summary->suspended_count
 	);
+	if (deck_summary_daily_limit_blocks_cards(summary))
+		printf(APP_COLOR_WARNING " limit" APP_COLOR_RESET);
 }
 
 static void draw_deck_load_error_detail(
@@ -2137,6 +2147,16 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					details_row + 2,
 					(unsigned long)summary->due_count
 				);
+				if (deck_summary_daily_limit_blocks_cards(summary))
+				{
+					printf(
+						"\x1b[%d;1H" APP_COLOR_WARNING
+						"Past limit: N %lu  R %lu" APP_COLOR_RESET,
+						details_row + 3,
+						(unsigned long)summary->new_limit_blocked_count,
+						(unsigned long)summary->review_limit_blocked_count
+					);
+				}
 				printf(
 					"\x1b[%d;1HCards: %lu  Suspended: %lu",
 					details_row + 4,

@@ -45,6 +45,8 @@ counts. Blue, cyan, and magenta are intentionally avoided because they are hard
 to read on the dark 3DS console background.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
+If daily limits hide otherwise due cards, the deck row shows a `limit` warning
+and the bottom selected-deck details show the hidden new/review counts.
 If a deck has both ignored settings and unmatched saved state, the selector row
 uses the compact `settings! state!` warning and the bottom screen shows details.
 

@@ -253,8 +253,9 @@ state from its previous card range.
 
 Multi-deck text review works at build level: the app scans
 `sdmc:/3ds/anki3ds/decks`, lets you select a deck folder containing `cards.tsv`,
-shows the selected deck position plus new/learning/review due counts in the
-multi-deck selector, reports ignored non-hidden entries during deck scans,
+shows the selected deck position plus new/learning/review due counts and
+daily-limit-blocked counts in the multi-deck selector, reports ignored
+non-hidden entries during deck scans,
 loads optional per-deck `settings.tsv` daily limits, can
 edit those daily limits from the `SELECT` actions screen, reveals answers,
 records ratings, schedules cards with a

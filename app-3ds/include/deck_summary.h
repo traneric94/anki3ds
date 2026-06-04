@@ -22,6 +22,8 @@ struct deck_summary
 	size_t new_due_count;
 	size_t learning_due_count;
 	size_t review_due_count;
+	size_t new_limit_blocked_count;
+	size_t review_limit_blocked_count;
 	size_t suspended_count;
 };
 

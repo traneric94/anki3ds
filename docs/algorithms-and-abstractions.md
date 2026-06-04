@@ -74,8 +74,9 @@ reject invalid ids, scan a temporary root, and verify only folders containing
 After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, total due count, new/learning/review due
-counts from scheduler policy, suspended-card count, and deck/settings/state load
-reports for the selector. This keeps the deck list useful for daily study while
+counts from scheduler policy, daily-limit-blocked new/review counts,
+suspended-card count, and deck/settings/state load reports for the selector.
+This keeps the deck list useful for daily study while
 preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits. The
 summary loader allocates its temporary deck and scheduler on the heap so larger
 supported decks do not consume a large 3DS stack frame during deck scanning. If
@@ -83,9 +84,11 @@ the deck load fails, the selected-deck panel can show the same first-line parse
 detail as the load-error screen. If the deck loads but every available state
 file is malformed, the selector keeps the card count but suppresses due and
 suspended counts and shows a state error instead of presenting bad progress as
-a fresh review queue. If a valid state file has no rows matching the current
-deck's card ids, the selector marks it as unmatched and the app starts a fresh
-queue.
+a fresh review queue. If daily limits hide otherwise calendar-due cards, the
+selector marks the deck with a limit warning and shows the hidden new/review
+counts in the selected-deck details. If a valid state file has no rows matching
+the current deck's card ids, the selector marks it as unmatched and the app
+starts a fresh queue.
 
 ## Deck Loading
 

@@ -4862,6 +4862,8 @@ static void test_deck_summary_counts_due_cards(void)
 	check(summary.new_due_count == 1, "summary new due count honors new limit");
 	check(summary.learning_due_count == 1, "summary learning due count");
 	check(summary.review_due_count == 1, "summary review due count");
+	check(summary.new_limit_blocked_count == 0, "summary new limit blocks none");
+	check(summary.review_limit_blocked_count == 0, "summary review limit blocks none");
 	check(summary.suspended_count == 1, "summary suspended count includes saved state");
 
 	cleanup_deck_index_test_root();
@@ -4911,6 +4913,14 @@ static void test_deck_summary_reports_bad_settings_with_default_counts(void)
 	check(summary.card_count == 2, "bad settings summary keeps card count");
 	check(summary.due_count == 2, "bad settings summary keeps default due count");
 	check(summary.new_due_count == 2, "bad settings summary keeps default new count");
+	check(
+		summary.new_limit_blocked_count == 0,
+		"bad settings summary has no new blocked count"
+	);
+	check(
+		summary.review_limit_blocked_count == 0,
+		"bad settings summary has no review blocked count"
+	);
 
 	cleanup_deck_index_test_root();
 }
@@ -4949,6 +4959,11 @@ static void test_deck_summary_suppresses_bad_state_counts(void)
 	check(summary.new_due_count == 0, "bad state summary hides new count");
 	check(summary.learning_due_count == 0, "bad state summary hides learning count");
 	check(summary.review_due_count == 0, "bad state summary hides review count");
+	check(summary.new_limit_blocked_count == 0, "bad state summary hides new blocked count");
+	check(
+		summary.review_limit_blocked_count == 0,
+		"bad state summary hides review blocked count"
+	);
 	check(summary.suspended_count == 0, "bad state summary hides suspended count");
 
 	cleanup_deck_index_test_root();
@@ -5026,8 +5041,62 @@ static void test_deck_summary_from_session_counts_due_cards(void)
 	check(summary.new_due_count == 0, "summary session new count after suspend");
 	check(summary.learning_due_count == 1, "summary session learning count");
 	check(summary.review_due_count == 1, "summary session review count");
+	check(summary.new_limit_blocked_count == 1, "summary session new limit blocked count");
+	check(
+		summary.review_limit_blocked_count == 0,
+		"summary session review limit blocked count"
+	);
 	check(summary.suspended_count == 1, "summary session suspended count");
 
+	scheduler_init(&session, 2, TEST_TODAY);
+	scheduler_set_daily_limits(&session, 0, 1);
+	check(
+		scheduler_restore_card(
+			&session,
+			0,
+			2,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			2,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 10,
+			TEST_TODAY - 2
+		),
+		"summary session first limited review restores"
+	);
+	check(
+		scheduler_restore_card(
+			&session,
+			1,
+			2,
+			SCHEDULER_RATING_GOOD,
+			TEST_TODAY,
+			2,
+			2500,
+			0,
+			false,
+			TEST_TODAY - 10,
+			TEST_TODAY - 2
+		),
+		"summary session second limited review restores"
+	);
+	deck_summary_from_session(
+		&summary,
+		DECK_LOAD_OK,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(summary.due_count == 1, "summary session review limit visible due count");
+	check(summary.review_due_count == 1, "summary session review limit visible review count");
+	check(
+		summary.review_limit_blocked_count == 1,
+		"summary session review limit blocked count"
+	);
+
+	scheduler_init(&session, 4, TEST_TODAY);
 	deck_summary_from_session(
 		&summary,
 		DECK_LOAD_BAD_FORMAT,
@@ -5037,6 +5106,11 @@ static void test_deck_summary_from_session_counts_due_cards(void)
 	);
 	check(summary.card_count == 0, "bad session summary clears card count");
 	check(summary.due_count == 0, "bad session summary clears due count");
+	check(summary.new_limit_blocked_count == 0, "bad session summary clears new blocked count");
+	check(
+		summary.review_limit_blocked_count == 0,
+		"bad session summary clears review blocked count"
+	);
 
 	deck_summary_from_session(
 		&summary,
@@ -5048,6 +5122,14 @@ static void test_deck_summary_from_session_counts_due_cards(void)
 	check(summary.card_count == 4, "bad state session summary keeps card count");
 	check(summary.due_count == 0, "bad state session summary clears due count");
 	check(summary.new_due_count == 0, "bad state session summary clears new count");
+	check(
+		summary.new_limit_blocked_count == 0,
+		"bad state session summary clears new blocked count"
+	);
+	check(
+		summary.review_limit_blocked_count == 0,
+		"bad state session summary clears review blocked count"
+	);
 	check(summary.suspended_count == 0, "bad state session summary clears suspended count");
 }
 
@@ -5246,6 +5328,10 @@ static void test_daily_use_workflow_persists_two_decks(void)
 	check(
 		summary.new_due_count == 1,
 		"daily workflow alpha live summary new count applies"
+	);
+	check(
+		summary.new_limit_blocked_count == 1,
+		"daily workflow alpha live summary shows blocked new count"
 	);
 
 	load_entry_deck(
