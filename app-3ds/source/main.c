@@ -2579,6 +2579,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 		app->mode = APP_MODE_REVIEW;
 		return true;
 	}
+	app_refresh_selected_deck_summary(app);
 
 	log_saved = append_review_log_entry(
 		app,
@@ -2686,6 +2687,7 @@ static bool undo_last_action(struct app_state *app)
 		app_set_review_save_failed_status(app, "Save failed; undo not kept");
 		return true;
 	}
+	app_refresh_selected_deck_summary(app);
 
 	if (can_log_undo)
 	{
@@ -2738,6 +2740,7 @@ static bool suspend_current_card(struct app_state *app)
 		app->mode = APP_MODE_REVIEW;
 		return true;
 	}
+	app_refresh_selected_deck_summary(app);
 
 	if (can_log_suspend)
 	{
@@ -2830,6 +2833,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 		app->mode = APP_MODE_ACTIONS;
 		return true;
 	}
+	app_refresh_selected_deck_summary(app);
 
 	for (size_t index = 0; index < app->session.card_count; index++)
 	{

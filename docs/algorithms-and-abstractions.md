@@ -57,6 +57,9 @@ Current practical constraints:
 - Rescan keeps the selected folder id highlighted when that deck still exists.
 - Returning from review, summary, or load-error screens reuses the cached deck
   list and refreshes only the active deck's summary from the in-memory session.
+- Successful saved ratings, undo actions, suspends, restores, daily-limit
+  edits, and day changes refresh that cached active-deck summary immediately,
+  so deck-selector due counts stay current without a full rescan.
 - Startup and explicit rescans draw a scanning screen before SD traversal, then
   update progress before each deck summary load so large deck lists do not look
   like a blank or frozen app.
