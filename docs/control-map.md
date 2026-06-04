@@ -78,8 +78,9 @@ actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
 `SELECT` to return. On a revealed review card, `Y` is reserved for Again.
 Controls opened from deck-specific screens keep warning status visible,
 including selected-deck, load-error, reset-needed, ignored-settings,
-unmatched-state, and daily-limit warnings. Returning to the deck selector
-restores the selected-deck status.
+unmatched-state, and daily-limit warnings. Returning from controls preserves
+those warnings; returning to the deck selector restores the selected-deck
+status.
 If `START` opens exit confirmation from the controls screen, canceling exit
 returns to the controls screen.
 If `START` opens exit confirmation from daily limits, or from controls opened
