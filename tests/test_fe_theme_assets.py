@@ -148,6 +148,40 @@ class FeThemeAssetTests(unittest.TestCase):
             offset = (30 * import_fe_theme_assets.RAW_WIDTH + 50) * 3
             self.assertEqual(raw_pixels[offset:offset + 3], bytes((68, 25, 43)))
 
+    def test_convert_source_outputs_scales_screens_from_full_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "source.png"
+            write_gradient_png(
+                source,
+                import_fe_theme_assets.SOURCE_IMAGE_WIDTH,
+                import_fe_theme_assets.SOURCE_IMAGE_HEIGHT,
+            )
+
+            raw_pixels, top_pixels, bottom_pixels = (
+                import_fe_theme_assets.convert_source_outputs(source)
+            )
+            low_res_top_pixels, low_res_bottom_pixels = (
+                import_fe_theme_assets.scale_raw_for_screens(raw_pixels)
+            )
+
+            top_offset = (119 * import_fe_theme_assets.TOP_PREVIEW_WIDTH + 199) * 3
+            bottom_offset = (
+                119 * import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH + 159
+            ) * 3
+            self.assertEqual(top_pixels[top_offset:top_offset + 3], bytes((88, 33, 54)))
+            self.assertEqual(
+                bottom_pixels[bottom_offset:bottom_offset + 3],
+                bytes((88, 33, 54)),
+            )
+            self.assertNotEqual(
+                top_pixels[top_offset:top_offset + 3],
+                low_res_top_pixels[top_offset:top_offset + 3],
+            )
+            self.assertNotEqual(
+                bottom_pixels[bottom_offset:bottom_offset + 3],
+                low_res_bottom_pixels[bottom_offset:bottom_offset + 3],
+            )
+
     def test_3ds_framebuffer_layout_round_trips_screen_pixels(self):
         pixels = bytes(
             (

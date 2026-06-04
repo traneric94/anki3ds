@@ -36,18 +36,21 @@ than `~/codebase/FE-Repo`.
 
 Outputs:
 
-- `assets/fe-themes/raw/fe_bg_*_128x80_bgr888.bin`: tracked raw BGR888 files.
+- `assets/fe-themes/raw/fe_bg_*_128x80_bgr888.bin`: tracked low-resolution
+  BGR888 files for lightweight experiments.
 - `build/fe-theme-previews/*_raw_128x80.bmp`: exact small converted images.
 - `build/fe-theme-previews/*_top_400x240.bmp`: desktop preview for top-screen
-  scale.
+  scale, generated directly from the `256x160` FE source rather than from the
+  `128x80` raw file.
 - `build/fe-theme-previews/*_bottom_320x240.bmp`: desktop preview for
-  bottom-screen scale.
+  bottom-screen scale, generated directly from the `256x160` FE source rather
+  than from the `128x80` raw file.
 - `build/fe-theme-framebuffers/*_top_400x240_bgr888_fb.bin`: top-screen
   BGR888 bytes laid out for direct copy into libctru's default sideways
-  framebuffer.
+  framebuffer. These are generated directly from the full source image.
 - `build/fe-theme-framebuffers/*_bottom_320x240_bgr888_fb.bin`: bottom-screen
   BGR888 bytes laid out for direct copy into libctru's default sideways
-  framebuffer.
+  framebuffer. These are generated directly from the full source image.
 - `build/fe-theme-previews/*_fb_240x*.bmp`: sideways framebuffer bytes shown as
   a desktop bitmap, useful only for layout debugging.
 - `build/fe-theme-previews/*_fb_roundtrip_*.bmp`: framebuffer bytes converted
@@ -66,6 +69,10 @@ image is copied directly into the framebuffer, it can display as scrambled or
 rotated output. Use the `*_bgr888_fb.bin` artifacts for an isolated direct-copy
 renderer, and inspect the matching `*_fb_roundtrip_*.png` previews to confirm
 the conversion displays upright before integrating with app screens.
+
+The screen-sized outputs intentionally avoid the `128x80` intermediate. That
+keeps more of the original source detail for the actual rendered background;
+the low-resolution tracked raw files are not the quality target for the viewer.
 
 ## Future Renderer
 

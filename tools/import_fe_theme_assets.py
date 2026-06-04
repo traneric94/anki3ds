@@ -401,27 +401,59 @@ def remove_generated_files(directory: Path, patterns: tuple[str, ...]) -> None:
                 path.unlink()
 
 
-def convert_source(source: Path) -> bytes:
+def read_source_visible_bgr(source: Path) -> bytes:
     width, height, full_pixels = read_png_8bit_bgr(source)
     if width != SOURCE_IMAGE_WIDTH or height != SOURCE_IMAGE_HEIGHT:
         raise ValueError(
             f"{source} must be {SOURCE_IMAGE_WIDTH}x{SOURCE_IMAGE_HEIGHT}"
         )
 
-    cropped_pixels = crop_top_left_bgr(
+    return crop_top_left_bgr(
         full_pixels,
         SOURCE_IMAGE_WIDTH,
         VISIBLE_CROP_WIDTH,
         VISIBLE_CROP_HEIGHT,
     )
+
+
+def make_raw_theme_pixels(visible_pixels: bytes) -> bytes:
     raw_pixels = scale_bgr_nearest(
-        cropped_pixels,
+        visible_pixels,
         VISIBLE_CROP_WIDTH,
         VISIBLE_CROP_HEIGHT,
         RAW_WIDTH,
         RAW_HEIGHT,
     )
     return darken_bgr(raw_pixels)
+
+
+def make_screen_theme_pixels(visible_pixels: bytes) -> tuple[bytes, bytes]:
+    top_pixels = scale_bgr_nearest(
+        visible_pixels,
+        VISIBLE_CROP_WIDTH,
+        VISIBLE_CROP_HEIGHT,
+        TOP_PREVIEW_WIDTH,
+        PREVIEW_HEIGHT,
+    )
+    bottom_pixels = scale_bgr_nearest(
+        visible_pixels,
+        VISIBLE_CROP_WIDTH,
+        VISIBLE_CROP_HEIGHT,
+        BOTTOM_PREVIEW_WIDTH,
+        PREVIEW_HEIGHT,
+    )
+    return darken_bgr(top_pixels), darken_bgr(bottom_pixels)
+
+
+def convert_source(source: Path) -> bytes:
+    return make_raw_theme_pixels(read_source_visible_bgr(source))
+
+
+def convert_source_outputs(source: Path) -> tuple[bytes, bytes, bytes]:
+    visible_pixels = read_source_visible_bgr(source)
+    raw_pixels = make_raw_theme_pixels(visible_pixels)
+    top_pixels, bottom_pixels = make_screen_theme_pixels(visible_pixels)
+    return raw_pixels, top_pixels, bottom_pixels
 
 
 def scale_raw_for_screens(raw_pixels: bytes) -> tuple[bytes, bytes]:
@@ -599,8 +631,7 @@ def main() -> int:
         if not source.is_file():
             raise FileNotFoundError(source)
 
-        raw_pixels = convert_source(source)
-        top_pixels, bottom_pixels = scale_raw_for_screens(raw_pixels)
+        raw_pixels, top_pixels, bottom_pixels = convert_source_outputs(source)
         raw_path = args.raw_out / f"fe_bg_{theme_id}_{RAW_WIDTH}x{RAW_HEIGHT}_bgr888.bin"
         raw_path.write_bytes(raw_pixels)
 
