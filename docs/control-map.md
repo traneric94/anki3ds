@@ -109,8 +109,9 @@ reset-needed state, ignored settings, unmatched state, and daily-limit
 exhaustion. Opening or canceling restore/suspend/reset confirmations preserves
 that warning context too. Canceling exit from actions or those confirmations
 also preserves the active deck warning context.
-The action, daily-limit, and restore/suspend/reset confirmation screens show
-the active deck name on the bottom controls screen as well as the top screen.
+Opening daily limits preserves the same active deck warning context. The
+action, daily-limit, and restore/suspend/reset confirmation screens show the
+active deck name on the bottom controls screen as well as the top screen.
 
 - Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
 - Press `A` to choose the selected action.
@@ -143,7 +144,8 @@ In the daily-limits screen:
 `0` means all available cards.
 The screen shows `no changes` when the edited values match the active saved
 limits and warns about `unsaved changes` after a value change. The bottom
-status line uses the warning color for unsaved edits, including after moving
-between fields while edits are still dirty. Canceling with unsaved changes
-discards the edit buffer and returns to actions.
+status line uses the warning color for active deck warnings on entry and for
+unsaved edits, including after moving between fields while edits are still
+dirty. Canceling with unsaved changes discards the edit buffer and returns to
+actions.
 Saving limits updates `settings.tsv` and leaves review progress status separate.

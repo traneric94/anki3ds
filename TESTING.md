@@ -321,6 +321,8 @@ Acceptance steps:
 - change `new_limit` and `review_limit` from the actions screen
 - confirm daily-limit edits show an unsaved-changes cue before saving and
   return to no-changes state after save or cancel
+- confirm opening daily limits from reset-needed, ignored-settings, or
+  limit-blocked decks preserves that warning context in the status line
 - confirm controls opened from unsaved daily-limit edits show an unsaved warning
 - confirm controls opened from or closed back to reset-needed, ignored-settings,
   limit-blocked, or load-error screens preserve that warning context in the

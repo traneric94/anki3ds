@@ -420,7 +420,9 @@ visible.
 Settings save feedback stays in the settings/status messages and does not
 overwrite the review-state status line. Saving settings after a malformed
 review-state load still leaves the deck on the reset-needed summary; settings
-changes do not make an unsafe review queue visible.
+changes do not make an unsafe review queue visible. Opening the daily-limits
+screen preserves active deck warning context until field movement or save/cancel
+feedback replaces it.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards in

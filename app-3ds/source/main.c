@@ -575,6 +575,16 @@ static void app_set_actions_status(struct app_state *app)
 	);
 }
 
+static void app_set_settings_open_status(struct app_state *app)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Editing limits%s",
+		active_deck_status_suffix(app)
+	);
+}
+
 static void app_set_canceled_status(struct app_state *app, const char *label)
 {
 	snprintf(
@@ -1518,7 +1528,7 @@ static void app_open_settings(struct app_state *app)
 	app->edited_settings = app->settings;
 	app->selected_setting = SETTING_ITEM_NEW_LIMIT;
 	app->settings_message = "no changes";
-	app_set_status(app, "Editing limits");
+	app_set_settings_open_status(app);
 	app->mode = APP_MODE_SETTINGS;
 }
 
