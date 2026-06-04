@@ -120,10 +120,100 @@ static void test_maps_combined_3ds_keys_to_combined_app_buttons(void)
 	);
 }
 
+static void check_revealed_rating_key(
+	unsigned int key,
+	enum scheduler_rating expected_rating,
+	const char *message
+)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+	unsigned int buttons = app_controls_buttons_from_3ds_keys(key);
+	enum app_control_action action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		buttons,
+		buttons,
+		&rating
+	);
+
+	check(action == APP_CONTROL_ACTION_RATE, message);
+	check(rating == expected_rating, message);
+}
+
+static void test_revealed_review_maps_3ds_face_keys_to_ratings(void)
+{
+	check_revealed_rating_key(
+		KEY_Y,
+		SCHEDULER_RATING_AGAIN,
+		"revealed KEY_Y rates Again"
+	);
+	check_revealed_rating_key(
+		KEY_X,
+		SCHEDULER_RATING_HARD,
+		"revealed KEY_X rates Hard"
+	);
+	check_revealed_rating_key(
+		KEY_B,
+		SCHEDULER_RATING_GOOD,
+		"revealed KEY_B rates Good"
+	);
+	check_revealed_rating_key(
+		KEY_A,
+		SCHEDULER_RATING_EASY,
+		"revealed KEY_A rates Easy"
+	);
+}
+
+static void test_review_rating_context_and_chords_are_safe(void)
+{
+	enum scheduler_rating rating = SCHEDULER_RATING_COUNT;
+	unsigned int buttons = app_controls_buttons_from_3ds_keys(KEY_A);
+	enum app_control_action action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		true,
+		buttons,
+		buttons,
+		&rating
+	);
+
+	check(action == APP_CONTROL_ACTION_SHOW_ANSWER, "unrevealed KEY_A shows answer");
+	check(rating == SCHEDULER_RATING_COUNT, "unrevealed KEY_A does not rate Easy");
+
+	rating = SCHEDULER_RATING_COUNT;
+	buttons = app_controls_buttons_from_3ds_keys(KEY_A | KEY_B);
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		buttons,
+		buttons,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "revealed rating chord is ignored");
+	check(rating == SCHEDULER_RATING_COUNT, "revealed rating chord keeps rating unset");
+
+	rating = SCHEDULER_RATING_COUNT;
+	buttons = app_controls_buttons_from_3ds_keys(KEY_A);
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		true,
+		true,
+		buttons,
+		buttons | APP_CONTROL_BUTTON_L,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "revealed rating with held command is ignored");
+	check(rating == SCHEDULER_RATING_COUNT, "held command keeps rating unset");
+}
+
 int main(void)
 {
 	test_maps_3ds_keys_to_app_buttons();
 	test_maps_combined_3ds_keys_to_combined_app_buttons();
+	test_revealed_review_maps_3ds_face_keys_to_ratings();
+	test_review_rating_context_and_chords_are_safe();
 	printf("app controls 3ds key tests passed\n");
 	return 0;
 }
