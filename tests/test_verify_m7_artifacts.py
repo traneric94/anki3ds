@@ -315,6 +315,59 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             self.assertIn("sample/settings.tsv: expected new_limit 5", stderr.getvalue())
             self.assertNotIn("Traceback", stderr.getvalue())
 
+    def test_cli_can_skip_required_events_for_log_skipped_case(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            for deck_id in ("sample", "limits-demo"):
+                (
+                    sdmc
+                    / verify_m7_artifacts.APP_SD_DIR
+                    / "decks"
+                    / deck_id
+                    / "review-log.tsv"
+                ).unlink()
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_m7_artifacts.py",
+                    "--sdmc",
+                    str(sdmc),
+                    "--deck",
+                    "sample",
+                    "--deck",
+                    "limits-demo",
+                    "--allow-missing-review-log",
+                    "--no-required-events",
+                    "--quiet",
+                ],
+            ):
+                exit_code = verify_m7_artifacts.main()
+
+            self.assertEqual(exit_code, 0)
+
+    def test_cli_rejects_no_required_events_with_required_event(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_m7_artifacts.py",
+                    "--sdmc",
+                    str(sdmc),
+                    "--require-event",
+                    "rating",
+                    "--no-required-events",
+                ],
+            ), redirect_stderr(stderr):
+                with self.assertRaises(SystemExit) as raised:
+                    verify_m7_artifacts.main()
+
+            self.assertEqual(raised.exception.code, 2)
+            self.assertIn("cannot be combined", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

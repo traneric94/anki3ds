@@ -465,6 +465,11 @@ def main() -> int:
         help="Review-log event that must appear across the checked decks.",
     )
     parser.add_argument(
+        "--no-required-events",
+        action="store_true",
+        help="Do not require any review-log event types.",
+    )
+    parser.add_argument(
         "--expect-settings",
         action="append",
         default=[],
@@ -483,10 +488,16 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.no_required_events and args.required_events:
+        parser.error("--no-required-events cannot be combined with --require-event")
+
     deck_ids = args.decks if args.decks else list(DEFAULT_DECKS)
-    required_events = (
-        args.required_events if args.required_events else list(DEFAULT_REQUIRED_EVENTS)
-    )
+    if args.no_required_events:
+        required_events = []
+    else:
+        required_events = (
+            args.required_events if args.required_events else list(DEFAULT_REQUIRED_EVENTS)
+        )
     sdmc = args.sdmc.expanduser()
     errors = verify_m7_artifacts(
         sdmc,

@@ -184,7 +184,8 @@ Pass condition:
 - a real study session works without manual file edits
 - the post-run artifact verifier passes for the tested decks, or the log notes
   why a missing `review-log.tsv` is expected from an in-app `log skipped`
-  status
+  status and verifies with `M7_ALLOW_MISSING_REVIEW_LOG=1` and
+  `M7_NO_REQUIRED_EVENTS=1`
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result

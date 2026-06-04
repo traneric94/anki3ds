@@ -1461,3 +1461,26 @@ Expected:
 Result: pass for automated target wiring only
 Notes:
 - Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - M7 Artifact Log-Skipped Parameters
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make -n verify-m7-artifacts M7_SDMC=/tmp/sd
+  M7_ALLOW_MISSING_REVIEW_LOG=1 M7_NO_REQUIRED_EVENTS=1`
+Steps:
+- Added an explicit verifier mode for the documented `log skipped` exception.
+- Wired the Make target to pass `--allow-missing-review-log` and
+  `--no-required-events` only when requested.
+Observed:
+- The verifier can still check deck state and settings when review logs are
+  absent because the app reported diagnostic logging failure.
+- The CLI rejects combining `--no-required-events` with explicit
+  `--require-event` flags.
+Expected:
+- Manual M7 acceptance can now distinguish a real missing-log failure from the
+  known in-app `log skipped` exception without bypassing all artifact checks.
+Result: pass for automated target wiring only
+Notes:
+- Manual M7 interaction acceptance remains pending.
