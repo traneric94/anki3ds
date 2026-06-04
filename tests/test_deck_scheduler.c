@@ -1323,6 +1323,55 @@ static void test_app_controls_navigation_repeat(void)
 		!app_controls_repeatable_navigation_held(APP_CONTROL_BUTTON_A),
 		"held navigation wait rejects command-only hold"
 	);
+	check(
+		app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_DECK_SELECT,
+			APP_CONTROL_BUTTON_RIGHT
+		),
+		"deck select held wait accepts page direction"
+	);
+	check(
+		app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_REVIEW,
+			APP_CONTROL_BUTTON_UP
+		),
+		"review held wait accepts scroll direction"
+	);
+	check(
+		!app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_REVIEW,
+			APP_CONTROL_BUTTON_RIGHT
+		),
+		"review held wait rejects non-repeat axis"
+	);
+	check(
+		app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_SETTINGS,
+			APP_CONTROL_BUTTON_RIGHT
+		),
+		"settings held wait accepts value direction"
+	);
+	check(
+		!app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_SETTINGS,
+			APP_CONTROL_BUTTON_DOWN
+		),
+		"settings held wait rejects field direction"
+	);
+	check(
+		!app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_SETTINGS,
+			APP_CONTROL_BUTTON_RIGHT | APP_CONTROL_BUTTON_A
+		),
+		"settings held wait rejects command chord"
+	);
+	check(
+		!app_controls_repeatable_navigation_held_for_mode(
+			APP_CONTROL_MODE_LOAD_ERROR,
+			APP_CONTROL_BUTTON_DOWN
+		),
+		"load error held wait rejects navigation"
+	);
 
 	app_controls_repeat_init(&repeat);
 	repeated = app_controls_repeat_buttons(
