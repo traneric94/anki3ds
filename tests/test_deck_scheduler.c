@@ -4914,6 +4914,26 @@ static void test_daily_use_workflow_persists_two_decks(void)
 		) == APP_SETTINGS_SAVE_OK,
 		"daily workflow alpha settings save"
 	);
+	scheduler_set_daily_limits(
+		&alpha_session,
+		alpha_settings.new_limit,
+		alpha_settings.review_limit
+	);
+	deck_summary_from_session(
+		&summary,
+		DECK_LOAD_OK,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_NOT_FOUND,
+		&alpha_session
+	);
+	check(
+		summary.due_count == 1,
+		"daily workflow alpha live summary due limit applies"
+	);
+	check(
+		summary.new_due_count == 1,
+		"daily workflow alpha live summary new count applies"
+	);
 
 	load_entry_deck(
 		&beta_deck,
