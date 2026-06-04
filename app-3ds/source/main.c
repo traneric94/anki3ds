@@ -22,13 +22,14 @@
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
-/* Bright terminal palette for the dark 3DS console; avoid blue for contrast. */
-#define APP_COLOR_ACCENT CONSOLE_MAGENTA
+/* Bright terminal palette for the dark 3DS console; avoid pure blue. */
+#define APP_COLOR_ACCENT CONSOLE_CYAN
 #define APP_COLOR_NEUTRAL CONSOLE_WHITE
+#define APP_COLOR_SELECTED CONSOLE_YELLOW
 #define APP_COLOR_SUCCESS CONSOLE_GREEN
 #define APP_COLOR_DANGER CONSOLE_RED
 #define APP_COLOR_WARNING CONSOLE_YELLOW
-#define APP_COLOR_EASY APP_COLOR_NEUTRAL
+#define APP_COLOR_EASY CONSOLE_CYAN
 #define APP_COLOR_RULE APP_COLOR_NEUTRAL
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -1230,7 +1231,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 			const struct deck_summary *summary = &app->deck_summaries[index];
 
 			if (selected)
-				printf(APP_COLOR_SUCCESS);
+				printf(APP_COLOR_SELECTED);
 			printf(
 				"\x1b[%lu;1H%s ",
 				(unsigned long)(APP_LAYOUT_DECK_SELECTOR_FIRST_ROW + visible_index),
@@ -1444,12 +1445,12 @@ static void draw_actions_screen(const struct app_state *app)
 	printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions" APP_COLOR_RESET);
 	printf(
 		"\x1b[6;1H%s%s Restore suspended cards" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? APP_COLOR_SUCCESS : "",
+		app->selected_action == ACTION_ITEM_UNSUSPEND_ALL ? APP_COLOR_SELECTED : "",
 		unsuspend_marker
 	);
 	printf(
 		"\x1b[8;1H%s%s Daily limits" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_DAILY_LIMITS ? APP_COLOR_SUCCESS : "",
+		app->selected_action == ACTION_ITEM_DAILY_LIMITS ? APP_COLOR_SELECTED : "",
 		settings_marker
 	);
 	printf(
@@ -1511,13 +1512,13 @@ static void draw_settings_screen(const struct app_state *app)
 	draw_deck_name_line(app, 5, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);
 	printf(
 		"\x1b[8;1H%s%s New cards:    %s" APP_COLOR_RESET,
-		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? APP_COLOR_SUCCESS : "",
+		app->selected_setting == SETTING_ITEM_NEW_LIMIT ? APP_COLOR_SELECTED : "",
 		new_marker,
 		new_limit
 	);
 	printf(
 		"\x1b[10;1H%s%s Review cards: %s" APP_COLOR_RESET,
-		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? APP_COLOR_SUCCESS : "",
+		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? APP_COLOR_SELECTED : "",
 		review_marker,
 		review_limit
 	);
