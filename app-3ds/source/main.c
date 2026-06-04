@@ -124,6 +124,7 @@ static void draw_scanning_progress_screen(
 	size_t total_count,
 	const char *deck_name
 );
+static void app_set_status(struct app_state *app, const char *message);
 static void present_current_frame(void);
 
 static void select_top_screen(void)
@@ -489,6 +490,35 @@ static bool app_exit_would_discard_unsaved_limits(const struct app_state *app)
 
 	return app->mode == APP_MODE_CONFIRM_EXIT &&
 		app->exit_return_mode == APP_MODE_SETTINGS;
+}
+
+static bool app_mode_shows_unsaved_limit_status(
+	const struct app_state *app,
+	enum app_mode mode
+)
+{
+	if (!app_settings_have_unsaved_changes(app))
+		return false;
+	if (mode == APP_MODE_SETTINGS)
+		return true;
+	if (mode == APP_MODE_CONTROLS)
+		return app->controls_return_mode == APP_MODE_SETTINGS;
+
+	return false;
+}
+
+static void app_set_context_status(
+	struct app_state *app,
+	enum app_mode mode,
+	const char *fallback_message
+)
+{
+	app_set_status(
+		app,
+		app_mode_shows_unsaved_limit_status(app, mode) ?
+			"Unsaved limit edits" :
+			fallback_message
+	);
 }
 
 static bool settings_load_result_needs_warning(enum app_settings_load_result result)
@@ -1136,8 +1166,8 @@ static void app_open_exit_confirmation(struct app_state *app)
 static void app_open_controls(struct app_state *app)
 {
 	app->controls_return_mode = app->mode;
-	app_set_status(app, "Controls");
 	app->mode = APP_MODE_CONTROLS;
+	app_set_context_status(app, app->mode, "Controls");
 }
 
 static void app_close_controls(struct app_state *app)
@@ -1145,10 +1175,7 @@ static void app_close_controls(struct app_state *app)
 	enum app_mode return_mode = app->controls_return_mode;
 
 	app->mode = return_mode;
-	if (return_mode == APP_MODE_SETTINGS && app_settings_have_unsaved_changes(app))
-		app_set_status(app, "Unsaved limit edits");
-	else
-		app_set_status(app, "Controls closed");
+	app_set_context_status(app, app->mode, "Controls closed");
 }
 
 static enum app_power_battery_sample_result app_init(struct app_state *app)
@@ -3165,7 +3192,7 @@ static bool app_handle_input(
 		return true;
 	case APP_CONTROL_ACTION_CANCEL_EXIT:
 		app->mode = app->exit_return_mode;
-		app_set_status(app, "Exit canceled");
+		app_set_context_status(app, app->mode, "Exit canceled");
 		return true;
 	case APP_CONTROL_ACTION_OPEN_EXIT:
 		app_open_exit_confirmation(app);

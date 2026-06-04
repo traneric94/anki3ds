@@ -76,9 +76,9 @@ If `START` opens exit confirmation from daily limits, or from controls opened
 by daily limits, while edits are unsaved, the confirmation screen warns that
 those limit edits will be lost.
 Controls opened from daily limits also show `Unsaved limit edits` while the
-edit buffer differs from the active saved limits.
-Returning from that controls screen keeps the unsaved warning visible on the
-daily-limits status line.
+edit buffer differs from the active saved limits. Opening or returning from
+controls, and canceling exit back to daily limits or its controls screen, keeps
+the unsaved warning visible on the status line.
 
 The controls screen is contextual. Its top screen lists controls for the screen
 that opened it, including empty deck-list and review-state-error variants, so it
