@@ -83,7 +83,7 @@ unmatched-state, and daily-limit warnings. Returning from controls preserves
 those warnings; returning to the deck selector restores the selected-deck
 status.
 If `START` opens exit confirmation from the controls screen, canceling exit
-returns to the controls screen.
+returns to the controls screen and restores that controls-screen status.
 If `START` opens exit confirmation from daily limits, or from controls opened
 by daily limits, while edits are unsaved, the confirmation screen warns that
 those limit edits will be lost.
@@ -105,7 +105,8 @@ selected by default so the repair flow is immediately reachable.
 Opening actions preserves active deck warnings in the status line, including
 reset-needed state, ignored settings, unmatched state, and daily-limit
 exhaustion. Canceling actions or restore/suspend/reset confirmations preserves
-that warning context too.
+that warning context too. Canceling exit from actions or those confirmations
+also preserves the active deck warning context.
 The action, daily-limit, and restore/suspend/reset confirmation screens show
 the active deck name on the bottom controls screen as well as the top screen.
 

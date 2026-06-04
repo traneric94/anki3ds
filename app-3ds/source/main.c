@@ -630,20 +630,6 @@ static bool app_mode_shows_unsaved_limit_status(
 	return false;
 }
 
-static void app_set_context_status(
-	struct app_state *app,
-	enum app_mode mode,
-	const char *fallback_message
-)
-{
-	app_set_status(
-		app,
-		app_mode_shows_unsaved_limit_status(app, mode) ?
-			"Unsaved limit edits" :
-			fallback_message
-	);
-}
-
 static void app_set_controls_status(struct app_state *app)
 {
 	if (app_mode_shows_unsaved_limit_status(app, APP_MODE_CONTROLS))
@@ -734,6 +720,53 @@ static void app_set_controls_closed_status(
 	}
 
 	app_set_status(app, "Controls closed");
+}
+
+static void app_set_exit_canceled_status(
+	struct app_state *app,
+	enum app_mode return_mode
+)
+{
+	if (return_mode == APP_MODE_CONTROLS)
+	{
+		app_set_controls_status(app);
+		return;
+	}
+	if (app_mode_shows_unsaved_limit_status(app, return_mode))
+	{
+		app_set_status(app, "Unsaved limit edits");
+		return;
+	}
+	if (return_mode == APP_MODE_DECK_SELECT)
+	{
+		app_set_deck_selection_status(app);
+		return;
+	}
+	if (return_mode == APP_MODE_LOAD_ERROR)
+	{
+		app_set_status(app, "Load error");
+		return;
+	}
+	if (
+		return_mode == APP_MODE_REVIEW ||
+		return_mode == APP_MODE_SUMMARY ||
+		return_mode == APP_MODE_ACTIONS ||
+		return_mode == APP_MODE_SETTINGS ||
+		return_mode == APP_MODE_CONFIRM_RESTORE ||
+		return_mode == APP_MODE_CONFIRM_SUSPEND ||
+		return_mode == APP_MODE_CONFIRM_RESET
+	)
+	{
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Exit canceled%s",
+			active_deck_status_suffix(app)
+		);
+		return;
+	}
+
+	app_set_status(app, "Exit canceled");
 }
 
 static void draw_deck_due_counts_inline(
@@ -3476,7 +3509,7 @@ static bool app_handle_input(
 		return true;
 	case APP_CONTROL_ACTION_CANCEL_EXIT:
 		app->mode = app->exit_return_mode;
-		app_set_context_status(app, app->mode, "Exit canceled");
+		app_set_exit_canceled_status(app, app->mode);
 		return true;
 	case APP_CONTROL_ACTION_OPEN_EXIT:
 		app_open_exit_confirmation(app);

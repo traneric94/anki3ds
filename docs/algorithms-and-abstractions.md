@@ -230,6 +230,10 @@ ignored settings, unmatched state, and daily-limit-blocked decks. Controls
 opened from deck-specific screens, and closed back to those screens, inherit
 warning context from the selector or active deck. Returning to the selector
 restores the selected-deck status instead of a generic navigation message.
+Canceling exit confirmation restores the status context for the destination
+screen; unsaved daily-limit edits stay highest priority, controls restore their
+own contextual status, and active deck screens keep reset, ignored-settings,
+unmatched-state, or daily-limit warnings visible.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without

@@ -327,6 +327,8 @@ Acceptance steps:
   status line
 - confirm exit from daily limits and from its controls screen warns before
   losing unsaved edits
+- confirm canceling exit from controls, actions, confirmations, and warning
+  surfaces preserves the relevant status-line warning context
 - confirm opening actions from reset-needed, ignored-settings, or limit-blocked
   decks preserves that warning context in the status line
 - confirm canceling actions or restore/suspend/reset confirmations preserves
