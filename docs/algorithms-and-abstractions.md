@@ -514,6 +514,7 @@ Keep the portable logic separate from the libctru shell:
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds, poll scheduling policy, idle input wait tiers | libctru PTMU calls, rendering |
 | `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
+| `app_status` | pure status-message classification for console color semantics | libctru color escapes, rendering |
 | `app_controls` | abstract button bits, repeat timing, app command classification | scheduler mutation, file I/O, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |

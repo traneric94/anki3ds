@@ -11,6 +11,7 @@
 #include "app_layout.h"
 #include "app_power.h"
 #include "app_review.h"
+#include "app_status.h"
 #include "app_time.h"
 #include "app_text.h"
 #include "deck.h"
@@ -3476,6 +3477,57 @@ static void test_app_review_formats_rating_status(void)
 	app_review_format_rating_status(NULL, 0, "Good", true, false, false, 0, 1);
 }
 
+static void test_app_status_classifies_daily_use_feedback(void)
+{
+	check(
+		app_status_message_color("Loaded deck") == APP_STATUS_COLOR_SUCCESS,
+		"status loaded deck is success"
+	);
+	check(
+		app_status_message_color("Restored 2 suspended") == APP_STATUS_COLOR_SUCCESS,
+		"status restore is success"
+	);
+	check(
+		app_status_message_color("New day; no cards due") == APP_STATUS_COLOR_SUCCESS,
+		"status no due is success"
+	);
+	check(
+		app_status_message_color("Missing deck") == APP_STATUS_COLOR_DANGER,
+		"status missing deck is danger"
+	);
+	check(
+		app_status_message_color("Save failed; card not advanced") ==
+			APP_STATUS_COLOR_DANGER,
+		"status failed save is danger"
+	);
+	check(
+		app_status_message_color("Unsaved limit edits") == APP_STATUS_COLOR_WARNING,
+		"status unsaved limit is warning"
+	);
+	check(
+		app_status_message_color("Exit loses unsaved limits") ==
+			APP_STATUS_COLOR_WARNING,
+		"status exit losing limits is warning"
+	);
+	check(
+		app_status_message_color("Limits saved; daily limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limit reached is warning"
+	);
+	check(
+		app_status_message_color("Actions canceled") == APP_STATUS_COLOR_WARNING,
+		"status cancel is warning"
+	);
+	check(
+		app_status_message_color("Controls") == APP_STATUS_COLOR_NEUTRAL,
+		"status controls is neutral"
+	);
+	check(
+		app_status_message_color(NULL) == APP_STATUS_COLOR_NEUTRAL,
+		"status null is neutral"
+	);
+}
+
 static void test_app_settings_missing_file_uses_defaults(void)
 {
 	struct app_settings settings;
@@ -5007,6 +5059,7 @@ int main(void)
 	test_review_state_save_policy_rejects_bad_load();
 	test_app_review_queue_requires_safe_state();
 	test_app_review_formats_rating_status();
+	test_app_status_classifies_daily_use_feedback();
 	test_review_state_delete_removes_save_artifacts();
 	test_storage_replace_file_commits_temp_file();
 	test_storage_replace_file_commits_first_save();

@@ -9,6 +9,7 @@
 #include "app_layout.h"
 #include "app_power.h"
 #include "app_review.h"
+#include "app_status.h"
 #include "app_text.h"
 #include "app_time.h"
 #include "deck.h"
@@ -784,47 +785,18 @@ static bool scroll_review_text(struct app_state *app, bool scroll_down)
 	return true;
 }
 
-static const char *status_message_color(const char *message)
+static const char *status_color_escape(enum app_status_color color)
 {
-	if (
-		strstr(message, "failed") != NULL ||
-		strstr(message, "Failed") != NULL ||
-		strstr(message, "Missing") != NULL ||
-		strstr(message, "error") != NULL ||
-		strstr(message, "bad") != NULL
-	)
+	switch (color)
 	{
+	case APP_STATUS_COLOR_DANGER:
 		return APP_COLOR_DANGER;
-	}
-	if (
-		strstr(message, "requires") != NULL ||
-		strstr(message, "Nothing") != NULL ||
-		strstr(message, "No deck") != NULL ||
-		strstr(message, "skipped") != NULL ||
-		strstr(message, "same card due") != NULL ||
-		strstr(message, "same due") != NULL ||
-		strstr(message, "canceled") != NULL ||
-		strstr(message, "kept") != NULL ||
-		strstr(message, "reset state") != NULL ||
-		strstr(message, "limit reached") != NULL ||
-		strstr(message, "unmatched") != NULL ||
-		strstr(message, "ignored") != NULL ||
-		strstr(message, "unsaved") != NULL ||
-		strstr(message, "Unsaved") != NULL
-	)
-	{
+	case APP_STATUS_COLOR_WARNING:
 		return APP_COLOR_WARNING;
-	}
-	if (
-		strstr(message, "saved") != NULL ||
-		strstr(message, "Loaded") != NULL ||
-		strstr(message, "Restored") != NULL ||
-		strstr(message, "no cards due") != NULL ||
-		strstr(message, "reset") != NULL ||
-		strstr(message, "Reset") != NULL
-	)
-	{
+	case APP_STATUS_COLOR_SUCCESS:
 		return APP_COLOR_SUCCESS;
+	case APP_STATUS_COLOR_NEUTRAL:
+		break;
 	}
 
 	return APP_COLOR_NEUTRAL;
@@ -1841,7 +1813,10 @@ static void draw_status_message(const struct app_state *app)
 		return;
 
 	printf("\x1b[24;1H" APP_COLOR_ACCENT "Status:" APP_COLOR_RESET " ");
-	printf("%s", status_message_color(app->status_message));
+	printf(
+		"%s",
+		status_color_escape(app_status_message_color(app->status_message))
+	);
 	print_truncated(app->status_message, APP_LAYOUT_STATUS_MESSAGE_WIDTH);
 	printf(APP_COLOR_RESET);
 }

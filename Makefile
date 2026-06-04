@@ -30,6 +30,7 @@ test-host:
 		app-3ds/source/app_power.c \
 		app-3ds/source/app_review.c \
 		app-3ds/source/app_settings.c \
+		app-3ds/source/app_status.c \
 		app-3ds/source/app_text.c \
 		app-3ds/source/app_time.c \
 		app-3ds/source/deck.c \
