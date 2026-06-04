@@ -829,6 +829,44 @@ Notes:
   persistence, and CTR-001 battery-line rendering still need manual emulator or
   hardware acceptance.
 
+## 2026-06-04 - Post-Launch Azahar SD Evidence
+
+Build: `b66ec48` repo state; app code unchanged since `0d2b636`
+Command: read-only inspection of Azahar SDMC files
+Gate: evidence only; not acceptance
+Sample prep: previous `make run-emulator-fresh-samples`
+Decks: `limits-demo`, `sample`
+Steps:
+- Inspected app-owned files in Azahar's SDMC sample deck folders after the
+  current launch check.
+- Read `limits-demo/state.tsv` and `limits-demo/review-log.tsv` without
+  resetting sample progress.
+Observed:
+- `limits-demo/state.tsv`, `limits-demo/state.tsv.bak`, and
+  `limits-demo/review-log.tsv` existed with June 4, 2026 timestamps around
+  10:50.
+- `limits-demo/state.tsv` contained a complete 6-card state file.
+- `limits-demo/review-log.tsv` contained 11 rating rows: one Hard rating for
+  `limit-0001`, repeated Again ratings for `limit-0002`, and a final Easy
+  rating for `limit-0002`.
+- `sample` still contained only source deck files and no app-owned progress
+  files.
+Expected:
+- Emulator interaction after launch should save per-deck progress beside the
+  active deck and append diagnostic review-log rows without affecting unrelated
+  decks.
+Evidence:
+- `wc -l` reported 8 lines in `limits-demo/state.tsv` and 11 lines in
+  `limits-demo/review-log.tsv`.
+- `sample` folder inspection listed only `cards.tsv`, `deck.json`, and
+  `settings.tsv`.
+Result: pass for SD evidence only
+Notes:
+- This is useful evidence that the launched app wrote emulator SD progress and
+  diagnostic logs for `limits-demo`, but it does not prove which physical or
+  emulator keys were pressed, rendered contrast, status readability, relaunch
+  persistence, or the full two-deck M7 path.
+
 ## 2026-06-04 - Contextual Key Prompt Palette Local Gate
 
 Build: local working tree
