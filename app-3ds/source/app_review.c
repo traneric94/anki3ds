@@ -66,3 +66,40 @@ void app_review_format_rating_status(
 		(unsigned long)card_count
 	);
 }
+
+void app_review_format_day_change_status(
+	char *destination,
+	size_t destination_size,
+	enum review_state_load_result state_load_result,
+	const struct scheduler_session *session
+)
+{
+	if (destination == NULL || destination_size == 0)
+		return;
+
+	if (
+		!review_state_load_result_allows_save(state_load_result) ||
+		session == NULL
+	)
+	{
+		snprintf(destination, destination_size, "Reset bad state first");
+		return;
+	}
+
+	if (!scheduler_is_complete(session))
+	{
+		snprintf(destination, destination_size, "New day; cards due");
+		return;
+	}
+
+	if (
+		scheduler_new_limit_blocked_count(session) > 0 ||
+		scheduler_review_limit_blocked_count(session) > 0
+	)
+	{
+		snprintf(destination, destination_size, "New day; daily limit reached");
+		return;
+	}
+
+	snprintf(destination, destination_size, "New day; no cards due");
+}

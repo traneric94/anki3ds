@@ -271,8 +271,10 @@ screen redraws immediately on the correct review or summary surface for the new
 day. Other deck-specific screens, such as actions, daily limits, controls, and
 exit confirmation, redraw in place after the scheduler update and keep their
 current modal context. Their return targets are updated so canceling a modal
-lands on the correct review or summary screen for the new day. A deck with
-malformed saved state stays on the reset-needed summary across day changes
+lands on the correct review or summary screen for the new day. The status line
+also reports the new-day queue result on those in-place screens, except that
+unsaved daily-limit and exit-loses-unsaved-limits warnings stay visible. A deck
+with malformed saved state stays on the reset-needed summary across day changes
 instead of moving into the review queue.
 
 The app samples PTMU battery state at startup, then normally at most once every

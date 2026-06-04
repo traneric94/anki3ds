@@ -837,6 +837,31 @@ static void app_set_scan_complete_status(struct app_state *app)
 	);
 }
 
+static void app_set_day_change_status(struct app_state *app)
+{
+	if (
+		app->mode == APP_MODE_CONFIRM_EXIT &&
+		app_exit_would_discard_unsaved_limits(app)
+	)
+	{
+		app_set_status(app, "Exit loses unsaved limits");
+		return;
+	}
+
+	if (app_mode_shows_unsaved_limit_status(app, app->mode))
+	{
+		app_set_status(app, "Unsaved limit edits");
+		return;
+	}
+
+	app_review_format_day_change_status(
+		app->status_message,
+		sizeof(app->status_message),
+		app->state_load_result,
+		&app->session
+	);
+}
+
 static bool scroll_review_text(struct app_state *app, bool scroll_down)
 {
 	size_t max_offset = review_max_scroll_offset(app);
@@ -2029,19 +2054,10 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 	target_mode = app_review_mode_for_session(app);
 	app_update_review_return_modes_for_day_change(app, target_mode);
 
-	if (!app_mode_is_review_surface(app->mode))
-		return true;
+	if (app_mode_is_review_surface(app->mode))
+		app->mode = target_mode;
 
-	app->mode = target_mode;
-	if (!app_state_allows_study(app))
-		app_set_status(app, "Reset bad state first");
-	else if (target_mode == APP_MODE_SUMMARY && app_daily_limit_blocks_cards(app))
-		app_set_status(app, "New day; daily limit reached");
-	else if (target_mode == APP_MODE_SUMMARY)
-		app_set_status(app, "New day; no cards due");
-	else
-		app_set_status(app, "New day; cards due");
-
+	app_set_day_change_status(app);
 	return true;
 }
 

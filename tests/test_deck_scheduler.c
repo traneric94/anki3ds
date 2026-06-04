@@ -3947,6 +3947,72 @@ static void test_app_review_formats_rating_status(void)
 	app_review_format_rating_status(NULL, 0, "Good", true, false, false, 0, 1);
 }
 
+static void test_app_review_formats_day_change_status(void)
+{
+	char message[64];
+	char tiny[8];
+	struct scheduler_session session;
+
+	scheduler_init(&session, 2, TEST_TODAY);
+	app_review_format_day_change_status(
+		message,
+		sizeof(message),
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(
+		strcmp(message, "New day; cards due") == 0,
+		"day-change status shows active due queue"
+	);
+
+	scheduler_set_daily_limits(&session, 1, 200);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	app_review_format_day_change_status(
+		message,
+		sizeof(message),
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(
+		strcmp(message, "New day; daily limit reached") == 0,
+		"day-change status distinguishes limit-blocked queue"
+	);
+
+	scheduler_set_daily_limits(&session, 0, 0);
+	while (!scheduler_is_complete(&session))
+		scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	app_review_format_day_change_status(
+		message,
+		sizeof(message),
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(
+		strcmp(message, "New day; no cards due") == 0,
+		"day-change status shows empty due queue"
+	);
+
+	app_review_format_day_change_status(
+		message,
+		sizeof(message),
+		REVIEW_STATE_LOAD_BAD_FORMAT,
+		&session
+	);
+	check(
+		strcmp(message, "Reset bad state first") == 0,
+		"day-change status preserves bad-state recovery"
+	);
+
+	app_review_format_day_change_status(
+		tiny,
+		sizeof(tiny),
+		REVIEW_STATE_LOAD_OK,
+		&session
+	);
+	check(tiny[sizeof(tiny) - 1] == '\0', "day-change status truncates safely");
+	app_review_format_day_change_status(NULL, 0, REVIEW_STATE_LOAD_OK, &session);
+}
+
 static void test_app_status_classifies_daily_use_feedback(void)
 {
 	check(
@@ -3960,6 +4026,10 @@ static void test_app_status_classifies_daily_use_feedback(void)
 	check(
 		app_status_message_color("New day; no cards due") == APP_STATUS_COLOR_SUCCESS,
 		"status no due is success"
+	);
+	check(
+		app_status_message_color("New day; cards due") == APP_STATUS_COLOR_SUCCESS,
+		"status cards due is success"
 	);
 	check(
 		app_status_message_color("Missing deck") == APP_STATUS_COLOR_DANGER,
@@ -5561,6 +5631,7 @@ int main(void)
 	test_review_state_save_policy_rejects_bad_load();
 	test_app_review_queue_requires_safe_state();
 	test_app_review_formats_rating_status();
+	test_app_review_formats_day_change_status();
 	test_app_status_classifies_daily_use_feedback();
 	test_review_state_delete_removes_save_artifacts();
 	test_storage_replace_file_commits_temp_file();

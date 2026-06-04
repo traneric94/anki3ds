@@ -21,5 +21,11 @@ void app_review_format_rating_status(
 	size_t current_index,
 	size_t card_count
 );
+void app_review_format_day_change_status(
+	char *destination,
+	size_t destination_size,
+	enum review_state_load_result state_load_result,
+	const struct scheduler_session *session
+);
 
 #endif

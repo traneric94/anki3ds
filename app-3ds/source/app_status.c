@@ -42,6 +42,7 @@ enum app_status_color app_status_message_color(const char *message)
 		strstr(message, "saved") != NULL ||
 		strstr(message, "Loaded") != NULL ||
 		strstr(message, "Restored") != NULL ||
+		strstr(message, "cards due") != NULL ||
 		strstr(message, "no cards due") != NULL ||
 		strstr(message, "reset") != NULL ||
 		strstr(message, "Reset") != NULL
