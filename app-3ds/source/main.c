@@ -586,6 +586,24 @@ static void app_append_active_deck_status_suffix(struct app_state *app)
 	);
 }
 
+static bool app_day_change_status_suffix_is_redundant(const char *suffix)
+{
+	return (
+		strcmp(suffix, "; limit reached") == 0 ||
+		strcmp(suffix, "; reset state") == 0
+	);
+}
+
+static void app_append_day_change_status_suffix(struct app_state *app)
+{
+	const char *suffix = active_deck_status_suffix(app);
+
+	if (suffix[0] == '\0' || app_day_change_status_suffix_is_redundant(suffix))
+		return;
+
+	app_append_active_deck_status_suffix(app);
+}
+
 static void app_set_actions_status(struct app_state *app)
 {
 	snprintf(
@@ -1265,6 +1283,7 @@ static void app_set_day_change_status(struct app_state *app)
 		app->state_load_result,
 		&app->session
 	);
+	app_append_day_change_status_suffix(app);
 }
 
 static bool scroll_review_text(struct app_state *app, bool scroll_down)

@@ -4032,6 +4032,26 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status cards due is success"
 	);
 	check(
+		app_status_message_color("New day; cards due; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status new day settings ignored is warning"
+	);
+	check(
+		app_status_message_color("New day; no cards due; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status new day state unmatched is warning"
+	);
+	check(
+		app_status_message_color("New day; daily limit reached; settings/state") ==
+			APP_STATUS_COLOR_WARNING,
+		"status new day limit settings/state is warning"
+	);
+	check(
+		app_status_message_color("Reset bad state first; reset state/settings") ==
+			APP_STATUS_COLOR_DANGER,
+		"status new day reset state/settings is danger"
+	);
+	check(
 		app_status_message_color("Missing deck") == APP_STATUS_COLOR_DANGER,
 		"status missing deck is danger"
 	);
