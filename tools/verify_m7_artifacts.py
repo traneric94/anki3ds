@@ -37,6 +37,14 @@ STATE_HEADER = "#anki3ds-state-v1"
 STATE_FOOTER = "#anki3ds-state-complete"
 STATE_FIELD_COUNT = 10
 REVIEW_LOG_FIELD_COUNT = 21
+RESET_PROGRESS_FILES = (
+    "state.tsv",
+    "state.tsv.tmp",
+    "state.tsv.bak",
+    "review-log.tsv",
+    "review-log.tsv.tmp",
+    "review-log.tsv.bak",
+)
 
 
 class DeckArtifacts:
@@ -396,17 +404,49 @@ def verify_deck_artifacts(
     )
 
 
+def verify_reset_deck_artifacts(
+    deck_root: Path,
+    deck_id: str,
+    errors: list[str],
+) -> DeckArtifacts | None:
+    deck_dir = deck_root / deck_id
+    if not deck_dir.is_dir():
+        append_error(errors, deck_dir, "missing deck directory")
+        return None
+
+    card_ids = load_card_ids(deck_dir, errors)
+    settings = load_settings(deck_dir, errors)
+
+    for name in RESET_PROGRESS_FILES:
+        path = deck_dir / name
+        if path.exists():
+            append_error(errors, path, "must be absent after reset")
+
+    return DeckArtifacts(
+        deck_id,
+        card_ids,
+        settings,
+        0,
+        set(),
+    )
+
+
 def verify_m7_artifacts(
     sdmc: Path,
     deck_ids: list[str],
     required_events: list[str],
     expected_settings: list[tuple[str, int, int]],
     allow_missing_log: bool = False,
+    reset_deck_ids: list[str] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     deck_root = sdmc / APP_SD_DIR / "decks"
     decks: dict[str, DeckArtifacts] = {}
     all_events: set[str] = set()
+    reset_deck_ids = reset_deck_ids or []
+
+    for deck_id in sorted(set(deck_ids).intersection(reset_deck_ids)):
+        errors.append(f"{deck_id}: cannot be both study and reset deck")
 
     for deck_id in deck_ids:
         artifacts = verify_deck_artifacts(
@@ -420,6 +460,11 @@ def verify_m7_artifacts(
 
         decks[deck_id] = artifacts
         all_events.update(artifacts.review_log_events)
+
+    for deck_id in reset_deck_ids:
+        artifacts = verify_reset_deck_artifacts(deck_root, deck_id, errors)
+        if artifacts is not None:
+            decks[deck_id] = artifacts
 
     for required_event in required_events:
         if required_event not in VALID_REVIEW_LOG_EVENTS:
@@ -457,6 +502,18 @@ def main() -> int:
         help="Deck id to verify. Can be passed more than once.",
     )
     parser.add_argument(
+        "--no-study-decks",
+        action="store_true",
+        help="Do not default to the tracked sample study decks.",
+    )
+    parser.add_argument(
+        "--expect-reset-deck",
+        dest="reset_decks",
+        action="append",
+        default=[],
+        help="Deck id expected to have reset progress while preserving settings.",
+    )
+    parser.add_argument(
         "--require-event",
         dest="required_events",
         action="append",
@@ -490,8 +547,13 @@ def main() -> int:
 
     if args.no_required_events and args.required_events:
         parser.error("--no-required-events cannot be combined with --require-event")
+    if args.no_study_decks and args.decks:
+        parser.error("--no-study-decks cannot be combined with --deck")
 
-    deck_ids = args.decks if args.decks else list(DEFAULT_DECKS)
+    if args.no_study_decks:
+        deck_ids = []
+    else:
+        deck_ids = args.decks if args.decks else list(DEFAULT_DECKS)
     if args.no_required_events:
         required_events = []
     else:
@@ -505,6 +567,7 @@ def main() -> int:
         required_events,
         args.expect_settings,
         args.allow_missing_review_log,
+        args.reset_decks,
     )
 
     if errors:

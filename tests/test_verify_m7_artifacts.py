@@ -19,6 +19,14 @@ VERIFY_M7_ARTIFACTS_SPEC.loader.exec_module(verify_m7_artifacts)
 
 
 REQUIRED_EVENTS = ["rating", "undo", "suspend", "restore"]
+RESET_PROGRESS_FILES = (
+    "state.tsv",
+    "state.tsv.tmp",
+    "state.tsv.bak",
+    "review-log.tsv",
+    "review-log.tsv.tmp",
+    "review-log.tsv.bak",
+)
 
 
 def card_ids(deck_id: str) -> list[str]:
@@ -139,6 +147,13 @@ def write_deck(
     write_state(deck_dir, deck_id)
     write_review_log(deck_dir, deck_id, events)
     return deck_dir
+
+
+def reset_deck_progress_files(deck_dir: Path) -> None:
+    for name in RESET_PROGRESS_FILES:
+        path = deck_dir / name
+        if path.exists():
+            path.unlink()
 
 
 class VerifyM7ArtifactsTests(unittest.TestCase):
@@ -367,6 +382,106 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
 
             self.assertEqual(raised.exception.code, 2)
             self.assertIn("cannot be combined", stderr.getvalue())
+
+    def test_accepts_reset_deck_artifacts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            reset_dir = (
+                sdmc
+                / verify_m7_artifacts.APP_SD_DIR
+                / "decks"
+                / "sample"
+            )
+            reset_deck_progress_files(reset_dir)
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["limits-demo"],
+                ["suspend", "restore"],
+                [("sample", 7, 9), ("limits-demo", 7, 9)],
+                reset_deck_ids=["sample"],
+            )
+
+            self.assertEqual(errors, [])
+
+    def test_reset_deck_rejects_leftover_progress_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            reset_dir = (
+                sdmc
+                / verify_m7_artifacts.APP_SD_DIR
+                / "decks"
+                / "sample"
+            )
+            reset_deck_progress_files(reset_dir)
+            (reset_dir / "state.tsv.bak").write_text("stale\n", encoding="utf-8")
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["limits-demo"],
+                ["suspend", "restore"],
+                [],
+                reset_deck_ids=["sample"],
+            )
+
+            self.assertTrue(
+                any("state.tsv.bak: must be absent after reset" in error for error in errors),
+                errors,
+            )
+
+    def test_cli_rejects_study_and_reset_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_m7_artifacts.py",
+                    "--sdmc",
+                    str(sdmc),
+                    "--deck",
+                    "sample",
+                    "--expect-reset-deck",
+                    "sample",
+                    "--quiet",
+                ],
+            ), redirect_stderr(stderr):
+                exit_code = verify_m7_artifacts.main()
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("sample: cannot be both study and reset deck", stderr.getvalue())
+
+    def test_cli_can_verify_only_reset_decks(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            for deck_id in ("sample", "limits-demo"):
+                reset_dir = (
+                    sdmc
+                    / verify_m7_artifacts.APP_SD_DIR
+                    / "decks"
+                    / deck_id
+                )
+                reset_deck_progress_files(reset_dir)
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_m7_artifacts.py",
+                    "--sdmc",
+                    str(sdmc),
+                    "--no-study-decks",
+                    "--expect-reset-deck",
+                    "sample",
+                    "--expect-reset-deck",
+                    "limits-demo",
+                    "--no-required-events",
+                    "--quiet",
+                ],
+            ):
+                exit_code = verify_m7_artifacts.main()
+
+            self.assertEqual(exit_code, 0)
 
 
 if __name__ == "__main__":

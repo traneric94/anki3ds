@@ -21,14 +21,20 @@ M7_REQUIRED_EVENTS ?= rating undo suspend restore
 M7_EXPECT_SETTINGS ?=
 M7_ALLOW_MISSING_REVIEW_LOG ?= 0
 M7_NO_REQUIRED_EVENTS ?= 0
-M7_DECK_ARGS = $(foreach deck,$(M7_DECKS),--deck $(deck))
+M7_RESET_DECKS ?=
+M7_STUDY_DECKS = $(filter-out $(M7_RESET_DECKS),$(M7_DECKS))
+M7_DECK_ARGS = $(foreach deck,$(M7_STUDY_DECKS),--deck $(deck))
+M7_NO_STUDY_DECKS_ARG = $(if $(M7_STUDY_DECKS),,--no-study-decks)
 M7_NO_REQUIRED_EVENTS_ARG = $(if $(filter 1 yes true,$(M7_NO_REQUIRED_EVENTS)),--no-required-events)
 M7_REQUIRED_EVENT_ARGS = $(if $(M7_NO_REQUIRED_EVENTS_ARG),,\
 	$(foreach event,$(M7_REQUIRED_EVENTS),--require-event $(event)))
 M7_EXPECT_SETTING_ARGS = $(foreach setting,$(M7_EXPECT_SETTINGS),--expect-settings $(setting))
+M7_RESET_DECK_ARGS = $(foreach deck,$(M7_RESET_DECKS),--expect-reset-deck $(deck))
 M7_ALLOW_MISSING_REVIEW_LOG_ARG = $(if $(filter 1 yes true,$(M7_ALLOW_MISSING_REVIEW_LOG)),--allow-missing-review-log)
 M7_ARTIFACT_ARGS = $(strip \
 	$(M7_DECK_ARGS) \
+	$(M7_NO_STUDY_DECKS_ARG) \
+	$(M7_RESET_DECK_ARGS) \
 	$(M7_REQUIRED_EVENT_ARGS) \
 	$(M7_EXPECT_SETTING_ARGS) \
 	$(M7_ALLOW_MISSING_REVIEW_LOG_ARG) \

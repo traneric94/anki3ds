@@ -81,7 +81,9 @@ Pass conditions:
   `AZAHAR_SDMC`. Include `M7_EXPECT_SETTINGS="deck:new:review ..."` for the
   exact daily-limit values changed during the pass. If the app reported
   `log skipped`, also pass `M7_ALLOW_MISSING_REVIEW_LOG=1` and
-  `M7_NO_REQUIRED_EVENTS=1`.
+  `M7_NO_REQUIRED_EVENTS=1`. If reset was the final state for a deck, also
+  pass `M7_RESET_DECKS="deck-id"` so the verifier expects no progress files
+  while still checking `settings.tsv`.
 
 Fail the checkpoint for any uncontrolled multi-step movement from a quick
 direction tap, any rating button that does not advance or clearly keep the same

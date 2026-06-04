@@ -1484,3 +1484,28 @@ Expected:
 Result: pass for automated target wiring only
 Notes:
 - Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - M7 Reset Artifact Verification
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make -n verify-m7-artifacts M7_SDMC=/tmp/sd M7_RESET_DECKS=sample
+  M7_REQUIRED_EVENTS="suspend restore"`
+- `make -n verify-m7-artifacts M7_SDMC=/tmp/sd
+  M7_RESET_DECKS="sample limits-demo" M7_NO_REQUIRED_EVENTS=1`
+Steps:
+- Added reset-deck artifact checks to the M7 verifier.
+- Reset decks must keep valid `cards.tsv` and `settings.tsv` while removing
+  `state.tsv`, `state.tsv.tmp`, `state.tsv.bak`, `review-log.tsv`,
+  `review-log.tsv.tmp`, and `review-log.tsv.bak`.
+Observed:
+- The Make target removes reset decks from the normal study-deck list.
+- The verifier can check one reset deck beside one studied deck, or reset-only
+  decks with `--no-study-decks` and no required events.
+Expected:
+- Manual M7 acceptance can verify reset-progress cleanup without contradicting
+  the normal post-study state/log artifact checks.
+Result: pass for automated target wiring only
+Notes:
+- Manual M7 interaction acceptance remains pending.

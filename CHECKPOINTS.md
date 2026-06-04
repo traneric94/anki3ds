@@ -173,7 +173,9 @@ Acceptance test:
 5. Restore suspended cards from the actions screen.
 6. Set `new_limit` and `review_limit` from the actions screen.
 7. Relaunch and confirm state and daily limits persisted.
-8. After the session, run `make verify-m7-artifacts M7_SDMC=/path/to/sdmc`
+8. Reset progress on one tested deck and confirm settings are preserved. If
+   reset is the final state for that deck, include it in `M7_RESET_DECKS`.
+9. After the session, run `make verify-m7-artifacts M7_SDMC=/path/to/sdmc`
    against the tested SD root. For Azahar, the default `M7_SDMC` is the
    configured `AZAHAR_SDMC`. To prove exact daily-limit edits, pass settings
    expectations such as
@@ -186,6 +188,8 @@ Pass condition:
   why a missing `review-log.tsv` is expected from an in-app `log skipped`
   status and verifies with `M7_ALLOW_MISSING_REVIEW_LOG=1` and
   `M7_NO_REQUIRED_EVENTS=1`
+- any deck reset at the end verifies with `M7_RESET_DECKS` and still has valid
+  `settings.tsv`
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result
