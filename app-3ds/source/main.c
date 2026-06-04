@@ -38,6 +38,7 @@
 #define APP_COLOR_WARNING APP_COLOR_CAUTION
 #define APP_COLOR_NEUTRAL APP_COLOR_TEXT
 #define APP_COLOR_SELECTED APP_COLOR_FOCUS
+#define APP_COLOR_SELECTED_DANGER CONSOLE_ESC(31;1;7m)
 #define APP_COLOR_EASY APP_COLOR_ACCENT
 #define APP_COLOR_NEW APP_COLOR_ACCENT
 #define APP_COLOR_LEARNING APP_COLOR_WARNING
@@ -1996,7 +1997,9 @@ static void draw_actions_screen(const struct app_state *app)
 	);
 	printf(
 		"\x1b[10;1H%s%s Reset deck progress" APP_COLOR_RESET,
-		app->selected_action == ACTION_ITEM_RESET_PROGRESS ? APP_COLOR_DANGER : "",
+		app->selected_action == ACTION_ITEM_RESET_PROGRESS ?
+			APP_COLOR_SELECTED_DANGER :
+			APP_COLOR_DANGER,
 		reset_marker
 	);
 	draw_deck_name_line(app, 13, APP_LAYOUT_DECK_NAME_HEADER_WIDTH);

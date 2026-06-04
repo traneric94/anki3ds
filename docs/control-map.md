@@ -39,11 +39,12 @@ screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
 list size and wraps between the first and last decks. Basic terminal-style
 colors are used for status: bright magenta headings/status labels, Easy
 ratings, and new counts; green Good ratings, review counts, and saved/safe
-state; amber reverse-video selected or focused items; yellow/amber Hard
-ratings, learning counts, and cautions; red Again ratings, suspended counts,
-errors, and reset actions; and bright white neutral status, with dim white
-separators. Standard blue is intentionally avoided because it is hard to read
-on the dark 3DS console background.
+state; amber reverse-video selected or focused items; red reverse-video
+selected reset actions; yellow/amber Hard ratings, learning counts, and
+cautions; red Again ratings, suspended counts, errors, and reset actions; and
+bright white neutral status, with dim white separators. Standard blue is
+intentionally avoided because it is hard to read on the dark 3DS console
+background.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
 If daily limits hide otherwise due cards, the deck row shows a `limit` warning
