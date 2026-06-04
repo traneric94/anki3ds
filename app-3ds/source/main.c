@@ -24,24 +24,23 @@
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
 /*
- * High-contrast terminal palette for the dark 3DS console. Amber and white
- * carry the app chrome and focus states, while green/yellow/red keep their
- * review semantics. Blue, cyan, and violet are avoided because they wash out
- * on 3DS LCDs, especially at low brightness.
+ * High-contrast terminal palette for the dark 3DS console. Warm amber carries
+ * app chrome and focus, green/yellow/red keep review semantics, and white is
+ * reserved for neutral text plus Easy/new cues. Blue, cyan, and violet are
+ * avoided because they wash out on 3DS LCDs, especially at low brightness.
  */
-#define APP_COLOR_PRIMARY CONSOLE_ESC(32;1m)
 #define APP_COLOR_ACCENT CONSOLE_ESC(33;1m)
 #define APP_COLOR_TEXT CONSOLE_ESC(37;1m)
 #define APP_COLOR_MUTED CONSOLE_ESC(37m)
-#define APP_COLOR_FOCUS CONSOLE_ESC(37;1;7m)
+#define APP_COLOR_FOCUS CONSOLE_ESC(33;1;7m)
 #define APP_COLOR_CAUTION CONSOLE_ESC(33;1m)
-#define APP_COLOR_SUCCESS APP_COLOR_PRIMARY
+#define APP_COLOR_SUCCESS CONSOLE_ESC(32;1m)
 #define APP_COLOR_DANGER CONSOLE_ESC(31;1m)
 #define APP_COLOR_WARNING APP_COLOR_CAUTION
 #define APP_COLOR_NEUTRAL APP_COLOR_TEXT
 #define APP_COLOR_SELECTED APP_COLOR_FOCUS
 #define APP_COLOR_SELECTED_DANGER CONSOLE_ESC(31;1;7m)
-#define APP_COLOR_EASY APP_COLOR_SUCCESS
+#define APP_COLOR_EASY APP_COLOR_TEXT
 #define APP_COLOR_NEW APP_COLOR_TEXT
 #define APP_COLOR_LEARNING APP_COLOR_WARNING
 #define APP_COLOR_REVIEW APP_COLOR_SUCCESS

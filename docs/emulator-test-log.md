@@ -1054,3 +1054,29 @@ Notes:
 - Button-level review, rendered palette contrast, save-feedback visibility,
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
+
+## 2026-06-04 - Amber Focus Palette Local Gate
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make test`
+Steps:
+- Switched normal selected/focused rows to warm amber reverse video instead of
+  white or violet reverse video.
+- Kept app chrome on warm amber, Good/review/safe cues on green,
+  Hard/learning/warning cues on amber, Again/suspended/error cues on red, and
+  Easy/new/neutral text on bright white.
+- Updated palette docs so the code and project notes describe the same
+  dark-terminal color system.
+Observed:
+- The 3DS target rebuilt successfully.
+- Host C tests, converter tests, and text-deck verifier tests passed.
+Expected:
+- The app should avoid hard-to-read blue, cyan, and violet-like colors while
+  giving deck focus, review actions, and status severities distinct cues on a
+  dark console background.
+Result: pass for automated build/test only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
