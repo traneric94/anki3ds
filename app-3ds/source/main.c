@@ -1473,7 +1473,12 @@ static enum app_power_battery_sample_result app_sample_battery(struct app_state 
 	u8 old_level;
 
 	if (!app->battery_service_available)
-		return APP_POWER_BATTERY_SAMPLE_UNAVAILABLE;
+	{
+		if (R_FAILED(ptmuInit()))
+			return APP_POWER_BATTERY_SAMPLE_UNAVAILABLE;
+
+		app->battery_service_available = true;
+	}
 
 	if (R_FAILED(PTMU_GetShellState(&shell_state)))
 		return APP_POWER_BATTERY_SAMPLE_READ_FAILED;
@@ -1731,7 +1736,6 @@ static enum app_power_battery_sample_result app_init(struct app_state *app)
 
 	memset(app, 0, sizeof(*app));
 	app->current_day = app_time_current_day();
-	app->battery_service_available = R_SUCCEEDED(ptmuInit());
 	battery_sample_result = app_sample_battery(app);
 	app_set_status(app, "Ready");
 	app->mode = APP_MODE_DECK_SELECT;

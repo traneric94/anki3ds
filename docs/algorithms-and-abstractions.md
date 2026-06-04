@@ -303,17 +303,19 @@ into the review queue.
 The app samples PTMU battery state at startup, then normally at most once every
 ten minutes. Startup and periodic samples use the same scheduling policy, so a
 transient startup read failure gets the short retry interval instead of waiting
-for a full ten-minute poll. Periodic checks first ask PTMU whether the shell is
-open; battery level and charging state are read only when the shell reports
-open. The app does not call the battery service on every button press. If the
-system clock is briefly unavailable, the periodic poll timer arms itself when a
-valid clock reading appears. Closed-shell skips keep the normal ten-minute
-cadence and avoid battery-level reads until the shell reports open; transient
-read failures schedule a short retry instead of leaving stale status for a full
-interval. The bottom screen shows `Battery: unavailable` until a valid
-open-shell sample is available, then keeps the last valid sample as a compact
-`level/5` line, including charging and low-battery states. Battery status
-changes redraw the screen only when that visible status changes.
+for a full ten-minute poll. If PTMU service initialization is unavailable at
+startup, the app retries initialization only at the normal battery-poll cadence.
+Periodic checks first ask PTMU whether the shell is open; battery level and
+charging state are read only when the shell reports open. The app does not call
+the battery service on every button press. If the system clock is briefly
+unavailable, the periodic poll timer arms itself when a valid clock reading
+appears. Closed-shell skips keep the normal ten-minute cadence and avoid
+battery-level reads until the shell reports open; transient read failures
+schedule a short retry instead of leaving stale status for a full interval. The
+bottom screen shows `Battery: unavailable` until a valid open-shell sample is
+available, then keeps the last valid sample as a compact `level/5` line,
+including charging and low-battery states. Battery status changes redraw the
+screen only when that visible status changes.
 
 Review algorithm:
 
