@@ -173,10 +173,16 @@ Acceptance test:
 5. Restore suspended cards from the actions screen.
 6. Set `new_limit` and `review_limit` from the actions screen.
 7. Relaunch and confirm state and daily limits persisted.
+8. After the session, run `make verify-m7-artifacts M7_SDMC=/path/to/sdmc`
+   against the tested SD root. For Azahar, the default `M7_SDMC` is the
+   configured `AZAHAR_SDMC`.
 
 Pass condition:
 
 - a real study session works without manual file edits
+- the post-run artifact verifier passes for the tested decks, or the log notes
+  why a missing `review-log.tsv` is expected from an in-app `log skipped`
+  status
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result

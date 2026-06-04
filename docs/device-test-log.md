@@ -76,6 +76,9 @@ Pass conditions:
   `state.tsv` after saved study, `settings.tsv` after limit edits, and
   `review-log.tsv` after saved study actions unless the status reported
   `log skipped`.
+- After the pass, `make verify-m7-artifacts M7_SDMC=/path/to/sdmc` accepts the
+  tested SD root. For Azahar, omit `M7_SDMC` to use the configured
+  `AZAHAR_SDMC`.
 
 Fail the checkpoint for any uncontrolled multi-step movement from a quick
 direction tap, any rating button that does not advance or clearly keep the same

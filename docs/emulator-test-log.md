@@ -1414,3 +1414,29 @@ Notes:
 - Full M7 acceptance still requires manual emulator or hardware interaction for
   rating, suspend, undo, daily-limit editing, relaunch persistence, and visual
   readability.
+
+## 2026-06-04 - M7 Post-Run Artifact Verifier
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_azahar_controls.py tests/test_verify_text_deck.py`
+Steps:
+- Added a post-run SD artifact verifier for the M7 daily-use checklist.
+- Validated two-deck fixture output containing framed `state.tsv`,
+  `settings.tsv`, and 21-field `review-log.tsv` rows with `rating`, `undo`,
+  `suspend`, and `restore` evidence.
+Observed:
+- The verifier accepts normal Unix timestamps, checks scheduler-field bounds by
+  field type, and reports missing or malformed artifacts without tracebacks.
+Expected:
+- After a manual emulator or hardware pass, `make verify-m7-artifacts` should
+  provide a quick sanity check that the tested SD root contains durable study
+  evidence.
+Evidence:
+- Focused verifier and existing tool tests passed.
+Result: pass for automated post-run artifact gate only
+Notes:
+- This does not replace manual M7 interaction acceptance. It verifies SD-card
+  evidence after that pass has already created progress files.
