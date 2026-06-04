@@ -897,7 +897,7 @@ class ConverterTests(unittest.TestCase):
                 (
                     "#anki3ds-state-v1\t2\n"
                     f"{old_cards[0].card_id}\t1\t2\t20001\t1\t2500\t0\t0\t20000\t20000\n"
-                    f"{old_cards[255].card_id}\t1\t1\t20002\t2\t2400\t0\t0\t20000\t20000\n"
+                    f"{old_cards[DECK_MAX_CARDS - 1].card_id}\t1\t1\t20002\t2\t2400\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t2\n"
                 ),
                 encoding="utf-8",
@@ -905,20 +905,20 @@ class ConverterTests(unittest.TestCase):
             (first_chunk / "review-log.tsv").write_text(
                 (
                     review_log_row(old_cards[0].card_id, 1)
-                    + review_log_row(old_cards[255].card_id, 2)
+                    + review_log_row(old_cards[DECK_MAX_CARDS - 1].card_id, 2)
                 ),
                 encoding="utf-8",
             )
             (second_chunk / "state.tsv").write_text(
                 (
                     "#anki3ds-state-v1\t1\n"
-                    f"{old_cards[256].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
+                    f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t1\n"
                 ),
                 encoding="utf-8",
             )
             (second_chunk / "review-log.tsv").write_text(
-                review_log_row(old_cards[256].card_id, 3),
+                review_log_row(old_cards[DECK_MAX_CARDS].card_id, 3),
                 encoding="utf-8",
             )
 
@@ -941,16 +941,16 @@ class ConverterTests(unittest.TestCase):
                 (second_chunk / "state.tsv").read_text(encoding="utf-8"),
                 (
                     "#anki3ds-state-v1\t2\n"
-                    f"{old_cards[255].card_id}\t1\t1\t20002\t2\t2400\t0\t0\t20000\t20000\n"
-                    f"{old_cards[256].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
+                    f"{old_cards[DECK_MAX_CARDS - 1].card_id}\t1\t1\t20002\t2\t2400\t0\t0\t20000\t20000\n"
+                    f"{old_cards[DECK_MAX_CARDS].card_id}\t1\t3\t20004\t4\t2500\t0\t0\t20000\t20000\n"
                     "#anki3ds-state-complete\t2\n"
                 ),
             )
             self.assertEqual(
                 (second_chunk / "review-log.tsv").read_text(encoding="utf-8"),
                 (
-                    review_log_row(old_cards[255].card_id, 2)
-                    + review_log_row(old_cards[256].card_id, 3)
+                    review_log_row(old_cards[DECK_MAX_CARDS - 1].card_id, 2)
+                    + review_log_row(old_cards[DECK_MAX_CARDS].card_id, 3)
                 ),
             )
 

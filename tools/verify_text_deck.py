@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 
-DECK_MAX_CARDS = 256
+DECK_MAX_CARDS = 4096
 DECK_MAX_ID_LENGTH = 32
 DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128

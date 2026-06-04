@@ -83,7 +83,7 @@ Rules:
   includes tabs and newlines because `state.tsv` stores raw card IDs
 - `card_id` values may not start with `#`, which is reserved for app-owned
   state-file metadata
-- current 3DS builds support at most 256 cards per deck
+- current 3DS builds support at most 4096 cards per deck
 - converter `--split-large-decks` writes oversized exports as up to 64 numbered
   sibling deck folders within this limit
 - split re-import removes stale converter-generated sibling chunks after the

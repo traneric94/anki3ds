@@ -222,7 +222,7 @@ python3 converter/anki3ds_convert.py export.tsv sample-decks/my-deck \
   --text-only
 ```
 
-Current 3DS builds support 256 cards per deck folder and store up to 64 deck
+Current 3DS builds support 4096 cards per deck folder and store up to 64 deck
 folders in the selector. To split a larger export into numbered sibling decks
 such as `my-deck-01` and `my-deck-02`:
 
