@@ -335,7 +335,14 @@ static bool review_log_recover_pending_repair(const char *path)
 		return false;
 	}
 	if (review_log_file_exists(path))
+	{
+		if (!review_log_remove_if_present(temp_path))
+			return false;
+		if (!review_log_remove_if_present(backup_path))
+			return false;
+
 		return true;
+	}
 	if (review_log_file_exists(temp_path))
 	{
 		if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))

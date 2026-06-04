@@ -3409,6 +3409,28 @@ static void test_review_log_recovers_pending_repair_before_append(void)
 	);
 
 	remove(TEST_REVIEW_LOG_PATH);
+	remove(TEST_REVIEW_LOG_TEMP_PATH);
+	remove(TEST_REVIEW_LOG_BACKUP_PATH);
+	write_file(TEST_REVIEW_LOG_PATH, "existing row\n");
+	write_file(TEST_REVIEW_LOG_TEMP_PATH, "stale temp\n");
+	write_file(TEST_REVIEW_LOG_BACKUP_PATH, "stale backup\n");
+	check(
+		review_log_append(TEST_REVIEW_LOG_PATH, &entry),
+		"review log cleans stale repair files before append"
+	);
+	check(
+		file_equals(
+			TEST_REVIEW_LOG_PATH,
+			"existing row\n"
+			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
+			"1\t20001\t1\t2500\t0\t0\n"
+		),
+		"review log appends after stale repair cleanup"
+	);
+	check(access(TEST_REVIEW_LOG_TEMP_PATH, F_OK) != 0, "stale log temp removed");
+	check(access(TEST_REVIEW_LOG_BACKUP_PATH, F_OK) != 0, "stale log backup removed");
+
+	remove(TEST_REVIEW_LOG_PATH);
 }
 
 static void test_review_log_appends_at_capacity_boundary(void)
