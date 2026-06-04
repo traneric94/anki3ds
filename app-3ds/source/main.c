@@ -21,11 +21,15 @@
 #define APP_VERSION "0.5.0-dev"
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
-#define APP_COLOR_RESET "\x1b[0m"
-#define APP_COLOR_ACCENT "\x1b[36m"
-#define APP_COLOR_SUCCESS "\x1b[32m"
-#define APP_COLOR_DANGER "\x1b[31m"
-#define APP_COLOR_WARNING "\x1b[33m"
+#define APP_COLOR_RESET CONSOLE_RESET
+/* Bright terminal palette for the dark 3DS console; avoid blue for contrast. */
+#define APP_COLOR_ACCENT CONSOLE_MAGENTA
+#define APP_COLOR_NEUTRAL CONSOLE_WHITE
+#define APP_COLOR_SUCCESS CONSOLE_GREEN
+#define APP_COLOR_DANGER CONSOLE_RED
+#define APP_COLOR_WARNING CONSOLE_YELLOW
+#define APP_COLOR_EASY APP_COLOR_NEUTRAL
+#define APP_COLOR_RULE APP_COLOR_NEUTRAL
 static const unsigned int daily_limit_presets[] = {
 	5,
 	10,
@@ -723,7 +727,7 @@ static const char *status_message_color(const char *message)
 		return APP_COLOR_SUCCESS;
 	}
 
-	return APP_COLOR_ACCENT;
+	return APP_COLOR_NEUTRAL;
 }
 
 static void wait_for_idle_input(unsigned int idle_wait_count)
@@ -1243,7 +1247,7 @@ static void draw_review_screen(const struct app_state *app)
 
 	draw_card_status(app, &app->session.cards[scheduler_current_index(&app->session)]);
 	printf("\x1b[7;1H" APP_COLOR_ACCENT "Front" APP_COLOR_RESET);
-	printf("\x1b[8;1H" APP_COLOR_ACCENT "------------------------------------------------" APP_COLOR_RESET);
+	printf("\x1b[8;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
 
 	if (app->revealed)
 	{
@@ -1255,7 +1259,7 @@ static void draw_review_screen(const struct app_state *app)
 			0
 		);
 		printf("\x1b[15;1H" APP_COLOR_ACCENT "Back" APP_COLOR_RESET);
-		printf("\x1b[16;1H" APP_COLOR_ACCENT "------------------------------------------------" APP_COLOR_RESET);
+		printf("\x1b[16;1H" APP_COLOR_RULE "------------------------------------------------" APP_COLOR_RESET);
 		draw_wrapped_text_columns(
 			card->back,
 			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
@@ -1347,7 +1351,7 @@ static void draw_summary_screen(const struct app_state *app)
 		session->rating_counts[SCHEDULER_RATING_GOOD]
 	);
 	printf(
-		"\x1b[16;1H" APP_COLOR_ACCENT "A Easy" APP_COLOR_RESET ":  %u",
+		"\x1b[16;1H" APP_COLOR_EASY "A Easy" APP_COLOR_RESET ":  %u",
 		session->rating_counts[SCHEDULER_RATING_EASY]
 	);
 }
@@ -1611,7 +1615,7 @@ static void draw_controls_screen(const struct app_state *app)
 			);
 			printf(
 				"\x1b[7;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_ACCENT "A: Easy" APP_COLOR_RESET
+				"       " APP_COLOR_EASY "A: Easy" APP_COLOR_RESET
 			);
 			printf("\x1b[9;1HL: undo last action");
 			printf("\x1b[11;1HR: confirm suspend");
@@ -1675,7 +1679,7 @@ static void draw_battery_status(const struct app_state *app)
 	else
 	{
 		printf(
-			"\x1b[29;1H" APP_COLOR_ACCENT "Battery: %u/5" APP_COLOR_RESET,
+			"\x1b[29;1H" APP_COLOR_NEUTRAL "Battery: %u/5" APP_COLOR_RESET,
 			(unsigned int)app->battery_level
 		);
 	}
@@ -1684,7 +1688,7 @@ static void draw_battery_status(const struct app_state *app)
 static void draw_due_legend(int row, bool include_suspended)
 {
 	printf(
-		"\x1b[%d;1H" APP_COLOR_ACCENT "N" APP_COLOR_RESET
+		"\x1b[%d;1H" APP_COLOR_NEUTRAL "N" APP_COLOR_RESET
 		" new  " APP_COLOR_WARNING "L" APP_COLOR_RESET
 		" learn  " APP_COLOR_SUCCESS "R" APP_COLOR_RESET " review",
 		row
@@ -2045,7 +2049,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			);
 			printf(
 				"\x1b[8;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
-				"       " APP_COLOR_ACCENT "A: Easy" APP_COLOR_RESET
+				"       " APP_COLOR_EASY "A: Easy" APP_COLOR_RESET
 			);
 			printf("\x1b[10;1HL: undo last action");
 			printf("\x1b[12;1HR: confirm suspend");
