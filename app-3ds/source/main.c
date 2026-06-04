@@ -659,6 +659,17 @@ static void app_set_nothing_status(struct app_state *app, const char *message)
 	);
 }
 
+static void app_set_undo_saved_status(struct app_state *app, bool log_saved)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s%s",
+		log_saved ? "Undo saved" : "Undo saved; log skipped",
+		active_deck_status_suffix(app)
+	);
+}
+
 static void app_set_canceled_status(struct app_state *app, const char *label)
 {
 	snprintf(
@@ -3077,7 +3088,7 @@ static bool undo_last_action(struct app_state *app)
 		);
 	}
 	app->state_message = "undone";
-	app_set_status(app, log_saved ? "Undo saved" : "Undo saved; log skipped");
+	app_set_undo_saved_status(app, log_saved);
 	app->revealed = false;
 	reset_review_scroll(app);
 	app->mode = APP_MODE_REVIEW;

@@ -354,8 +354,9 @@ problem.
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
 counters before applying the action. Undo restores that snapshot, clears the
-undo slot, returns to review mode, and saves the restored `state.tsv`. Loading a
-deck or restoring saved card state clears the undo slot.
+undo slot, returns to review mode, and saves the restored `state.tsv`. Successful
+undo feedback preserves active-deck warning context. Loading a deck or
+restoring saved card state clears the undo slot.
 
 The app keeps a scheduler rollback snapshot before review actions that mutate
 state and then save `state.tsv`. If the save fails after a rating, suspend,

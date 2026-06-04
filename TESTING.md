@@ -318,8 +318,8 @@ Acceptance steps:
 - suspend one card, then restore suspended cards from the actions screen
 - confirm restore with no suspended cards stays on the actions screen and
   preserves active warning context when present
-- undo one rating and confirm the queue/status updates sensibly; no-op undo
-  keeps active warning context when present
+- undo one rating and confirm the queue/status updates sensibly; saved and
+  no-op undo feedback keeps active warning context when present
 - change `new_limit` and `review_limit` from the actions screen
 - confirm daily-limit edits show an unsaved-changes cue before saving and
   return to no-changes state after save or cancel, with active warning context

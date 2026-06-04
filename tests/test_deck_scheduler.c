@@ -4060,6 +4060,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status nothing suspended settings ignored is warning"
 	);
 	check(
+		app_status_message_color("Undo saved; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status undo saved settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Undo saved; log skipped; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status undo saved log skipped limit reached is warning"
+	);
+	check(
 		app_status_message_color("No decks found; 2 ignored") ==
 			APP_STATUS_COLOR_WARNING,
 		"status no decks found is warning"
