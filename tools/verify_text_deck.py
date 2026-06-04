@@ -35,6 +35,10 @@ TEXT_DECK_FILES = frozenset(("deck.json", "cards.tsv", "settings.tsv"))
 RUNTIME_SUPPORTED_JSON_NAME_ESCAPES = frozenset(('"', "\\", "/"))
 
 
+class DuplicateJsonKeyError(ValueError):
+    pass
+
+
 class DeckSummary(NamedTuple):
     deck_dir: Path
     deck_name: str
@@ -111,14 +115,31 @@ def load_deck_json(deck_dir: Path, errors: list[str]) -> dict[str, object] | Non
         return None
 
     try:
-        loaded = json.loads(deck_json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+        loaded = json.loads(
+            deck_json_path.read_text(encoding="utf-8"),
+            object_pairs_hook=json_object_without_duplicate_keys,
+        )
+    except (OSError, json.JSONDecodeError, DuplicateJsonKeyError) as error:
         append_file_error(errors, deck_json_path, str(error))
         return None
 
     if not isinstance(loaded, dict):
         append_file_error(errors, deck_json_path, "must contain a JSON object")
         return None
+
+    return loaded
+
+
+def json_object_without_duplicate_keys(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
+    loaded: dict[str, object] = {}
+
+    for key, value in pairs:
+        if key in loaded:
+            raise DuplicateJsonKeyError(f"duplicate JSON key: {key}")
+
+        loaded[key] = value
 
     return loaded
 

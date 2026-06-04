@@ -167,6 +167,25 @@ class VerifyTextDeckTests(unittest.TestCase):
                 "name uses a JSON escape unsupported by the 3DS display parser",
             )
 
+    def test_rejects_duplicate_deck_json_keys(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "deck.json").write_text(
+                (
+                    '{"format_version":1,'
+                    '"deck_id":"sample",'
+                    '"name":"First",'
+                    '"name":"Second",'
+                    '"card_count":1}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            self.assert_error_contains(
+                self.verify(deck_dir),
+                "duplicate JSON key: name",
+            )
+
     def test_rejects_progress_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             deck_dir = self.write_deck(Path(temp_dir))

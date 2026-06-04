@@ -683,6 +683,23 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Deck Metadata Duplicate-Key Gate
+
+Build: local working tree
+Command: `python3 -m unittest tests/test_verify_text_deck.py`
+Steps:
+- Tightened the text-deck verifier to reject duplicate JSON keys in
+  `deck.json`.
+Observed:
+- Text-deck verifier tests passed.
+Expected:
+- Preflight verification should reject ambiguous metadata instead of letting
+  Python's JSON parser silently choose one key occurrence.
+Result: pass for verifier gate
+Notes:
+- Converter output already writes unique keys, so normal converted decks are
+  unaffected.
+
 ## 2026-06-04 - Deck Name Preflight Escape Gate
 
 Build: local working tree

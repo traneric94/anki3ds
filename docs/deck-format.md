@@ -51,6 +51,7 @@ Draft:
 }
 ```
 
+`deck.json` object keys must be unique.
 `deck_id` must match the folder id. The converter defaults it from the output
 folder name, and rejects mismatches so desktop output stays loadable on-device.
 Folder ids are limited to 63 ASCII letters, numbers, `_`, or `-` characters,
