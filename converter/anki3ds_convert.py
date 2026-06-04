@@ -29,6 +29,7 @@ REVIEW_STATE_FILES = ("state.tsv", "state.tsv.tmp", "state.tsv.bak")
 SETTINGS_FILES = ("settings.tsv", "settings.tsv.tmp", "settings.tsv.bak")
 REVIEW_LOG_FILE = "review-log.tsv"
 REVIEW_LOG_FIELD_COUNT = 21
+REVIEW_LOG_MAX_BYTES = 262144
 
 BLOCK_TAGS = {
     "address",
@@ -722,6 +723,27 @@ def matching_review_log_rows_from_rows(
     ]
 
 
+def capped_review_log_rows(rows: list[str]) -> list[str]:
+    selected_rows: list[str] = []
+    total_bytes = 0
+
+    for row in reversed(rows):
+        row_bytes = len(row.encode("utf-8")) + 1
+
+        if row_bytes > REVIEW_LOG_MAX_BYTES:
+            if not selected_rows:
+                continue
+            break
+        if total_bytes + row_bytes > REVIEW_LOG_MAX_BYTES:
+            break
+
+        selected_rows.append(row)
+        total_bytes += row_bytes
+
+    selected_rows.reverse()
+    return selected_rows
+
+
 def migrate_review_log_file(
     source_path: Path,
     target_path: Path,
@@ -738,8 +760,7 @@ def migrate_review_log_file(
     except (OSError, UnicodeDecodeError):
         return
 
-    if matching_rows:
-        target_path.write_text("\n".join(matching_rows) + "\n", encoding="utf-8")
+    write_review_log_rows(target_path, matching_rows)
 
 
 def collect_review_log_rows(source_dirs: list[Path]) -> list[str]:
@@ -787,8 +808,10 @@ def collect_matching_review_log_rows(
 
 
 def write_review_log_rows(target_path: Path, matching_rows: list[str]) -> None:
-    if matching_rows:
-        target_path.write_text("\n".join(matching_rows) + "\n", encoding="utf-8")
+    capped_rows = capped_review_log_rows(matching_rows)
+
+    if capped_rows:
+        target_path.write_text("\n".join(capped_rows) + "\n", encoding="utf-8")
     else:
         remove_path_if_present(target_path)
 

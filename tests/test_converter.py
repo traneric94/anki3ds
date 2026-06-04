@@ -11,6 +11,7 @@ from converter.anki3ds_convert import (
     DECK_MAX_CARDS,
     DECK_MAX_NAME_LENGTH,
     DECK_MAX_TEXT_LENGTH,
+    REVIEW_LOG_MAX_BYTES,
     convert_lines,
     deck_id_is_valid,
     escape_tsv_field,
@@ -1073,6 +1074,73 @@ class ConverterTests(unittest.TestCase):
                 (second_chunk / "settings.tsv").read_text(encoding="utf-8"),
                 "new_limit\t3\nreview_limit\t4\n",
             )
+
+    def test_write_split_decks_caps_migrated_review_log_at_device_limit(self):
+        old_cards = convert_lines(
+            ["source-0\tnote-0\told front 0\told back 0"],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+        new_cards = convert_lines(
+            ["source-0\tnote-0\tnew front 0\tnew back 0"] + [
+                f"new-source-{index}\tnew-note-{index}\tfront {index}\tback {index}"
+                for index in range(DECK_MAX_CARDS)
+            ],
+            2,
+            3,
+            None,
+            card_id_field=0,
+            note_id_field=1,
+        )
+        review_rows = []
+        review_log_size = 0
+        timestamp = 1
+        while review_log_size <= REVIEW_LOG_MAX_BYTES + 512:
+            row = review_log_row(old_cards[0].card_id, timestamp)
+            review_rows.append(row)
+            review_log_size += len(row.encode("utf-8"))
+            timestamp += 1
+
+        expected_rows = []
+        expected_size = 0
+        for row in reversed(review_rows):
+            row_size = len(row.encode("utf-8"))
+            if expected_size + row_size > REVIEW_LOG_MAX_BYTES:
+                break
+            expected_rows.append(row)
+            expected_size += row_size
+        expected_rows.reverse()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "large"
+            write_split_decks(output, "large", "Large", old_cards)
+            (output / "review-log.tsv").write_text(
+                "".join(review_rows),
+                encoding="utf-8",
+            )
+
+            written_paths = write_split_decks(output, "large", "Large", new_cards)
+
+            first_chunk = root / "large-01"
+            second_chunk = root / "large-02"
+            self.assertEqual(written_paths, [first_chunk, second_chunk])
+            self.assertFalse(output.exists())
+            review_log_text = (first_chunk / "review-log.tsv").read_text(
+                encoding="utf-8"
+            )
+            self.assertLessEqual(
+                len(review_log_text.encode("utf-8")),
+                REVIEW_LOG_MAX_BYTES,
+            )
+            self.assertEqual(review_log_text, "".join(expected_rows))
+            review_log_lines = review_log_text.splitlines()
+            self.assertNotIn(review_rows[0].rstrip("\n"), review_log_lines)
+            self.assertIn(review_rows[-1].rstrip("\n"), review_log_lines)
+            self.assertFalse((second_chunk / "review-log.tsv").exists())
 
     def test_write_split_decks_keeps_non_converter_matching_sibling(self):
         cards = convert_lines(

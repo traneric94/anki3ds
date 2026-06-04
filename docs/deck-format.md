@@ -209,7 +209,9 @@ preserve them when updating card content. When split output changes shape, the
 converter preserves complete `review-log.tsv` rows whose `card_id` still exists
 in the target deck or chunk. Rows must be newline-terminated and use the
 expected field count; incomplete final log rows are ignored, matching the app's
-partial-row repair policy.
+partial-row repair policy. Rewritten migrated logs keep the newest matching
+rows whose newline-terminated UTF-8 encoding fits the same 262144-byte device
+cap used by the app.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can

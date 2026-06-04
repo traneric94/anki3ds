@@ -1080,3 +1080,28 @@ Result: pass for automated build/test only; pending manual render check
 Notes:
 - Manual emulator or hardware rendering is still needed for true 3DS screen
   contrast.
+
+## 2026-06-04 - Migrated Review Log Cap Local Gate
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_converter.py`
+- `make test`
+Steps:
+- Added the 262144-byte device review-log cap to converter-rewritten
+  `review-log.tsv` files.
+- Kept the newest complete matching migrated log rows that fit the cap when a
+  converter-generated deck changes between single-folder and split-folder
+  output.
+- Updated deck-format and converter algorithm docs with the cap behavior.
+Observed:
+- Focused converter tests passed, including the oversized migrated-log case.
+- Host C tests, converter tests, and text-deck verifier tests passed through
+  `make test`.
+Expected:
+- Reimporting a text deck should not strand migrated diagnostic logs above the
+  size where the 3DS app can continue appending study transitions.
+Result: pass for automated gate
+Notes:
+- This is converter-side behavior only; the app's append cap remains covered by
+  host C review-log tests.
