@@ -461,6 +461,14 @@ static bool app_daily_limit_blocks_cards(const struct app_state *app)
 	);
 }
 
+static bool app_settings_have_unsaved_changes(const struct app_state *app)
+{
+	return (
+		app->edited_settings.new_limit != app->settings.new_limit ||
+		app->edited_settings.review_limit != app->settings.review_limit
+	);
+}
+
 static bool settings_load_result_needs_warning(enum app_settings_load_result result)
 {
 	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
@@ -1066,7 +1074,7 @@ static void app_open_settings(struct app_state *app)
 {
 	app->edited_settings = app->settings;
 	app->selected_setting = SETTING_ITEM_NEW_LIMIT;
-	app->settings_message = "settings not saved";
+	app->settings_message = "no changes";
 	app_set_status(app, "Editing limits");
 	app->mode = APP_MODE_SETTINGS;
 }
@@ -1457,6 +1465,7 @@ static void draw_settings_screen(const struct app_state *app)
 	char new_limit[16];
 	char review_limit[16];
 	int save_row = 18;
+	bool unsaved_changes = app_settings_have_unsaved_changes(app);
 
 	format_daily_limit(
 		new_limit,
@@ -1500,7 +1509,14 @@ static void draw_settings_screen(const struct app_state *app)
 	{
 		save_row = 19;
 	}
-	printf("\x1b[%d;1HSave: %s", save_row, app->settings_message);
+	printf(
+		"\x1b[%d;1H%sSave: %s" APP_COLOR_RESET,
+		save_row,
+		unsaved_changes ? APP_COLOR_WARNING : "",
+		app->settings_message
+	);
+	if (unsaved_changes)
+		printf("\x1b[%d;1HPress A to save changes.", save_row + 1);
 }
 
 static void draw_reset_confirmation_screen(const struct app_state *app)
@@ -3025,15 +3041,21 @@ static bool app_handle_settings_input(
 	{
 		unsigned int *limit = selected_daily_limit(app);
 		char limit_text[16];
+		bool unsaved_changes;
 
 		*limit = adjusted_daily_limit(*limit, right);
 		format_daily_limit(limit_text, sizeof(limit_text), *limit);
+		unsaved_changes = app_settings_have_unsaved_changes(app);
+		app->settings_message = unsaved_changes ?
+			"unsaved changes" :
+			"no changes";
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"%s: %s",
+			"%s: %s%s",
 			setting_item_name(app->selected_setting),
-			limit_text
+			limit_text,
+			unsaved_changes ? " unsaved" : ""
 		);
 		return true;
 	}
@@ -3050,8 +3072,15 @@ static bool app_handle_settings_input(
 		)
 	)
 	{
+		bool discarded_changes = app_settings_have_unsaved_changes(app);
+
 		app->mode = APP_MODE_ACTIONS;
-		app_set_status(app, "Limits canceled");
+		app_set_status(
+			app,
+			discarded_changes ?
+				"Limits canceled; discarded" :
+				"Limits canceled"
+		);
 		return true;
 	}
 

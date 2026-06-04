@@ -112,4 +112,7 @@ In the daily-limits screen:
 - `B` or `SELECT` returns to actions without saving.
 
 `0` means all available cards.
+The screen shows `no changes` when the edited values match the active saved
+limits and warns about `unsaved changes` after a value change. Canceling with
+unsaved changes discards the edit buffer and returns to actions.
 Saving limits updates `settings.tsv` and leaves review progress status separate.
