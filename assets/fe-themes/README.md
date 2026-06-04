@@ -6,7 +6,7 @@ an `[F2E]` folder.
 Run from the repo root:
 
 ```sh
-python3 tools/import_fe_theme_assets.py
+make verify-fe-theme-assets
 ```
 
 Tracked raw output lives in `raw/` as `128x80` BGR888 data. Desktop BMP and

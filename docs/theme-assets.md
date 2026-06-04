@@ -28,7 +28,7 @@ folder:
 Regenerate the raw files and desktop previews with:
 
 ```sh
-python3 tools/import_fe_theme_assets.py
+make verify-fe-theme-assets
 ```
 
 Set `FE_REPO_PATH` or pass `--fe-repo` if the FE repo clone is somewhere other
@@ -60,7 +60,8 @@ Current implementation still uses original console-rendered panels:
 
 Moving beyond converted backdrops requires a renderer pass:
 
-1. Prove the conversion output with desktop BMP previews.
+1. Prove the conversion output with desktop BMP/PNG previews and
+   `python3 -m unittest tests/test_fe_theme_assets.py`.
 2. Choose either direct framebuffer drawing or citro2d/citro3d sprites.
 3. Render one background in an isolated 3DS test before touching app screens.
 4. Keep console text over the sprites, or replace console text with a bitmap

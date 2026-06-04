@@ -13,8 +13,9 @@ SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 SAMPLE_PROGRESS_FILE_CASE := state.tsv|state.tsv.tmp|state.tsv.bak|review-log.tsv|review-log.tsv.tmp|review-log.tsv.bak
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 VERIFY_AZAHAR_CONTROLS := python3 tools/verify_azahar_controls.py
+IMPORT_FE_THEME_ASSETS := python3 tools/import_fe_theme_assets.py
 
-.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-m7-preflight verify-sample-decks verify-azahar-controls check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-m7-preflight verify-sample-decks verify-azahar-controls verify-fe-theme-assets check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
 all: app-3ds
 
@@ -57,6 +58,7 @@ test-converter:
 test-tools:
 	python3 -m unittest tests/test_verify_text_deck.py
 	python3 -m unittest tests/test_verify_azahar_controls.py
+	python3 -m unittest tests/test_fe_theme_assets.py
 
 verify-ci: test verify-sample-decks
 
@@ -72,6 +74,9 @@ verify-sample-decks:
 
 verify-azahar-controls:
 	$(VERIFY_AZAHAR_CONTROLS)
+
+verify-fe-theme-assets:
+	$(IMPORT_FE_THEME_ASSETS)
 
 check-package-sd-root:
 	@set -e; \
