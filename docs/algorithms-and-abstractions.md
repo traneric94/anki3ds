@@ -392,6 +392,9 @@ the configured size cap. If the existing file ends with a partial non-newline
 row, the log writer rewrites the complete prefix before appending the new row.
 A log append or repair failure does not roll back a saved study action; the
 bottom status reports `log skipped` so the diagnostic gap is visible.
+Restore-all logging uses the same pre-save rollback snapshot used for failed
+save recovery, so each restored card's log row records the actual pre-restore
+card state.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant

@@ -388,6 +388,28 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Restore Log Snapshot Gate
+
+Build: local working tree
+Command: `git diff --check`, `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Changed restore-all diagnostic logging to use the rollback session captured
+  before `scheduler_unsuspend_all`.
+- Avoided reconstructing the before-state from the already-restored card.
+Observed:
+- Whitespace check passed.
+- Host C tests passed.
+- The 3DS target rebuilt successfully.
+Expected:
+- Restore-all log rows should record each card's actual pre-restore scheduler
+  state, including suspended and review-day fields.
+Result: pass for automated host/build gate only
+Notes:
+- Manual emulator or hardware review remains pending for end-to-end acceptance.
+
 ## 2026-06-04 - Review Log Day-Fields Gate
 
 Build: local working tree
