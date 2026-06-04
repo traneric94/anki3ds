@@ -2770,6 +2770,7 @@ static bool app_handle_actions_input(
 	)
 	{
 		app->mode = app->action_return_mode;
+		app_set_status(app, "Actions canceled");
 		return true;
 	}
 
