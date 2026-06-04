@@ -98,6 +98,10 @@ and shows new and review cards past the limit.
 When the battery sample is low and not charging, successful save-oriented
 actions add `; batt low` to the status line while the bottom battery line keeps
 showing the full low-battery prompt.
+The root `session.tsv` diagnostic snapshot is written at boot, deck scan, deck
+open, durable save actions, reset, and confirmed exit. Revealing an answer only
+updates the in-memory session counter; it is flushed by the next snapshot write
+so ordinary card flips do not add SD-card writes.
 
 ## Help Screen
 

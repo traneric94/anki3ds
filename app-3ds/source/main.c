@@ -4125,7 +4125,6 @@ static bool app_handle_input(
 		app_set_status(app, "Answer shown; choose rating");
 		app_append_active_deck_status_suffix(app);
 		app_diagnostics_mark_answer_shown(&app->diagnostics);
-		app_save_diagnostics(app);
 		return true;
 	case APP_CONTROL_ACTION_RATE:
 		return rate_current_card(app, rating);

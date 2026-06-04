@@ -80,7 +80,9 @@ Pass conditions:
   `state.tsv` after saved study, `settings.tsv` after limit edits, and
   `review-log.tsv` after saved study actions unless the status reported
   `log skipped`. The root `3ds/anki3ds/session.tsv` has a complete session
-  snapshot with scan, deck-open, action, reset, and exit counters.
+  snapshot with scan, deck-open, action, reset, and exit counters. Answer
+  reveals are allowed to appear only after the next snapshot write because they
+  do not write the diagnostic file by themselves.
 - After the pass, `make verify-m7-artifacts M7_SDMC=/path/to/sdmc` accepts the
   tested SD root. For Azahar, omit `M7_SDMC` to use the configured
   `AZAHAR_SDMC`. Include `M7_EXPECT_SETTINGS="deck:new:review ..."` for the
