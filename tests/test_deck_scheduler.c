@@ -2958,6 +2958,78 @@ static void test_review_state_round_trip(void)
 	remove(TEST_STATE_BACKUP_PATH);
 }
 
+static void test_review_state_round_trips_all_ratings(void)
+{
+	struct deck deck;
+	struct scheduler_session session;
+	struct scheduler_session loaded;
+
+	remove(TEST_STATE_PATH);
+	deck_init(&deck, "all-ratings-state-test");
+	deck.card_count = 4;
+	for (size_t index = 0; index < deck.card_count; index++)
+	{
+		snprintf(
+			deck.cards[index].card_id,
+			sizeof(deck.cards[index].card_id),
+			"card-%lu",
+			(unsigned long)(index + 1)
+		);
+		snprintf(
+			deck.cards[index].front,
+			sizeof(deck.cards[index].front),
+			"front %lu",
+			(unsigned long)(index + 1)
+		);
+		snprintf(
+			deck.cards[index].back,
+			sizeof(deck.cards[index].back),
+			"back %lu",
+			(unsigned long)(index + 1)
+		);
+	}
+	scheduler_init(&session, deck.card_count, TEST_TODAY);
+
+	scheduler_rate_current(&session, SCHEDULER_RATING_HARD);
+	scheduler_rate_current(&session, SCHEDULER_RATING_GOOD);
+	scheduler_rate_current(&session, SCHEDULER_RATING_EASY);
+	scheduler_rate_current(&session, SCHEDULER_RATING_AGAIN);
+
+	check(
+		review_state_save(&deck, &session, TEST_STATE_PATH) == REVIEW_STATE_SAVE_OK,
+		"all ratings state saves"
+	);
+
+	scheduler_init(&loaded, deck.card_count, TEST_TODAY);
+	check(
+		review_state_load(&deck, &loaded, TEST_STATE_PATH) == REVIEW_STATE_LOAD_OK,
+		"all ratings state loads"
+	);
+	check(loaded.cards[0].last_rating == SCHEDULER_RATING_HARD, "hard rating loads");
+	check(loaded.cards[0].due_day == TEST_TODAY + 1, "hard due day loads");
+	check(loaded.cards[0].interval_days == 1, "hard interval loads");
+	check(loaded.cards[1].last_rating == SCHEDULER_RATING_GOOD, "good rating reloads");
+	check(loaded.cards[1].due_day == TEST_TODAY + 1, "good due day reloads");
+	check(loaded.cards[1].interval_days == 1, "good interval reloads");
+	check(loaded.cards[2].last_rating == SCHEDULER_RATING_EASY, "easy rating loads");
+	check(loaded.cards[2].due_day == TEST_TODAY + 4, "easy due day loads");
+	check(loaded.cards[2].interval_days == 4, "easy interval loads");
+	check(loaded.cards[3].last_rating == SCHEDULER_RATING_AGAIN, "again rating reloads");
+	check(loaded.cards[3].due_day == TEST_TODAY, "again due day reloads");
+	check(loaded.cards[3].interval_days == 0, "again interval reloads");
+	check(scheduler_card_is_due(&loaded, 3), "again card remains due after reload");
+	check(loaded.due_count == 1, "all ratings reload leaves only again due");
+	check(scheduler_current_index(&loaded) == 3, "all ratings reload selects again card");
+	check(loaded.new_count_today == 4, "all ratings reloads new count today");
+	check(
+		scheduler_reviewed_today_count(&loaded) == 4,
+		"all ratings reloads reviewed count today"
+	);
+
+	remove(TEST_STATE_PATH);
+	remove(TEST_STATE_BACKUP_PATH);
+}
+
 static void test_review_state_round_trip_suspended_card(void)
 {
 	struct deck deck;
@@ -6183,6 +6255,7 @@ int main(void)
 	test_review_state_missing_file();
 	test_review_state_load_rejects_null_arguments();
 	test_review_state_round_trip();
+	test_review_state_round_trips_all_ratings();
 	test_review_state_round_trip_suspended_card();
 	test_review_state_round_trip_review_limit_count();
 	test_review_state_save_rejects_count_mismatch();
