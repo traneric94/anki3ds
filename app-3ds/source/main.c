@@ -86,6 +86,7 @@ struct app_state
 	enum deck_load_result load_result;
 	struct deck_load_report load_report;
 	enum app_settings_load_result settings_load_result;
+	struct app_settings_load_report settings_load_report;
 	enum app_settings_save_result settings_save_result;
 	enum review_state_load_result state_load_result;
 	enum review_state_save_result state_save_result;
@@ -463,6 +464,38 @@ static void draw_load_error_detail(const struct app_state *app, int row)
 	draw_deck_load_error_detail(app->load_result, &app->load_report, row);
 }
 
+static bool draw_settings_load_error_detail(
+	enum app_settings_load_result load_result,
+	const struct app_settings_load_report *report,
+	int row
+)
+{
+	if (load_result != APP_SETTINGS_LOAD_BAD_FORMAT || report == NULL)
+		return false;
+
+	if (report->line_number > 0)
+	{
+		printf(
+			"\x1b[%d;1HLine %u: %s",
+			row,
+			report->line_number,
+			app_settings_parse_result_name(report->parse_result)
+		);
+		return true;
+	}
+	if (report->parse_result != APP_SETTINGS_PARSE_OK)
+	{
+		printf(
+			"\x1b[%d;1HSettings: %s",
+			row,
+			app_settings_parse_result_name(report->parse_result)
+		);
+		return true;
+	}
+
+	return false;
+}
+
 static enum app_mode app_review_mode_for_session(const struct app_state *app)
 {
 	return app_review_should_show_queue(app->state_load_result, &app->session) ?
@@ -610,7 +643,8 @@ static const char *status_message_color(const char *message)
 		strstr(message, "kept") != NULL ||
 		strstr(message, "reset state") != NULL ||
 		strstr(message, "limit reached") != NULL ||
-		strstr(message, "unmatched") != NULL
+		strstr(message, "unmatched") != NULL ||
+		strstr(message, "ignored") != NULL
 	)
 	{
 		return APP_COLOR_WARNING;
@@ -777,6 +811,10 @@ static void app_refresh_selected_deck_summary(struct app_state *app)
 		app->state_load_result,
 		&app->session
 	);
+	app->deck_summaries[app->selected_deck_index].deck_load_report =
+		app->load_report;
+	app->deck_summaries[app->selected_deck_index].settings_load_report =
+		app->settings_load_report;
 }
 
 static void app_return_to_deck_select(struct app_state *app)
@@ -832,6 +870,8 @@ static void app_load_selected_deck(struct app_state *app)
 	reset_review_scroll(app);
 	app_settings_default(&app->settings);
 	app->settings_load_result = APP_SETTINGS_LOAD_NOT_FOUND;
+	app->settings_load_report.line_number = 0;
+	app->settings_load_report.parse_result = APP_SETTINGS_PARSE_OK;
 	app->settings_save_result = APP_SETTINGS_SAVE_OK;
 	app->state_load_result = REVIEW_STATE_LOAD_NOT_FOUND;
 	app->state_save_result = REVIEW_STATE_SAVE_OK;
@@ -845,9 +885,10 @@ static void app_load_selected_deck(struct app_state *app)
 
 	if (app->load_result == DECK_LOAD_OK)
 	{
-		app->settings_load_result = app_settings_load(
+		app->settings_load_result = app_settings_load_with_report(
 			&app->settings,
-			app->active_settings_path
+			app->active_settings_path,
+			&app->settings_load_report
 		);
 		scheduler_init(&app->session, app->deck.card_count, today);
 		scheduler_set_daily_limits(
@@ -863,9 +904,20 @@ static void app_load_selected_deck(struct app_state *app)
 		app->state_message = review_state_load_result_name(app->state_load_result);
 
 		app->mode = app_review_mode_for_session(app);
-		if (app->state_load_result == REVIEW_STATE_LOAD_UNMATCHED)
+		if (
+			settings_load_result_needs_warning(app->settings_load_result) &&
+			app->state_load_result == REVIEW_STATE_LOAD_UNMATCHED
+		)
+		{
+			app_set_status(app, "Settings ignored; state fresh");
+		}
+		else if (app->state_load_result == REVIEW_STATE_LOAD_UNMATCHED)
 		{
 			app_set_status(app, "State unmatched; started fresh");
+		}
+		else if (settings_load_result_needs_warning(app->settings_load_result))
+		{
+			app_set_status(app, "Settings ignored; using defaults");
 		}
 		else if (app->mode == APP_MODE_REVIEW)
 		{
@@ -1304,6 +1356,7 @@ static void draw_settings_screen(const struct app_state *app)
 		app->selected_setting == SETTING_ITEM_REVIEW_LIMIT ? ">" : " ";
 	char new_limit[16];
 	char review_limit[16];
+	int save_row = 18;
 
 	format_daily_limit(
 		new_limit,
@@ -1338,7 +1391,17 @@ static void draw_settings_screen(const struct app_state *app)
 		"\x1b[16;1HCurrent source: %s",
 		app_settings_load_result_name(app->settings_load_result)
 	);
-	printf("\x1b[18;1HSave: %s", app->settings_message);
+	if (
+		draw_settings_load_error_detail(
+			app->settings_load_result,
+			&app->settings_load_report,
+			17
+		)
+	)
+	{
+		save_row = 19;
+	}
+	printf("\x1b[%d;1HSave: %s", save_row, app->settings_message);
 }
 
 static void draw_reset_confirmation_screen(const struct app_state *app)
@@ -1772,6 +1835,16 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 						"Settings ignored; defaults" APP_COLOR_RESET
 					);
 					details_row = 16;
+					if (
+						draw_settings_load_error_detail(
+							summary->settings_load_result,
+							&summary->settings_load_report,
+							15
+						)
+					)
+					{
+						details_row = 17;
+					}
 				}
 				if (state_load_result_needs_warning(summary->state_load_result))
 				{
@@ -1800,7 +1873,10 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					(unsigned long)summary->card_count,
 					(unsigned long)summary->suspended_count
 				);
-				draw_due_legend(details_row + 6, true);
+				if (details_row <= 16)
+					draw_due_legend(details_row + 6, true);
+				else if (details_row == 17)
+					draw_due_legend(details_row + 6, false);
 			}
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
@@ -1930,6 +2006,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			"\x1b[27;1HSettings: %s",
 			app_settings_load_result_name(app->settings_load_result)
 		);
+		draw_settings_load_error_detail(
+			app->settings_load_result,
+			&app->settings_load_report,
+			28
+		);
 		break;
 	}
 	case APP_MODE_SUMMARY:
@@ -1988,6 +2069,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf(
 			"\x1b[13;1HSettings: %s",
 			app_settings_load_result_name(app->settings_load_result)
+		);
+		draw_settings_load_error_detail(
+			app->settings_load_result,
+			&app->settings_load_report,
+			14
 		);
 		printf("\x1b[27;1HReviewed this session: %u", app->session.reviewed_count);
 		break;

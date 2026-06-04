@@ -71,8 +71,8 @@ reject invalid ids, scan a temporary root, and verify only folders containing
 After discovery, the app builds a `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, total due count, new/learning/review due
-counts from scheduler policy, suspended-card count, and any deck-load report
-for the selector. This keeps the deck list useful for daily study while
+counts from scheduler policy, suspended-card count, and any deck/settings load
+reports for the selector. This keeps the deck list useful for daily study while
 preserving the fixed `DECK_INDEX_MAX_DECKS` and `DECK_MAX_CARDS` limits. The
 summary loader allocates its temporary deck and scheduler on the heap so larger
 supported decks do not consume a large 3DS stack frame during deck scanning. If
@@ -374,7 +374,8 @@ limits screen using the same temp/backup save pattern as review state. If
 so a stale temp file does not outrank a known previous save. If all available
 settings files are malformed, the app uses defaults.
 Deck selector stats still show default-based counts in that case, but mark the
-settings as ignored so the fallback is visible.
+settings as ignored and show the first settings parse reason so the fallback is
+visible.
 Settings save feedback stays in the settings/status messages and does not
 overwrite the review-state status line. Saving settings after a malformed
 review-state load still leaves the deck on the reset-needed summary; settings

@@ -134,7 +134,8 @@ Supported settings:
 - `review_limit`: review cards introduced per day, `0` means unlimited
 
 Both settings rows must be present. If `settings.tsv` is missing or invalid,
-the app uses defaults:
+the app uses defaults. Invalid settings are shown as ignored on device, with
+the first bad line or missing required setting when available:
 
 ```text
 new_limit	20

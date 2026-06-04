@@ -3567,14 +3567,24 @@ static void test_app_settings_bad_primary_prefers_backup_before_temp(void)
 static void test_app_settings_bad_file_uses_defaults(void)
 {
 	struct app_settings settings;
+	struct app_settings_load_report report;
 
 	remove(TEST_SETTINGS_TEMP_PATH);
 	remove(TEST_SETTINGS_BACKUP_PATH);
 	write_file(TEST_SETTINGS_PATH, "new_limit\tbad\n");
 
 	check(
-		app_settings_load(&settings, TEST_SETTINGS_PATH) == APP_SETTINGS_LOAD_BAD_FORMAT,
+		app_settings_load_with_report(
+			&settings,
+			TEST_SETTINGS_PATH,
+			&report
+		) == APP_SETTINGS_LOAD_BAD_FORMAT,
 		"bad settings reports ignored"
+	);
+	check(report.line_number == 1, "bad settings reports first bad line");
+	check(
+		report.parse_result == APP_SETTINGS_PARSE_BAD_VALUE,
+		"bad settings reports bad value"
 	);
 	check(settings.new_limit == APP_SETTINGS_DEFAULT_NEW_LIMIT, "bad settings new default");
 	check(
@@ -4215,6 +4225,14 @@ static void test_deck_summary_reports_bad_settings_with_default_counts(void)
 	check(
 		summary.settings_load_result == APP_SETTINGS_LOAD_BAD_FORMAT,
 		"bad settings summary reports ignored settings"
+	);
+	check(
+		summary.settings_load_report.line_number == 1,
+		"bad settings summary reports bad line"
+	);
+	check(
+		summary.settings_load_report.parse_result == APP_SETTINGS_PARSE_BAD_VALUE,
+		"bad settings summary reports bad value"
 	);
 	check(
 		summary.state_load_result == REVIEW_STATE_LOAD_NOT_FOUND,

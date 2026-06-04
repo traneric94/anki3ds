@@ -17,6 +17,43 @@ void app_settings_default(struct app_settings *settings)
 	settings->review_limit = APP_SETTINGS_DEFAULT_REVIEW_LIMIT;
 }
 
+static void app_settings_load_report_init(struct app_settings_load_report *report)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = 0;
+	report->parse_result = APP_SETTINGS_PARSE_OK;
+}
+
+static void app_settings_load_report_set(
+	struct app_settings_load_report *report,
+	unsigned int line_number,
+	enum app_settings_parse_result parse_result
+)
+{
+	if (report == NULL)
+		return;
+
+	report->line_number = line_number;
+	report->parse_result = parse_result;
+}
+
+static void app_settings_remember_bad_report(
+	struct app_settings_load_report *destination,
+	bool *has_destination,
+	const struct app_settings_load_report *source
+)
+{
+	if (destination == NULL || has_destination == NULL || source == NULL)
+		return;
+	if (*has_destination)
+		return;
+
+	*destination = *source;
+	*has_destination = true;
+}
+
 static bool parse_unsigned_field(const char *field, unsigned int max, unsigned int *value)
 {
 	char *end = NULL;
@@ -107,7 +144,7 @@ static bool split_settings_line(
 	return true;
 }
 
-static bool parse_settings_line(
+static enum app_settings_parse_result parse_settings_line(
 	char *line,
 	struct app_settings *settings,
 	bool *read_new_limit,
@@ -121,40 +158,41 @@ static bool parse_settings_line(
 	trim_line_end(line);
 
 	if (line[0] == '\0' || line[0] == '#')
-		return true;
+		return APP_SETTINGS_PARSE_OK;
 	if (!split_settings_line(line, fields, &field_count))
-		return false;
+		return APP_SETTINGS_PARSE_BAD_FIELD_COUNT;
 	if (field_count != SETTINGS_FIELD_COUNT)
-		return false;
+		return APP_SETTINGS_PARSE_BAD_FIELD_COUNT;
 	if (!parse_unsigned_field(fields[1], APP_SETTINGS_MAX_DAILY_LIMIT, &value))
-		return false;
+		return APP_SETTINGS_PARSE_BAD_VALUE;
 
 	if (strcmp(fields[0], "new_limit") == 0)
 	{
 		if (*read_new_limit)
-			return false;
+			return APP_SETTINGS_PARSE_DUPLICATE_KEY;
 
 		settings->new_limit = value;
 		*read_new_limit = true;
-		return true;
+		return APP_SETTINGS_PARSE_OK;
 	}
 	if (strcmp(fields[0], "review_limit") == 0)
 	{
 		if (*read_review_limit)
-			return false;
+			return APP_SETTINGS_PARSE_DUPLICATE_KEY;
 
 		settings->review_limit = value;
 		*read_review_limit = true;
-		return true;
+		return APP_SETTINGS_PARSE_OK;
 	}
 
-	return false;
+	return APP_SETTINGS_PARSE_UNKNOWN_KEY;
 }
 
 static enum app_settings_load_result app_settings_load_file(
 	struct app_settings *settings,
 	const char *path,
-	bool *loaded_file
+	bool *loaded_file,
+	struct app_settings_load_report *report
 )
 {
 	FILE *file;
@@ -162,7 +200,9 @@ static enum app_settings_load_result app_settings_load_file(
 	struct app_settings staged;
 	bool read_new_limit = false;
 	bool read_review_limit = false;
+	unsigned int line_number = 0;
 
+	app_settings_load_report_init(report);
 	app_settings_default(&staged);
 
 	file = fopen(path, "r");
@@ -173,15 +213,30 @@ static enum app_settings_load_result app_settings_load_file(
 
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
+		enum app_settings_parse_result parse_result;
+
+		line_number++;
 		if (line_needs_more_input(file, line))
 		{
 			consume_line_remainder(file);
+			app_settings_load_report_set(
+				report,
+				line_number,
+				APP_SETTINGS_PARSE_LINE_TOO_LONG
+			);
 			fclose(file);
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
 		}
 
-		if (!parse_settings_line(line, &staged, &read_new_limit, &read_review_limit))
+		parse_result = parse_settings_line(
+			line,
+			&staged,
+			&read_new_limit,
+			&read_review_limit
+		);
+		if (parse_result != APP_SETTINGS_PARSE_OK)
 		{
+			app_settings_load_report_set(report, line_number, parse_result);
 			fclose(file);
 			return APP_SETTINGS_LOAD_BAD_FORMAT;
 		}
@@ -189,11 +244,27 @@ static enum app_settings_load_result app_settings_load_file(
 
 	if (ferror(file))
 	{
+		app_settings_load_report_set(report, 0, APP_SETTINGS_PARSE_READ_ERROR);
 		fclose(file);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;
 	}
-	if (!read_new_limit || !read_review_limit)
+	if (!read_new_limit)
 	{
+		app_settings_load_report_set(
+			report,
+			0,
+			APP_SETTINGS_PARSE_MISSING_NEW_LIMIT
+		);
+		fclose(file);
+		return APP_SETTINGS_LOAD_BAD_FORMAT;
+	}
+	if (!read_review_limit)
+	{
+		app_settings_load_report_set(
+			report,
+			0,
+			APP_SETTINGS_PARSE_MISSING_REVIEW_LIMIT
+		);
 		fclose(file);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;
 	}
@@ -203,27 +274,48 @@ static enum app_settings_load_result app_settings_load_file(
 	return APP_SETTINGS_LOAD_OK;
 }
 
-enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
+enum app_settings_load_result app_settings_load_with_report(
+	struct app_settings *settings,
+	const char *path,
+	struct app_settings_load_report *report
+)
 {
 	char temp_path[STORAGE_MAX_PATH_LENGTH];
 	char backup_path[STORAGE_MAX_PATH_LENGTH];
 	bool loaded_file = false;
+	bool has_bad_report = false;
 	bool has_temp_path;
 	bool has_backup_path;
 	bool primary_missing;
 	enum app_settings_load_result result;
+	struct app_settings_load_report bad_report;
+	struct app_settings_load_report attempt_report;
 
+	app_settings_load_report_init(report);
+	app_settings_load_report_init(&bad_report);
 	if (settings == NULL)
+	{
+		app_settings_load_report_set(report, 0, APP_SETTINGS_PARSE_READ_ERROR);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;
+	}
 	if (path == NULL)
 	{
 		app_settings_default(settings);
+		app_settings_load_report_set(report, 0, APP_SETTINGS_PARSE_READ_ERROR);
 		return APP_SETTINGS_LOAD_BAD_FORMAT;
 	}
 
-	result = app_settings_load_file(settings, path, &loaded_file);
+	result = app_settings_load_file(settings, path, &loaded_file, &attempt_report);
 	if (result == APP_SETTINGS_LOAD_OK)
 		return APP_SETTINGS_LOAD_OK;
+	if (result == APP_SETTINGS_LOAD_BAD_FORMAT)
+	{
+		app_settings_remember_bad_report(
+			&bad_report,
+			&has_bad_report,
+			&attempt_report
+		);
+	}
 	primary_missing = result == APP_SETTINGS_LOAD_NOT_FOUND;
 	has_temp_path = storage_build_suffixed_path(
 		temp_path,
@@ -240,22 +332,45 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 
 	if (primary_missing && has_temp_path)
 	{
-		result = app_settings_load_file(settings, temp_path, &loaded_file);
+		result = app_settings_load_file(
+			settings,
+			temp_path,
+			&loaded_file,
+			&attempt_report
+		);
 		if (result == APP_SETTINGS_LOAD_OK)
 		{
 			if (!storage_promote_recovery_file(path, STORAGE_TEMP_SUFFIX))
 			{
 				app_settings_default(settings);
+				app_settings_load_report_set(
+					report,
+					0,
+					APP_SETTINGS_PARSE_RECOVERY_ERROR
+				);
 				return APP_SETTINGS_LOAD_BAD_FORMAT;
 			}
 
 			return APP_SETTINGS_LOAD_OK;
 		}
+		if (result == APP_SETTINGS_LOAD_BAD_FORMAT)
+		{
+			app_settings_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
 	}
 
 	if (has_backup_path)
 	{
-		result = app_settings_load_file(settings, backup_path, &loaded_file);
+		result = app_settings_load_file(
+			settings,
+			backup_path,
+			&loaded_file,
+			&attempt_report
+		);
 		if (result == APP_SETTINGS_LOAD_OK)
 		{
 			if (
@@ -264,25 +379,58 @@ enum app_settings_load_result app_settings_load(struct app_settings *settings, c
 			)
 			{
 				app_settings_default(settings);
+				app_settings_load_report_set(
+					report,
+					0,
+					APP_SETTINGS_PARSE_RECOVERY_ERROR
+				);
 				return APP_SETTINGS_LOAD_BAD_FORMAT;
 			}
 
 			return APP_SETTINGS_LOAD_OK;
 		}
+		if (result == APP_SETTINGS_LOAD_BAD_FORMAT)
+		{
+			app_settings_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
 	}
 
 	if (!primary_missing && has_temp_path)
 	{
-		result = app_settings_load_file(settings, temp_path, &loaded_file);
+		result = app_settings_load_file(
+			settings,
+			temp_path,
+			&loaded_file,
+			&attempt_report
+		);
 		if (result == APP_SETTINGS_LOAD_OK)
 			return APP_SETTINGS_LOAD_OK;
+		if (result == APP_SETTINGS_LOAD_BAD_FORMAT)
+		{
+			app_settings_remember_bad_report(
+				&bad_report,
+				&has_bad_report,
+				&attempt_report
+			);
+		}
 	}
 
 	app_settings_default(settings);
 	if (!loaded_file)
 		return APP_SETTINGS_LOAD_NOT_FOUND;
 
+	if (has_bad_report && report != NULL)
+		*report = bad_report;
 	return APP_SETTINGS_LOAD_BAD_FORMAT;
+}
+
+enum app_settings_load_result app_settings_load(struct app_settings *settings, const char *path)
+{
+	return app_settings_load_with_report(settings, path, NULL);
 }
 
 enum app_settings_save_result app_settings_save(
@@ -337,6 +485,35 @@ enum app_settings_save_result app_settings_save(
 		return APP_SETTINGS_SAVE_FAILED;
 
 	return APP_SETTINGS_SAVE_OK;
+}
+
+const char *app_settings_parse_result_name(enum app_settings_parse_result result)
+{
+	switch (result)
+	{
+	case APP_SETTINGS_PARSE_OK:
+		return "ok";
+	case APP_SETTINGS_PARSE_LINE_TOO_LONG:
+		return "line too long";
+	case APP_SETTINGS_PARSE_BAD_FIELD_COUNT:
+		return "bad field count";
+	case APP_SETTINGS_PARSE_BAD_VALUE:
+		return "bad value";
+	case APP_SETTINGS_PARSE_UNKNOWN_KEY:
+		return "unknown key";
+	case APP_SETTINGS_PARSE_DUPLICATE_KEY:
+		return "duplicate key";
+	case APP_SETTINGS_PARSE_MISSING_NEW_LIMIT:
+		return "missing new_limit";
+	case APP_SETTINGS_PARSE_MISSING_REVIEW_LIMIT:
+		return "missing review_limit";
+	case APP_SETTINGS_PARSE_READ_ERROR:
+		return "read error";
+	case APP_SETTINGS_PARSE_RECOVERY_ERROR:
+		return "recovery error";
+	}
+
+	return "unknown";
 }
 
 const char *app_settings_load_result_name(enum app_settings_load_result result)
