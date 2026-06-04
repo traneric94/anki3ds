@@ -388,6 +388,37 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Latest Local Pre-Manual Gate
+
+Build: `2fbc8ae`
+Command: `make verify-local`
+Gate: pass
+Sample prep: `make verify-local` ran `prepare-local-samples-fresh` for the
+local SD mirror and `package-sd` for the copy-ready payload.
+Decks: `limits-demo`, `sample`
+Steps:
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, and package payload
+  verification.
+Observed:
+- Host C tests passed, including the daily-use workflow, key translation,
+  centralized command classification, migrated review-limit accounting, battery
+  polling cadence, and idle input wait tiers.
+- Converter and text-deck verifier tests passed.
+- Tracked sample decks verified in source, local SD mirror, and `dist/sdmc/`.
+- The local SD mirror contains only fresh text sample deck files and app
+  artifacts for the default sample decks.
+Expected:
+- Current artifact remains ready for the final manual M7 emulator or hardware
+  pass.
+Evidence:
+- `make verify-local` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Button-level review, rendered palette contrast, save-feedback visibility,
+  SD-card behavior, relaunch persistence, and long-idle input wake feel still
+  need the final manual emulator or hardware acceptance pass.
+
 ## 2026-06-04 - Migrated Review Limit Gate
 
 Build: local working tree
