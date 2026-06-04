@@ -1253,6 +1253,15 @@ static void draw_summary_screen(const struct app_state *app)
 		printf("\x1b[7;1HState:         %s", app->state_message);
 		printf("\x1b[10;1HUse SELECT actions, then");
 		printf("\x1b[11;1Hreset deck progress.");
+		if (settings_load_result_needs_warning(app->settings_load_result))
+		{
+			printf("\x1b[13;1HSettings:      ignored");
+			draw_settings_load_error_detail(
+				app->settings_load_result,
+				&app->settings_load_report,
+				14
+			);
+		}
 		return;
 	}
 
@@ -1897,6 +1906,15 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 					"\x1b[18;1HCards: %lu",
 					(unsigned long)summary->card_count
 				);
+				if (settings_load_result_needs_warning(summary->settings_load_result))
+				{
+					printf("\x1b[20;1HSettings: ignored");
+					draw_settings_load_error_detail(
+						summary->settings_load_result,
+						&summary->settings_load_report,
+						21
+					);
+				}
 			}
 			else
 			{
@@ -2037,6 +2055,15 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 				"\x1b[13;1H" APP_COLOR_WARNING
 				"Reset progress to study." APP_COLOR_RESET
 			);
+			if (settings_load_result_needs_warning(app->settings_load_result))
+			{
+				printf("\x1b[15;1HSettings: ignored");
+				draw_settings_load_error_detail(
+					app->settings_load_result,
+					&app->settings_load_report,
+					16
+				);
+			}
 			break;
 		}
 

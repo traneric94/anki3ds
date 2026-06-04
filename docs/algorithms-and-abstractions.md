@@ -305,6 +305,9 @@ one-step undo slot. If a deck opens with malformed saved state, reset is
 selected by default so the recovery path is direct. Daily limits can be edited
 from the same actions screen. Reset remains available by moving the action
 selection first, then confirming on a separate reset screen with `X`.
+If malformed settings are present at the same time, the reset-needed screens
+still show the settings warning so fixing state does not hide a second setup
+problem.
 
 `L` undoes the most recent rating or suspend action in the active session. The
 scheduler stores a single snapshot of the affected card plus queue/session
