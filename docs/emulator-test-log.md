@@ -793,6 +793,42 @@ Notes:
   relaunch persistence, and CTR-001 battery-line rendering still need the final
   manual emulator or hardware acceptance pass.
 
+## 2026-06-04 - Current Azahar Launch Check
+
+Build: `636b605`
+Command: `make run-emulator-fresh-samples`
+Gate: launch only; not acceptance
+Sample prep: `verify-azahar-fresh-samples`
+Decks: `limits-demo`, `sample`
+Steps:
+- Staged fresh tracked sample decks in Azahar's SDMC directory.
+- Cleared tracked sample progress and diagnostic files in the Azahar sample
+  folders.
+- Built or reused the current `app-3ds/anki3ds.3dsx`.
+- Launched the `.3dsx` through Azahar.
+Observed:
+- The first sandboxed launch attempt staged the samples but failed at `open`
+  with a macOS Launch Services communication error.
+- Rerunning the same target with GUI escalation succeeded.
+- `osascript -e 'application "Azahar" is running'` returned `true`.
+- Azahar SDMC sample folders contained only `cards.tsv`, `deck.json`, and
+  `settings.tsv` for the tracked sample decks after staging.
+- A window-count check was blocked because System Events does not have
+  assistive access on this machine.
+Expected:
+- The current artifact should be ready for manual Azahar input testing against
+  fresh sample-deck progress.
+Evidence:
+- `make run-emulator-fresh-samples` completed with exit code 0 after GUI
+  escalation.
+- Azahar reported running through macOS application state.
+Result: pass for launch command only
+Notes:
+- This does not prove the M7 acceptance path. Button-level review, rendered
+  palette contrast, save-feedback visibility, SD-card behavior, relaunch
+  persistence, and CTR-001 battery-line rendering still need manual emulator or
+  hardware acceptance.
+
 ## 2026-06-04 - Contextual Key Prompt Palette Local Gate
 
 Build: local working tree
