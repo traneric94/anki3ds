@@ -11,6 +11,9 @@ describes the repo as public free-to-use, with an F2U/F2E distinction:
 `anki3ds` currently has a conversion-only FE asset checkpoint. The 3DS app does
 not render these backgrounds yet.
 
+The isolated FE background viewer has been manually verified in Azahar: the
+generated top and bottom framebuffer assets render upright on both screens.
+
 ## Current Sources
 
 The converter uses only generated derivatives from an explicitly `[F2E]`
@@ -108,7 +111,7 @@ Practical scope order:
 
 1. Original theme colors and console borders.
 2. Conversion and desktop preview pipeline.
-3. Isolated 3DS background renderer test.
+3. Isolated 3DS background renderer test. Done for direct framebuffer copy.
 4. App integration.
 5. Sprite-backed borders.
 6. Per-theme persisted settings.

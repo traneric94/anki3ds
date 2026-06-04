@@ -28,6 +28,30 @@ For M7 daily-use acceptance, include the deck ids tested, the exact fresh-sample
 command if one was used, the settings values changed, and whether relaunch
 persistence was confirmed.
 
+## 2026-06-04 - FE Background Viewer Visual Pass
+
+Build: `5d941d1`
+Command: `make install-azahar-fe-bg-viewer`, then launch
+`tools/fe-bg-viewer-3ds/fe-bg-viewer.3dsx` in Azahar
+Steps:
+- Regenerated FE framebuffer assets from the `[F2E]` WAve source backgrounds.
+- Built and installed the standalone FE background viewer into Azahar SDMC.
+- Launched the viewer through `Azahar.app`.
+- Inspected the live emulator window.
+Observed:
+- User-provided screenshot showed the same FE background rendered upright on
+  both top and bottom screens.
+- The image was dimmed, centered, and legible enough for a background test.
+Expected:
+- The direct-copy `*_bgr888_fb.bin` assets display upright on both 3DS
+  framebuffers without scrambled or rotated output.
+Result: pass
+Notes:
+- This proves the isolated renderer path, not integration into the main
+  `anki3ds` review UI.
+- An attempted Azahar `--dump-video` capture path did not produce a `.webm`, so
+  the verified evidence for this checkpoint is the live emulator screenshot.
+
 ## 2026-06-01 - M1 Toolchain Proof
 
 Build: `5118fe6`
