@@ -40,6 +40,8 @@ colors are used for status: cyan headings and neutral status, green
 selected/saved/safe items, red errors/reset actions, and yellow cautions.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
+If a deck has both ignored settings and unmatched saved state, the selector row
+uses the compact `settings! state!` warning and the bottom screen shows details.
 
 ## Review Flow
 

@@ -431,6 +431,35 @@ static bool state_load_result_needs_warning(enum review_state_load_result result
 	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
+static void draw_deck_selector_study_suffix(const struct deck_summary *summary)
+{
+	bool settings_warning = settings_load_result_needs_warning(
+		summary->settings_load_result
+	);
+	bool state_warning = state_load_result_needs_warning(summary->state_load_result);
+
+	if (settings_warning || state_warning)
+	{
+		printf(APP_COLOR_RESET APP_COLOR_WARNING);
+		if (settings_warning && state_warning)
+			printf(" settings! state!");
+		else if (settings_warning)
+			printf(" settings ignored");
+		else
+			printf(" state unmatched");
+		printf(APP_COLOR_RESET);
+		return;
+	}
+
+	printf(
+		" N:%lu L:%lu R:%lu S:%lu",
+		(unsigned long)summary->new_due_count,
+		(unsigned long)summary->learning_due_count,
+		(unsigned long)summary->review_due_count,
+		(unsigned long)summary->suspended_count
+	);
+}
+
 static void draw_deck_load_error_detail(
 	enum deck_load_result load_result,
 	const struct deck_load_report *report,
@@ -1105,30 +1134,7 @@ static void draw_deck_select_screen(const struct app_state *app)
 				deck_summary_state_allows_study(summary)
 			)
 			{
-				if (settings_load_result_needs_warning(summary->settings_load_result))
-				{
-					printf(
-						APP_COLOR_RESET APP_COLOR_WARNING
-						" settings ignored" APP_COLOR_RESET
-					);
-				}
-				else if (state_load_result_needs_warning(summary->state_load_result))
-				{
-					printf(
-						APP_COLOR_RESET APP_COLOR_WARNING
-						" state unmatched" APP_COLOR_RESET
-					);
-				}
-				else
-				{
-					printf(
-						" N:%lu L:%lu R:%lu S:%lu",
-						(unsigned long)summary->new_due_count,
-						(unsigned long)summary->learning_due_count,
-						(unsigned long)summary->review_due_count,
-						(unsigned long)summary->suspended_count
-					);
-				}
+				draw_deck_selector_study_suffix(summary);
 			}
 			else if (summary->deck_load_result == DECK_LOAD_OK)
 			{
