@@ -23,14 +23,21 @@
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
-/* Bright terminal palette for the dark 3DS console; avoid blue/cyan accents. */
+/*
+ * High-contrast terminal palette for the dark 3DS console. Avoid blue/cyan:
+ * they wash out on 3DS LCDs, especially at low brightness.
+ */
 #define APP_COLOR_ACCENT CONSOLE_GREEN
 #define APP_COLOR_NEUTRAL CONSOLE_WHITE
-#define APP_COLOR_SELECTED CONSOLE_MAGENTA
+#define APP_COLOR_SELECTED CONSOLE_YELLOW
 #define APP_COLOR_SUCCESS CONSOLE_GREEN
 #define APP_COLOR_DANGER CONSOLE_RED
 #define APP_COLOR_WARNING CONSOLE_YELLOW
 #define APP_COLOR_EASY CONSOLE_MAGENTA
+#define APP_COLOR_NEW CONSOLE_MAGENTA
+#define APP_COLOR_LEARNING APP_COLOR_WARNING
+#define APP_COLOR_REVIEW APP_COLOR_SUCCESS
+#define APP_COLOR_SUSPENDED APP_COLOR_EASY
 #define APP_COLOR_RULE APP_COLOR_NEUTRAL
 static const unsigned int daily_limit_presets[] = {
 	5,
@@ -532,6 +539,25 @@ static bool state_load_result_needs_warning(enum review_state_load_result result
 	return result == REVIEW_STATE_LOAD_UNMATCHED;
 }
 
+static void draw_deck_due_counts_inline(
+	size_t new_due_count,
+	size_t learning_due_count,
+	size_t review_due_count,
+	size_t suspended_count
+)
+{
+	printf(
+		APP_COLOR_RESET " " APP_COLOR_NEW "N" APP_COLOR_RESET ":%lu"
+		" " APP_COLOR_LEARNING "L" APP_COLOR_RESET ":%lu"
+		" " APP_COLOR_REVIEW "R" APP_COLOR_RESET ":%lu"
+		" " APP_COLOR_SUSPENDED "S" APP_COLOR_RESET ":%lu",
+		(unsigned long)new_due_count,
+		(unsigned long)learning_due_count,
+		(unsigned long)review_due_count,
+		(unsigned long)suspended_count
+	);
+}
+
 static void draw_deck_selector_study_suffix(const struct deck_summary *summary)
 {
 	bool settings_warning = settings_load_result_needs_warning(
@@ -552,12 +578,11 @@ static void draw_deck_selector_study_suffix(const struct deck_summary *summary)
 		return;
 	}
 
-	printf(
-		" N:%lu L:%lu R:%lu S:%lu",
-		(unsigned long)summary->new_due_count,
-		(unsigned long)summary->learning_due_count,
-		(unsigned long)summary->review_due_count,
-		(unsigned long)summary->suspended_count
+	draw_deck_due_counts_inline(
+		summary->new_due_count,
+		summary->learning_due_count,
+		summary->review_due_count,
+		summary->suspended_count
 	);
 }
 
@@ -1798,14 +1823,14 @@ static void draw_battery_status(const struct app_state *app)
 static void draw_due_legend(int row, bool include_suspended)
 {
 	printf(
-		"\x1b[%d;1H" APP_COLOR_NEUTRAL "N" APP_COLOR_RESET
-		" new  " APP_COLOR_WARNING "L" APP_COLOR_RESET
-		" learn  " APP_COLOR_SUCCESS "R" APP_COLOR_RESET " review",
+		"\x1b[%d;1H" APP_COLOR_NEW "N" APP_COLOR_RESET
+		" new  " APP_COLOR_LEARNING "L" APP_COLOR_RESET
+		" learn  " APP_COLOR_REVIEW "R" APP_COLOR_RESET " review",
 		row
 	);
 	if (include_suspended)
 		printf(
-			"\x1b[%d;1H" APP_COLOR_WARNING "S" APP_COLOR_RESET " suspended",
+			"\x1b[%d;1H" APP_COLOR_SUSPENDED "S" APP_COLOR_RESET " suspended",
 			row + 1
 		);
 }
