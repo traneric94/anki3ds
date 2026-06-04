@@ -1105,3 +1105,28 @@ Result: pass for automated gate
 Notes:
 - This is converter-side behavior only; the app's append cap remains covered by
   host C review-log tests.
+
+## 2026-06-04 - Dark Console Palette Hierarchy Local Gate
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make test`
+Steps:
+- Kept the app off blue, cyan, and violet terminal colors.
+- Refined the palette into amber/chalk/green/red semantics: amber for app
+  chrome, labels, key prompts, and focus; green for safe progress; red for
+  destructive/error state; bright white for card text and neutral values.
+- Added color to review headers, deck due counts, summary metrics, and bottom
+  key prompts without changing input behavior.
+Observed:
+- The 3DS target rebuilt successfully.
+- Host C tests, converter tests, and text-deck verifier tests passed through
+  `make test`.
+Expected:
+- The dark-console UI should be easier to scan on 3DS LCDs, especially at low
+  brightness, while preserving the existing review-button color meanings.
+Result: pass for automated build/test only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
