@@ -23,14 +23,14 @@
 #define STATUS_MESSAGE_SIZE 64
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
-/* Bright terminal palette for the dark 3DS console; avoid pure blue. */
-#define APP_COLOR_ACCENT CONSOLE_CYAN
+/* Bright terminal palette for the dark 3DS console; avoid blue/cyan accents. */
+#define APP_COLOR_ACCENT CONSOLE_GREEN
 #define APP_COLOR_NEUTRAL CONSOLE_WHITE
 #define APP_COLOR_SELECTED CONSOLE_MAGENTA
 #define APP_COLOR_SUCCESS CONSOLE_GREEN
 #define APP_COLOR_DANGER CONSOLE_RED
 #define APP_COLOR_WARNING CONSOLE_YELLOW
-#define APP_COLOR_EASY CONSOLE_CYAN
+#define APP_COLOR_EASY CONSOLE_MAGENTA
 #define APP_COLOR_RULE APP_COLOR_NEUTRAL
 static const unsigned int daily_limit_presets[] = {
 	5,

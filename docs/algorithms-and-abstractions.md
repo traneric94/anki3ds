@@ -211,12 +211,12 @@ The app loop is a small mode machine:
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
-framework yet. Rendering uses libctru's bright ANSI foreground colors: cyan
-headings/status labels, magenta selected or focused items, white neutral status
-and separators, yellow cautions, green successful, restored, or safe state, and
-red errors and destructive reset prompts. Pure blue is intentionally avoided
-because it is hard to read on the dark 3DS console background; Easy uses bright
-cyan as the readable cool-color substitute.
+framework yet. Rendering uses libctru's bright ANSI foreground colors: green
+headings/status labels and successful, restored, or safe state, magenta
+selected or focused items and Easy ratings, white neutral status and separators,
+yellow cautions, and red errors and destructive reset prompts. Blue and cyan
+are intentionally avoided because they are hard to read on the dark 3DS console
+background.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without
