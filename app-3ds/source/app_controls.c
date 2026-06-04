@@ -524,6 +524,7 @@ enum app_control_action app_controls_classify_action(
 	}
 
 	if (
+		study_allowed &&
 		app_controls_command_triggered(
 			trigger_buttons,
 			active_buttons,

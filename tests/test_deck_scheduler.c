@@ -1278,6 +1278,15 @@ static void test_app_controls_classifies_app_actions(void)
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_OPEN_SUSPEND, "R opens suspend confirmation");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_REVIEW,
+		false,
+		false,
+		APP_CONTROL_BUTTON_R,
+		APP_CONTROL_BUTTON_R,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "unsafe review blocks suspend");
 }
 
 static void test_app_controls_navigation_repeat(void)
