@@ -48,6 +48,46 @@ def write_gradient_png(path: Path, width: int, height: int) -> None:
     )
 
 
+def write_palette_png(path: Path) -> None:
+    palette = bytes(
+        (
+            0x10,
+            0x20,
+            0x30,
+            0x40,
+            0x50,
+            0x60,
+            0x70,
+            0x80,
+            0x90,
+        )
+    )
+    scanlines = bytes(
+        (
+            0,
+            0,
+            1,
+            2,
+            0,
+            2,
+            1,
+            0,
+        )
+    )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(
+        import_fe_theme_assets.PNG_SIGNATURE
+        + png_chunk(
+            b"IHDR",
+            struct.pack(">IIBBBBB", 3, 2, 8, 3, 0, 0, 0),
+        )
+        + png_chunk(b"PLTE", palette)
+        + png_chunk(b"IDAT", zlib.compress(scanlines))
+        + png_chunk(b"IEND", b"")
+    )
+
+
 def read_bmp_dimensions(path: Path) -> tuple[int, int]:
     data = path.read_bytes()
     if data[:2] != b"BM":
@@ -56,6 +96,40 @@ def read_bmp_dimensions(path: Path) -> tuple[int, int]:
 
 
 class FeThemeAssetTests(unittest.TestCase):
+    def test_read_png_8bit_bgr_expands_indexed_palette(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "indexed.png"
+            write_palette_png(source)
+
+            width, height, pixels = import_fe_theme_assets.read_png_8bit_bgr(source)
+
+            self.assertEqual((width, height), (3, 2))
+            self.assertEqual(
+                pixels,
+                bytes(
+                    (
+                        0x30,
+                        0x20,
+                        0x10,
+                        0x60,
+                        0x50,
+                        0x40,
+                        0x90,
+                        0x80,
+                        0x70,
+                        0x90,
+                        0x80,
+                        0x70,
+                        0x60,
+                        0x50,
+                        0x40,
+                        0x30,
+                        0x20,
+                        0x10,
+                    )
+                ),
+            )
+
     def test_convert_source_outputs_darken_scaled_bgr888(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             source = Path(temp_dir) / "source.png"
@@ -73,6 +147,42 @@ class FeThemeAssetTests(unittest.TestCase):
             )
             offset = (30 * import_fe_theme_assets.RAW_WIDTH + 50) * 3
             self.assertEqual(raw_pixels[offset:offset + 3], bytes((68, 25, 43)))
+
+    def test_3ds_framebuffer_layout_round_trips_screen_pixels(self):
+        pixels = bytes(
+            (
+                0x00,
+                0x01,
+                0x02,
+                0x10,
+                0x11,
+                0x12,
+                0x20,
+                0x21,
+                0x22,
+                0x30,
+                0x31,
+                0x32,
+                0x40,
+                0x41,
+                0x42,
+                0x50,
+                0x51,
+                0x52,
+            )
+        )
+
+        framebuffer = import_fe_theme_assets.bgr_to_3ds_framebuffer(pixels, 3, 2)
+
+        self.assertEqual(len(framebuffer), len(pixels))
+        self.assertEqual(framebuffer[0:3], pixels[9:12])
+        self.assertEqual(framebuffer[3:6], pixels[0:3])
+        self.assertEqual(framebuffer[12:15], pixels[15:18])
+        self.assertEqual(framebuffer[15:18], pixels[6:9])
+        self.assertEqual(
+            import_fe_theme_assets.bgr_from_3ds_framebuffer(framebuffer, 3, 2),
+            pixels,
+        )
 
     def test_write_theme_previews_uses_screen_dimensions(self):
         raw_pixels = bytes(
@@ -126,6 +236,96 @@ class FeThemeAssetTests(unittest.TestCase):
             )
             self.assertEqual(
                 read_bmp_dimensions(output / "sample_bottom_320x240.bmp"),
+                (
+                    import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH,
+                    -import_fe_theme_assets.PREVIEW_HEIGHT,
+                ),
+            )
+
+    def test_write_theme_framebuffers_outputs_direct_copy_bins(self):
+        top_pixels = bytes(
+            (
+                (index * 5) & 0xFF
+                for index in range(
+                    import_fe_theme_assets.TOP_PREVIEW_WIDTH
+                    * import_fe_theme_assets.PREVIEW_HEIGHT
+                    * 3
+                )
+            )
+        )
+        bottom_pixels = bytes(
+            (
+                (index * 7) & 0xFF
+                for index in range(
+                    import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH
+                    * import_fe_theme_assets.PREVIEW_HEIGHT
+                    * 3
+                )
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir, mock.patch.object(
+            import_fe_theme_assets,
+            "write_png_copy",
+        ):
+            output = Path(temp_dir)
+            framebuffer_out = output / "framebuffers"
+            preview_out = output / "previews"
+            preview_out.mkdir()
+
+            import_fe_theme_assets.write_theme_framebuffers(
+                framebuffer_out,
+                preview_out,
+                "sample",
+                top_pixels,
+                bottom_pixels,
+            )
+
+            top_bin = (
+                framebuffer_out / "fe_bg_sample_top_400x240_bgr888_fb.bin"
+            )
+            bottom_bin = (
+                framebuffer_out / "fe_bg_sample_bottom_320x240_bgr888_fb.bin"
+            )
+            self.assertEqual(
+                top_bin.stat().st_size,
+                import_fe_theme_assets.TOP_PREVIEW_WIDTH
+                * import_fe_theme_assets.PREVIEW_HEIGHT
+                * 3,
+            )
+            self.assertEqual(
+                bottom_bin.stat().st_size,
+                import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH
+                * import_fe_theme_assets.PREVIEW_HEIGHT
+                * 3,
+            )
+            self.assertEqual(
+                read_bmp_dimensions(preview_out / "sample_top_fb_240x400.bmp"),
+                (
+                    import_fe_theme_assets.PREVIEW_HEIGHT,
+                    -import_fe_theme_assets.TOP_PREVIEW_WIDTH,
+                ),
+            )
+            self.assertEqual(
+                read_bmp_dimensions(
+                    preview_out / "sample_top_fb_roundtrip_400x240.bmp"
+                ),
+                (
+                    import_fe_theme_assets.TOP_PREVIEW_WIDTH,
+                    -import_fe_theme_assets.PREVIEW_HEIGHT,
+                ),
+            )
+            self.assertEqual(
+                read_bmp_dimensions(preview_out / "sample_bottom_fb_240x320.bmp"),
+                (
+                    import_fe_theme_assets.PREVIEW_HEIGHT,
+                    -import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH,
+                ),
+            )
+            self.assertEqual(
+                read_bmp_dimensions(
+                    preview_out / "sample_bottom_fb_roundtrip_320x240.bmp"
+                ),
                 (
                     import_fe_theme_assets.BOTTOM_PREVIEW_WIDTH,
                     -import_fe_theme_assets.PREVIEW_HEIGHT,

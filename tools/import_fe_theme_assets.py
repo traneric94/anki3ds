@@ -9,6 +9,7 @@ import struct
 import subprocess
 import zlib
 from pathlib import Path
+from typing import Optional
 
 
 SOURCE_IMAGE_WIDTH = 256
@@ -255,6 +256,54 @@ def write_bmp_24(path: Path, width: int, height: int, pixels_bgr: bytes) -> None
             output.write(padding)
 
 
+def bgr_to_3ds_framebuffer(
+    pixels_bgr: bytes,
+    screen_width: int,
+    screen_height: int,
+) -> bytes:
+    """Return BGR888 bytes in libctru's default sideways framebuffer layout."""
+    expected_size = screen_width * screen_height * 3
+    if len(pixels_bgr) != expected_size:
+        raise ValueError(
+            f"expected {expected_size} screen BGR bytes, got {len(pixels_bgr)}"
+        )
+
+    framebuffer = bytearray(expected_size)
+    for y in range(screen_height):
+        for x in range(screen_width):
+            source_offset = (y * screen_width + x) * 3
+            framebuffer_offset = (x * screen_height + (screen_height - 1 - y)) * 3
+            framebuffer[framebuffer_offset:framebuffer_offset + 3] = pixels_bgr[
+                source_offset:source_offset + 3
+            ]
+
+    return bytes(framebuffer)
+
+
+def bgr_from_3ds_framebuffer(
+    framebuffer_bgr: bytes,
+    screen_width: int,
+    screen_height: int,
+) -> bytes:
+    """Convert libctru's default sideways framebuffer layout back to screen order."""
+    expected_size = screen_width * screen_height * 3
+    if len(framebuffer_bgr) != expected_size:
+        raise ValueError(
+            f"expected {expected_size} framebuffer BGR bytes, got {len(framebuffer_bgr)}"
+        )
+
+    pixels_bgr = bytearray(expected_size)
+    for y in range(screen_height):
+        for x in range(screen_width):
+            framebuffer_offset = (x * screen_height + (screen_height - 1 - y)) * 3
+            output_offset = (y * screen_width + x) * 3
+            pixels_bgr[output_offset:output_offset + 3] = framebuffer_bgr[
+                framebuffer_offset:framebuffer_offset + 3
+            ]
+
+    return bytes(pixels_bgr)
+
+
 def write_png_copy(bmp_path: Path) -> None:
     subprocess.run(
         [
@@ -375,16 +424,7 @@ def convert_source(source: Path) -> bytes:
     return darken_bgr(raw_pixels)
 
 
-def write_theme_previews(
-    preview_out: Path,
-    theme_id: str,
-    raw_pixels: bytes,
-) -> tuple[bytes, bytes]:
-    raw_preview = preview_out / f"{theme_id}_raw_{RAW_WIDTH}x{RAW_HEIGHT}.bmp"
-    top_preview = preview_out / f"{theme_id}_top_{TOP_PREVIEW_WIDTH}x{PREVIEW_HEIGHT}.bmp"
-    bottom_preview = (
-        preview_out / f"{theme_id}_bottom_{BOTTOM_PREVIEW_WIDTH}x{PREVIEW_HEIGHT}.bmp"
-    )
+def scale_raw_for_screens(raw_pixels: bytes) -> tuple[bytes, bytes]:
     top_pixels = scale_bgr_nearest(
         raw_pixels,
         RAW_WIDTH,
@@ -399,6 +439,21 @@ def write_theme_previews(
         BOTTOM_PREVIEW_WIDTH,
         PREVIEW_HEIGHT,
     )
+    return top_pixels, bottom_pixels
+
+
+def write_theme_previews_from_pixels(
+    preview_out: Path,
+    theme_id: str,
+    raw_pixels: bytes,
+    top_pixels: bytes,
+    bottom_pixels: bytes,
+) -> None:
+    raw_preview = preview_out / f"{theme_id}_raw_{RAW_WIDTH}x{RAW_HEIGHT}.bmp"
+    top_preview = preview_out / f"{theme_id}_top_{TOP_PREVIEW_WIDTH}x{PREVIEW_HEIGHT}.bmp"
+    bottom_preview = (
+        preview_out / f"{theme_id}_bottom_{BOTTOM_PREVIEW_WIDTH}x{PREVIEW_HEIGHT}.bmp"
+    )
 
     write_bmp_24(raw_preview, RAW_WIDTH, RAW_HEIGHT, raw_pixels)
     write_bmp_24(top_preview, TOP_PREVIEW_WIDTH, PREVIEW_HEIGHT, top_pixels)
@@ -406,7 +461,87 @@ def write_theme_previews(
     write_png_copy(raw_preview)
     write_png_copy(top_preview)
     write_png_copy(bottom_preview)
+
+
+def write_theme_previews(
+    preview_out: Path,
+    theme_id: str,
+    raw_pixels: bytes,
+) -> tuple[bytes, bytes]:
+    top_pixels, bottom_pixels = scale_raw_for_screens(raw_pixels)
+    write_theme_previews_from_pixels(
+        preview_out,
+        theme_id,
+        raw_pixels,
+        top_pixels,
+        bottom_pixels,
+    )
     return top_pixels, bottom_pixels
+
+
+def write_framebuffer_preview_pair(
+    preview_out: Path,
+    theme_id: str,
+    screen_name: str,
+    screen_width: int,
+    screen_height: int,
+    framebuffer_pixels: bytes,
+) -> None:
+    sideways_preview = (
+        preview_out
+        / f"{theme_id}_{screen_name}_fb_{screen_height}x{screen_width}.bmp"
+    )
+    roundtrip_preview = (
+        preview_out
+        / f"{theme_id}_{screen_name}_fb_roundtrip_{screen_width}x{screen_height}.bmp"
+    )
+    roundtrip_pixels = bgr_from_3ds_framebuffer(
+        framebuffer_pixels,
+        screen_width,
+        screen_height,
+    )
+
+    write_bmp_24(sideways_preview, screen_height, screen_width, framebuffer_pixels)
+    write_bmp_24(roundtrip_preview, screen_width, screen_height, roundtrip_pixels)
+    write_png_copy(sideways_preview)
+    write_png_copy(roundtrip_preview)
+
+
+def write_theme_framebuffers(
+    framebuffer_out: Path,
+    preview_out: Optional[Path],
+    theme_id: str,
+    top_pixels: bytes,
+    bottom_pixels: bytes,
+) -> None:
+    outputs = (
+        ("top", TOP_PREVIEW_WIDTH, PREVIEW_HEIGHT, top_pixels),
+        ("bottom", BOTTOM_PREVIEW_WIDTH, PREVIEW_HEIGHT, bottom_pixels),
+    )
+
+    framebuffer_out.mkdir(parents=True, exist_ok=True)
+    for screen_name, screen_width, screen_height, screen_pixels in outputs:
+        framebuffer_pixels = bgr_to_3ds_framebuffer(
+            screen_pixels,
+            screen_width,
+            screen_height,
+        )
+        raw_path = (
+            framebuffer_out
+            / f"fe_bg_{theme_id}_{screen_name}_{screen_width}x{screen_height}"
+            "_bgr888_fb.bin"
+        )
+        raw_path.write_bytes(framebuffer_pixels)
+
+        if preview_out is not None:
+            write_framebuffer_preview_pair(
+                preview_out,
+                theme_id,
+                screen_name,
+                screen_width,
+                screen_height,
+                framebuffer_pixels,
+            )
 
 
 def main() -> int:
@@ -430,14 +565,28 @@ def main() -> int:
         help="Directory for generated BMP previews.",
     )
     parser.add_argument(
+        "--framebuffer-out",
+        type=Path,
+        default=Path("build/fe-theme-framebuffers"),
+        help="Directory for generated 3DS framebuffer-ready BGR888 files.",
+    )
+    parser.add_argument(
         "--no-previews",
         action="store_true",
-        help="Only write raw BGR888 files.",
+        help="Skip generated BMP/PNG previews.",
+    )
+    parser.add_argument(
+        "--no-framebuffers",
+        action="store_true",
+        help="Skip generated 3DS framebuffer-ready BGR888 files.",
     )
     args = parser.parse_args()
 
     args.raw_out.mkdir(parents=True, exist_ok=True)
     remove_generated_files(args.raw_out, ("fe_bg_*_bgr888.bin",))
+    if not args.no_framebuffers:
+        args.framebuffer_out.mkdir(parents=True, exist_ok=True)
+        remove_generated_files(args.framebuffer_out, ("fe_bg_*_bgr888_fb.bin",))
     if not args.no_previews:
         args.preview_out.mkdir(parents=True, exist_ok=True)
         remove_generated_files(args.preview_out, ("*.bmp", "*.png"))
@@ -451,17 +600,29 @@ def main() -> int:
             raise FileNotFoundError(source)
 
         raw_pixels = convert_source(source)
+        top_pixels, bottom_pixels = scale_raw_for_screens(raw_pixels)
         raw_path = args.raw_out / f"fe_bg_{theme_id}_{RAW_WIDTH}x{RAW_HEIGHT}_bgr888.bin"
         raw_path.write_bytes(raw_pixels)
 
         if not args.no_previews:
-            top_pixels, bottom_pixels = write_theme_previews(
+            write_theme_previews_from_pixels(
                 args.preview_out,
                 theme_id,
                 raw_pixels,
+                top_pixels,
+                bottom_pixels,
             )
             top_previews.append(top_pixels)
             bottom_previews.append(bottom_pixels)
+
+        if not args.no_framebuffers:
+            write_theme_framebuffers(
+                args.framebuffer_out,
+                None if args.no_previews else args.preview_out,
+                theme_id,
+                top_pixels,
+                bottom_pixels,
+            )
 
         print(f"{theme_id}: {title}, {credit}, {raw_path}")
 

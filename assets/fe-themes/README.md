@@ -9,8 +9,9 @@ Run from the repo root:
 make verify-fe-theme-assets
 ```
 
-Tracked raw output lives in `raw/` as `128x80` BGR888 data. Desktop BMP and
-PNG previews are generated under `build/fe-theme-previews/` and are
-intentionally not tracked.
+Tracked raw output lives in `raw/` as `128x80` BGR888 data. Desktop BMP/PNG
+previews are generated under `build/fe-theme-previews/`, and 3DS
+framebuffer-ready BGR888 files are generated under `build/fe-theme-framebuffers/`.
+Both build directories are intentionally not tracked.
 
 These files are not rendered by the 3DS app yet.

@@ -42,6 +42,17 @@ Outputs:
   scale.
 - `build/fe-theme-previews/*_bottom_320x240.bmp`: desktop preview for
   bottom-screen scale.
+- `build/fe-theme-framebuffers/*_top_400x240_bgr888_fb.bin`: top-screen
+  BGR888 bytes laid out for direct copy into libctru's default sideways
+  framebuffer.
+- `build/fe-theme-framebuffers/*_bottom_320x240_bgr888_fb.bin`: bottom-screen
+  BGR888 bytes laid out for direct copy into libctru's default sideways
+  framebuffer.
+- `build/fe-theme-previews/*_fb_240x*.bmp`: sideways framebuffer bytes shown as
+  a desktop bitmap, useful only for layout debugging.
+- `build/fe-theme-previews/*_fb_roundtrip_*.bmp`: framebuffer bytes converted
+  back to natural screen order. These should look like the normal top/bottom
+  previews.
 - `build/fe-theme-previews/themes_top_sheet.bmp` and
   `themes_bottom_sheet.bmp`: contact sheets for quick visual inspection.
 - Matching `.png` previews are generated next to the BMPs for tools that do not
@@ -49,6 +60,12 @@ Outputs:
 
 Do not put the raw files under `app-3ds/data/` until the renderer is ready:
 the app Makefile links every file in that directory into the `.3dsx`.
+
+The default 3DS framebuffer is sideways BGR888. If a normal `400x240` desktop
+image is copied directly into the framebuffer, it can display as scrambled or
+rotated output. Use the `*_bgr888_fb.bin` artifacts for an isolated direct-copy
+renderer, and inspect the matching `*_fb_roundtrip_*.png` previews to confirm
+the conversion displays upright before integrating with app screens.
 
 ## Future Renderer
 
@@ -60,7 +77,8 @@ Current implementation still uses original console-rendered panels:
 
 Moving beyond converted backdrops requires a renderer pass:
 
-1. Prove the conversion output with desktop BMP/PNG previews and
+1. Prove the conversion output with desktop BMP/PNG previews,
+   framebuffer round-trip previews, and
    `python3 -m unittest tests/test_fe_theme_assets.py`.
 2. Choose either direct framebuffer drawing or citro2d/citro3d sprites.
 3. Render one background in an isolated 3DS test before touching app screens.
