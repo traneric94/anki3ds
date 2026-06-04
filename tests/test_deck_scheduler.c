@@ -4070,6 +4070,10 @@ static void test_review_state_save_policy_rejects_bad_load(void)
 		!review_state_load_result_allows_save(REVIEW_STATE_LOAD_BAD_FORMAT),
 		"state save policy rejects bad state"
 	);
+	check(
+		!review_state_load_result_allows_save(REVIEW_STATE_LOAD_OUT_OF_MEMORY),
+		"state save policy rejects out-of-memory state"
+	);
 }
 
 static void test_app_review_queue_requires_safe_state(void)

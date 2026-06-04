@@ -10,6 +10,7 @@ enum review_state_load_result
 	REVIEW_STATE_LOAD_NOT_FOUND,
 	REVIEW_STATE_LOAD_UNMATCHED,
 	REVIEW_STATE_LOAD_BAD_FORMAT,
+	REVIEW_STATE_LOAD_OUT_OF_MEMORY,
 };
 
 enum review_state_parse_result

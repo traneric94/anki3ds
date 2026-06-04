@@ -6,6 +6,7 @@ HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3ds/include
 
 APP_SD_DIR := 3ds/anki3ds
+APP_3DSX := $(abspath app-3ds/anki3ds.3dsx)
 SAMPLE_DECKS := limits-demo sample
 REMOVED_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
@@ -192,7 +193,7 @@ check-emulator:
 		(echo "Azahar not found at $(AZAHAR_APP). Set AZAHAR_APP=/path/to/Azahar.app"; exit 1)
 
 run-emulator: app-3ds check-emulator
-	open -a "$(AZAHAR_APP)" app-3ds/anki3ds.3dsx
+	open -a "$(AZAHAR_APP)" "$(APP_3DSX)"
 
 run-emulator-samples: install-azahar-sample-decks run-emulator
 

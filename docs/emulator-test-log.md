@@ -1353,3 +1353,32 @@ Result: pass for automated build/test only; pending manual render check
 Notes:
 - Manual emulator or hardware rendering is still needed to confirm bottom-screen
   answer fit, panel theme contrast, and control prompts on real 3DS dimensions.
+
+## 2026-06-04 - 4096-Card State Loader Boot Fix
+
+Build: local working tree
+Commands:
+- `make test`
+- `make -C app-3ds`
+- `make verify-package-sd`
+- `make run-emulator-fresh-samples`
+Steps:
+- Reproduced the Azahar 0 FPS boot failure as an immediate `HW.Memory` loop at
+  `PC 0x00000000`.
+- Mapped the crash address back to `review_state_load_file`.
+- Kept the 4096-card cap and moved the temporary state-load scheduler copy plus
+  card-match bitmap off the 3DS stack.
+- Updated the emulator launcher to pass Azahar an absolute `.3dsx` path.
+Observed:
+- Host tests, the 3DS build, and package verification passed.
+- The rebuilt `review_state_load_file` prologue allocates 364 bytes on the
+  stack instead of copying a full 4096-card scheduler session.
+- A fresh-sample Azahar launch no longer logs the immediate `HW.Memory` crash
+  loop.
+Expected:
+- Fresh sample decks should boot without the 0 FPS startup stall while keeping
+  the high per-deck card cap.
+Result: pass for boot-crash regression; pending manual screen interaction
+Notes:
+- macOS assistive-access restrictions still prevented automated Azahar window
+  inspection in this session.

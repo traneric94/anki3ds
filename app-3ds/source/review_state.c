@@ -355,8 +355,9 @@ static enum review_state_load_result review_state_load_file(
 {
 	FILE *file = fopen(path, "r");
 	char line[STATE_MAX_LINE_LENGTH];
-	struct scheduler_session staged = *session;
-	bool matched_cards[DECK_MAX_CARDS];
+	struct scheduler_session *staged = NULL;
+	bool *matched_cards = NULL;
+	size_t matched_card_count = deck->card_count > 0 ? deck->card_count : 1;
 	size_t matched_row_count = 0;
 	unsigned int parsed_row_count = 0;
 	unsigned int header_row_count = 0;
@@ -364,6 +365,7 @@ static enum review_state_load_result review_state_load_file(
 	bool saw_header = false;
 	bool saw_footer = false;
 	unsigned int line_number = 0;
+	enum review_state_load_result result = REVIEW_STATE_LOAD_BAD_FORMAT;
 
 	review_state_load_report_clear(report);
 	if (file == NULL)
@@ -371,9 +373,18 @@ static enum review_state_load_result review_state_load_file(
 
 	*loaded_file = true;
 
-	memset(matched_cards, 0, sizeof(matched_cards));
-	staged.undo.available = false;
-	staged.undo.kind = SCHEDULER_UNDO_NONE;
+	staged = malloc(sizeof(*staged));
+	matched_cards = calloc(matched_card_count, sizeof(*matched_cards));
+	if (staged == NULL || matched_cards == NULL)
+	{
+		review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_READ_ERROR);
+		result = REVIEW_STATE_LOAD_OUT_OF_MEMORY;
+		goto done;
+	}
+
+	*staged = *session;
+	staged->undo.available = false;
+	staged->undo.kind = SCHEDULER_UNDO_NONE;
 
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
@@ -389,8 +400,8 @@ static enum review_state_load_result review_state_load_file(
 				line_number,
 				REVIEW_STATE_PARSE_LINE_TOO_LONG
 			);
-			fclose(file);
-			return REVIEW_STATE_LOAD_BAD_FORMAT;
+			result = REVIEW_STATE_LOAD_BAD_FORMAT;
+			goto done;
 		}
 
 		if (line[0] == '#')
@@ -402,8 +413,8 @@ static enum review_state_load_result review_state_load_file(
 					line_number,
 					REVIEW_STATE_PARSE_METADATA_AFTER_ROWS
 				);
-				fclose(file);
-				return REVIEW_STATE_LOAD_BAD_FORMAT;
+				result = REVIEW_STATE_LOAD_BAD_FORMAT;
+				goto done;
 			}
 			if (
 				!parse_state_metadata_line(
@@ -420,8 +431,8 @@ static enum review_state_load_result review_state_load_file(
 					line_number,
 					REVIEW_STATE_PARSE_BAD_METADATA
 				);
-				fclose(file);
-				return REVIEW_STATE_LOAD_BAD_FORMAT;
+				result = REVIEW_STATE_LOAD_BAD_FORMAT;
+				goto done;
 			}
 
 			continue;
@@ -433,8 +444,8 @@ static enum review_state_load_result review_state_load_file(
 				line_number,
 				REVIEW_STATE_PARSE_DATA_AFTER_FOOTER
 			);
-			fclose(file);
-			return REVIEW_STATE_LOAD_BAD_FORMAT;
+			result = REVIEW_STATE_LOAD_BAD_FORMAT;
+			goto done;
 		}
 		if (!parse_state_line(line, &state, session->today))
 		{
@@ -443,8 +454,8 @@ static enum review_state_load_result review_state_load_file(
 				line_number,
 				REVIEW_STATE_PARSE_BAD_ROW
 			);
-			fclose(file);
-			return REVIEW_STATE_LOAD_BAD_FORMAT;
+			result = REVIEW_STATE_LOAD_BAD_FORMAT;
+			goto done;
 		}
 
 		parsed_row_count++;
@@ -458,8 +469,8 @@ static enum review_state_load_result review_state_load_file(
 				line_number,
 				REVIEW_STATE_PARSE_DUPLICATE_CARD
 			);
-			fclose(file);
-			return REVIEW_STATE_LOAD_BAD_FORMAT;
+			result = REVIEW_STATE_LOAD_BAD_FORMAT;
+			goto done;
 		}
 
 		matched_cards[card_index] = true;
@@ -467,7 +478,7 @@ static enum review_state_load_result review_state_load_file(
 
 		if (
 			!scheduler_restore_card(
-				&staged,
+				staged,
 				card_index,
 				state.review_count,
 				state.last_rating,
@@ -486,16 +497,16 @@ static enum review_state_load_result review_state_load_file(
 				line_number,
 				REVIEW_STATE_PARSE_BAD_SCHEDULER_STATE
 			);
-			fclose(file);
-			return REVIEW_STATE_LOAD_BAD_FORMAT;
+			result = REVIEW_STATE_LOAD_BAD_FORMAT;
+			goto done;
 		}
 	}
 
 	if (ferror(file))
 	{
 		review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_READ_ERROR);
-		fclose(file);
-		return REVIEW_STATE_LOAD_BAD_FORMAT;
+		result = REVIEW_STATE_LOAD_BAD_FORMAT;
+		goto done;
 	}
 	if (
 		saw_header != saw_footer ||
@@ -513,23 +524,28 @@ static enum review_state_load_result review_state_load_file(
 			0,
 			REVIEW_STATE_PARSE_ROW_COUNT_MISMATCH
 		);
-		fclose(file);
-		return REVIEW_STATE_LOAD_BAD_FORMAT;
+		result = REVIEW_STATE_LOAD_BAD_FORMAT;
+		goto done;
 	}
 	if (matched_row_count == 0 && deck->card_count > 0)
 	{
-		fclose(file);
 		if (parsed_row_count == 0)
 			review_state_load_report_set(report, 0, REVIEW_STATE_PARSE_EMPTY);
-		return parsed_row_count == 0 ?
+		result = parsed_row_count == 0 ?
 			REVIEW_STATE_LOAD_BAD_FORMAT :
 			REVIEW_STATE_LOAD_UNMATCHED;
+		goto done;
 	}
 
-	fclose(file);
-	*session = staged;
+	*session = *staged;
 	scheduler_reposition(session);
-	return REVIEW_STATE_LOAD_OK;
+	result = REVIEW_STATE_LOAD_OK;
+
+done:
+	fclose(file);
+	free(matched_cards);
+	free(staged);
+	return result;
 }
 
 enum review_state_load_result review_state_load_with_report(
@@ -568,6 +584,8 @@ enum review_state_load_result review_state_load_with_report(
 	);
 	if (result == REVIEW_STATE_LOAD_OK)
 		return REVIEW_STATE_LOAD_OK;
+	if (result == REVIEW_STATE_LOAD_OUT_OF_MEMORY)
+		return REVIEW_STATE_LOAD_OUT_OF_MEMORY;
 	if (result == REVIEW_STATE_LOAD_UNMATCHED)
 		found_unmatched = true;
 	if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
@@ -615,6 +633,8 @@ enum review_state_load_result review_state_load_with_report(
 
 			return REVIEW_STATE_LOAD_OK;
 		}
+		if (result == REVIEW_STATE_LOAD_OUT_OF_MEMORY)
+			return REVIEW_STATE_LOAD_OUT_OF_MEMORY;
 		if (result == REVIEW_STATE_LOAD_UNMATCHED)
 			found_unmatched = true;
 		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
@@ -653,6 +673,8 @@ enum review_state_load_result review_state_load_with_report(
 
 			return REVIEW_STATE_LOAD_OK;
 		}
+		if (result == REVIEW_STATE_LOAD_OUT_OF_MEMORY)
+			return REVIEW_STATE_LOAD_OUT_OF_MEMORY;
 		if (result == REVIEW_STATE_LOAD_UNMATCHED)
 			found_unmatched = true;
 		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
@@ -676,6 +698,8 @@ enum review_state_load_result review_state_load_with_report(
 		);
 		if (result == REVIEW_STATE_LOAD_OK)
 			return REVIEW_STATE_LOAD_OK;
+		if (result == REVIEW_STATE_LOAD_OUT_OF_MEMORY)
+			return REVIEW_STATE_LOAD_OUT_OF_MEMORY;
 		if (result == REVIEW_STATE_LOAD_UNMATCHED)
 			found_unmatched = true;
 		if (result == REVIEW_STATE_LOAD_BAD_FORMAT)
@@ -835,6 +859,8 @@ const char *review_state_load_result_name(enum review_state_load_result result)
 		return "unmatched";
 	case REVIEW_STATE_LOAD_BAD_FORMAT:
 		return "ignored";
+	case REVIEW_STATE_LOAD_OUT_OF_MEMORY:
+		return "out of memory";
 	}
 
 	return "unknown";
