@@ -597,6 +597,37 @@ static void app_set_context_status(
 	);
 }
 
+static void app_set_controls_status(struct app_state *app)
+{
+	if (app_mode_shows_unsaved_limit_status(app, APP_MODE_CONTROLS))
+	{
+		app_set_status(app, "Unsaved limit edits");
+		return;
+	}
+
+	if (app->controls_return_mode == APP_MODE_DECK_SELECT)
+	{
+		const char *suffix = "";
+
+		if (app->selected_deck_index < app->deck_index.count)
+		{
+			suffix = deck_selection_status_suffix(
+				&app->deck_summaries[app->selected_deck_index]
+			);
+		}
+
+		snprintf(
+			app->status_message,
+			sizeof(app->status_message),
+			"Controls%s",
+			suffix
+		);
+		return;
+	}
+
+	app_set_status(app, "Controls");
+}
+
 static void draw_deck_due_counts_inline(
 	size_t new_due_count,
 	size_t learning_due_count,
@@ -1147,7 +1178,7 @@ static void app_refresh_selected_deck_summary(struct app_state *app)
 static void app_return_to_deck_select(struct app_state *app)
 {
 	app_refresh_selected_deck_summary(app);
-	app_set_status(app, "Deck list");
+	app_set_deck_selection_status(app);
 	app->mode = APP_MODE_DECK_SELECT;
 }
 
@@ -1327,7 +1358,7 @@ static void app_open_controls(struct app_state *app)
 {
 	app->controls_return_mode = app->mode;
 	app->mode = APP_MODE_CONTROLS;
-	app_set_context_status(app, app->mode, "Controls");
+	app_set_controls_status(app);
 }
 
 static void app_close_controls(struct app_state *app)
@@ -1335,7 +1366,10 @@ static void app_close_controls(struct app_state *app)
 	enum app_mode return_mode = app->controls_return_mode;
 
 	app->mode = return_mode;
-	app_set_context_status(app, app->mode, "Controls closed");
+	if (return_mode == APP_MODE_DECK_SELECT)
+		app_set_deck_selection_status(app);
+	else
+		app_set_context_status(app, app->mode, "Controls closed");
 }
 
 static enum app_power_battery_sample_result app_init(struct app_state *app)
