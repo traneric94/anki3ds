@@ -27,3 +27,54 @@ Notes:
 For M7 daily-use acceptance, include the deck ids tested, the copy method or
 fresh-sample command used before copying, the settings values changed, and
 whether relaunch persistence was confirmed on the `CTR-001`.
+
+## M7 Daily-Use Acceptance Checklist
+
+Run this checklist on the `CTR-001` after a clean local preflight:
+
+```sh
+make verify-m7-preflight
+```
+
+Copy `dist/sdmc/3ds/anki3ds/` to the SD card so the device has the current
+`.3dsx`, `.smdh`, and tracked sample decks. Test `sample` and `limits-demo`.
+
+Record the build commit, copy method, SD card, and whether the battery line was
+unavailable, normal, charging, or low.
+
+Pass conditions:
+
+- Deck selector shows both tracked decks, selected deck position, due counts,
+  and readable dark-terminal colors without hard-to-read blue text.
+- D-pad or Circle Pad Up/Down moves one deck per quick tap; holding a single
+  direction repeats only after the expected short delay.
+- `A` opens the selected deck, `Y` opens contextual controls before reveal, and
+  `B`, `Y`, or `SELECT` closes controls.
+- On `sample`, `A` reveals the first card. After reveal, `Y` Again, `X` Hard,
+  `B` Good, and `A` Easy each save and advance or report that the same card is
+  still due. Ambiguous face-button chords must not rate a card.
+- `L` undoes the last rating or suspend action and leaves the restored card due
+  again.
+- Long text on `sample` card `card-0011` scrolls with D-pad Up/Down on the
+  active text pane; quick taps should not jump multiple rows.
+- `R`, then `X`, suspends a review card. `SELECT` actions, restore suspended,
+  then `X` restores it.
+- On `limits-demo`, rating the visible new cards reaches the daily limit
+  summary and shows hidden new/review counts instead of looking simply done.
+- From actions, Daily limits can change `new_limit` and `review_limit`, save
+  with `A`, update due counts immediately, and persist after exit and relaunch.
+- Reset progress requires the reset confirmation and `X`; it removes review
+  progress while keeping `settings.tsv`.
+- `START` opens exit confirmation from each major screen. `B` or `SELECT`
+  cancels back to the prior screen; `A` exits.
+- After relaunch, reviewed cards, suspended/restored state, daily-limit edits,
+  and deck selection behavior match the saved SD-card state.
+- On the SD card, the active test decks have expected app-owned files:
+  `state.tsv` after saved study, `settings.tsv` after limit edits, and
+  `review-log.tsv` after saved study actions unless the status reported
+  `log skipped`.
+
+Fail the checkpoint for any uncontrolled multi-step movement from a quick
+direction tap, any rating button that does not advance or clearly keep the same
+due card, unreadable selected/status colors, lost state after relaunch, or a
+save failure that advances the visible queue.
