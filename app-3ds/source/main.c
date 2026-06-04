@@ -2735,7 +2735,21 @@ static bool app_handle_deck_select_input(
 	}
 
 	if (app->deck_index.count == 0)
+	{
+		if (
+			app_command_pressed(
+				buttons_down,
+				buttons_active,
+				APP_CONTROL_BUTTON_A
+			)
+		)
+		{
+			app_set_status(app, "No deck selected");
+			return true;
+		}
+
 		return false;
+	}
 
 	if (app_controls_up_down_triggered(buttons_down, buttons_active, &move_down))
 	{
