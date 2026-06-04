@@ -121,7 +121,7 @@ local/sdmc/3ds/anki3ds/decks/sample/cards.tsv
 To install the sample decks into Azahar's SD card data directory:
 
 ```sh
-make install-azahar-sample-deck
+make install-azahar-sample-decks
 ```
 
 For a fresh Azahar sample-deck pass, use:
@@ -264,7 +264,8 @@ cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
 progress after opening the reset action and confirming with `X`. The top screen
-shows deck/card text with terminal-style color cues, while the bottom screen
+shows deck/card text with readable dark-terminal color cues that avoid pure
+blue; selected rows use magenta while warnings use yellow. The bottom screen
 shows controls, active deck context for deck-specific actions, review status,
 save feedback, and battery state, including an unavailable state before the
 first valid sample plus charging and low-battery states once sampled.
