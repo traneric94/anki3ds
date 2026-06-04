@@ -1067,11 +1067,38 @@ static void test_app_controls_classifies_app_actions(void)
 		APP_CONTROL_MODE_CONFIRM_EXIT,
 		false,
 		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CANCEL_EXIT, "exit confirmation cancels with B");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
 		APP_CONTROL_BUTTON_SELECT,
 		APP_CONTROL_BUTTON_SELECT,
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_CANCEL_EXIT, "exit confirmation cancels with select");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_A | APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "exit confirmation ignores confirm chord");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONFIRM_EXIT,
+		false,
+		true,
+		0,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "held B does not cancel exit again");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONFIRM_EXIT,
 		false,
@@ -1169,6 +1196,15 @@ static void test_app_controls_classifies_app_actions(void)
 		APP_CONTROL_MODE_LOAD_ERROR,
 		false,
 		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT, "SELECT exits load error");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_LOAD_ERROR,
+		false,
+		true,
 		APP_CONTROL_BUTTON_B,
 		APP_CONTROL_BUTTON_B,
 		&rating
@@ -1183,6 +1219,15 @@ static void test_app_controls_classifies_app_actions(void)
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT, "B leaves front review");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_SUMMARY,
+		false,
+		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT, "B leaves summary");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_REVIEW,
 		false,
