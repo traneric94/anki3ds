@@ -11,6 +11,7 @@ SAMPLE_DECKS := limits-demo sample
 REMOVED_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
 SAMPLE_PROGRESS_FILE_CASE := state.tsv|state.tsv.tmp|state.tsv.bak|review-log.tsv|review-log.tsv.tmp|review-log.tsv.bak
+APP_SESSION_FILES := session.tsv session.tsv.tmp session.tsv.bak
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 VERIFY_AZAHAR_CONTROLS := python3 tools/verify_azahar_controls.py
 VERIFY_M7_ARTIFACTS := python3 tools/verify_m7_artifacts.py
@@ -168,6 +169,9 @@ verify-local-sd: prepare-local-samples-fresh
 	app_dir="$(LOCAL_SDMC)/$(APP_SD_DIR)"; \
 	test -f "$$app_dir/anki3ds.3dsx" || { echo "$$app_dir/anki3ds.3dsx missing"; exit 1; }; \
 	test -f "$$app_dir/anki3ds.smdh" || { echo "$$app_dir/anki3ds.smdh missing"; exit 1; }; \
+	for file in $(APP_SESSION_FILES); do \
+		test ! -e "$$app_dir/$$file" || { echo "$$app_dir/$$file must not carry into a fresh pass"; exit 1; }; \
+	done; \
 	for deck in $(REMOVED_SAMPLE_DECKS); do \
 		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed"; exit 1; }; \
 	done; \
@@ -198,6 +202,10 @@ install-local-sample-decks: verify-sample-decks
 
 reset-local-sample-progress:
 	set -e; \
+	app_dir="$(LOCAL_SDMC)/$(APP_SD_DIR)"; \
+	for file in $(APP_SESSION_FILES); do \
+		rm -f "$$app_dir/$$file"; \
+	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		rm -f "$$deck_dir/state.tsv" "$$deck_dir/state.tsv.tmp" "$$deck_dir/state.tsv.bak" "$$deck_dir/review-log.tsv" "$$deck_dir/review-log.tsv.tmp" "$$deck_dir/review-log.tsv.bak"; \
@@ -235,6 +243,10 @@ install-azahar-fe-bg-viewer: fe-bg-viewer-3ds
 
 reset-azahar-sample-progress:
 	set -e; \
+	app_dir="$(AZAHAR_SDMC)/$(APP_SD_DIR)"; \
+	for file in $(APP_SESSION_FILES); do \
+		rm -f "$$app_dir/$$file"; \
+	done; \
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		rm -f "$$deck_dir/state.tsv" "$$deck_dir/state.tsv.tmp" "$$deck_dir/state.tsv.bak" "$$deck_dir/review-log.tsv" "$$deck_dir/review-log.tsv.tmp" "$$deck_dir/review-log.tsv.bak"; \
@@ -245,6 +257,9 @@ prepare-azahar-samples-fresh: install-azahar-sample-decks reset-azahar-sample-pr
 verify-azahar-fresh-samples: prepare-azahar-samples-fresh
 	@set -e; \
 	app_dir="$(AZAHAR_SDMC)/$(APP_SD_DIR)"; \
+	for file in $(APP_SESSION_FILES); do \
+		test ! -e "$$app_dir/$$file" || { echo "$$app_dir/$$file must not carry into a fresh pass"; exit 1; }; \
+	done; \
 	for deck in $(REMOVED_SAMPLE_DECKS); do \
 		test ! -e "$$app_dir/decks/$$deck" || { echo "$$app_dir/decks/$$deck must not be installed"; exit 1; }; \
 	done; \

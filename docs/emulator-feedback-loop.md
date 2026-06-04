@@ -96,7 +96,8 @@ make run-emulator-fresh-samples
 That launch path verifies the fresh Azahar text sample decks before opening the
 current `.3dsx`.
 
-The fresh targets clear only tracked sample progress files:
+The fresh targets clear only tracked sample progress files and root diagnostic
+snapshots used by M7 evidence:
 
 ```text
 state.tsv
@@ -105,6 +106,9 @@ state.tsv.bak
 review-log.tsv
 review-log.tsv.tmp
 review-log.tsv.bak
+session.tsv
+session.tsv.tmp
+session.tsv.bak
 ```
 
 They leave personal decks outside the tracked sample ids alone.

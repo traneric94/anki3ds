@@ -38,6 +38,9 @@ make verify-m7-preflight
 
 Copy `dist/sdmc/3ds/anki3ds/` to the SD card so the device has the current
 `.3dsx`, `.smdh`, and tracked sample decks. Test `sample` and `limits-demo`.
+Before launching a fresh acceptance pass, remove any stale root
+`3ds/anki3ds/session.tsv`, `.tmp`, and `.bak` diagnostics from the tested SD
+root, or use the fresh prep targets that do this automatically.
 
 Record the build commit, copy method, SD card, and whether the battery line was
 unavailable, normal, charging, or low.

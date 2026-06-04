@@ -165,8 +165,8 @@ Acceptance test:
 
 1. Copy two or more text decks to the SD card with `make install-local-sd` or
    the equivalent real SD copy. For tracked sample decks, use
-   `make prepare-local-samples-fresh` so stale sample progress does not carry
-   into the pass.
+   `make prepare-local-samples-fresh` so stale sample progress and root
+   `session.tsv` diagnostics do not carry into the pass.
 2. Review due cards from each deck.
 3. Suspend one card.
 4. Undo one rating.
