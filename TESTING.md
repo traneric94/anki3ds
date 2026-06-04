@@ -316,8 +316,10 @@ Acceptance steps:
 - reveal and rate with each rating path needed for the pass
 - scroll the long text card in the tracked `sample` deck with D-pad Up/Down
 - suspend one card, then restore suspended cards from the actions screen
-- confirm restore with no suspended cards stays on the actions screen
-- undo one rating and confirm the queue/status updates sensibly
+- confirm restore with no suspended cards stays on the actions screen and
+  preserves active warning context when present
+- undo one rating and confirm the queue/status updates sensibly; no-op undo
+  keeps active warning context when present
 - change `new_limit` and `review_limit` from the actions screen
 - confirm daily-limit edits show an unsaved-changes cue before saving and
   return to no-changes state after save or cancel, with active warning context

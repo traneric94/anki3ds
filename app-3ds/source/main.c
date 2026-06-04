@@ -648,6 +648,17 @@ static void app_set_limits_canceled_status(
 	);
 }
 
+static void app_set_nothing_status(struct app_state *app, const char *message)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s%s",
+		message,
+		active_deck_status_suffix(app)
+	);
+}
+
 static void app_set_canceled_status(struct app_state *app, const char *label)
 {
 	snprintf(
@@ -3044,7 +3055,7 @@ static bool undo_last_action(struct app_state *app)
 	if (!scheduler_undo_last(&app->session))
 	{
 		app->state_message = "nothing to undo";
-		app_set_status(app, "Nothing to undo");
+		app_set_nothing_status(app, "Nothing to undo");
 		return true;
 	}
 
@@ -3094,7 +3105,7 @@ static bool suspend_current_card(struct app_state *app)
 	if (!scheduler_suspend_current(&app->session))
 	{
 		app->state_message = "nothing to suspend";
-		app_set_status(app, "Nothing to suspend");
+		app_set_nothing_status(app, "Nothing to suspend");
 		app->mode = app_review_mode_for_session(app);
 		return true;
 	}
@@ -3186,7 +3197,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 	if (unsuspended_count == 0)
 	{
 		app->state_message = "nothing suspended";
-		app_set_status(app, "Nothing suspended");
+		app_set_nothing_status(app, "Nothing suspended");
 		app->mode = APP_MODE_ACTIONS;
 		return true;
 	}

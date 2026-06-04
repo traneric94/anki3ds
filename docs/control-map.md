@@ -121,7 +121,7 @@ active deck name on the bottom controls screen as well as the top screen.
 - Restoring suspended cards requires `X` on the restore confirmation screen if
   any suspended cards exist.
 - Choosing restore when no cards are suspended keeps the actions screen open
-  and reports `Nothing suspended`.
+  and reports `Nothing suspended` with active deck warning context when present.
 - Reset progress requires `X` on the reset confirmation screen.
 - A successful reset reloads the deck and shows `Progress reset`; if only the
   diagnostic log cleanup fails, it shows `Progress reset; log kept`.
@@ -133,6 +133,8 @@ Suspending from review also uses a confirmation screen:
 - Press `R` on the current card to open suspend confirmation.
 - Press `X` to suspend the card.
 - Press `B` or `SELECT` to cancel.
+No-op undo, suspend, and restore attempts keep active deck warning context in
+the status line.
 
 ## Daily Limits
 

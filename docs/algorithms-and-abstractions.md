@@ -344,6 +344,9 @@ present. If a deck opens with malformed saved state, reset is selected by
 default so the recovery path is direct. Daily limits can be edited from the
 same actions screen. Reset remains available by moving the action selection
 first, then confirming on a separate reset screen with `X`.
+No-op study actions such as undo without an undo slot, suspend without a
+current card, or restore with no suspended cards preserve active-deck warning
+context in the status line.
 If malformed settings are present at the same time, the reset-needed screens
 still show the settings warning so fixing state does not hide a second setup
 problem.

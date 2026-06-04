@@ -4045,6 +4045,21 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status unsaved limit is warning"
 	);
 	check(
+		app_status_message_color("Nothing to undo; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status nothing undo limit reached is warning"
+	);
+	check(
+		app_status_message_color("Nothing to suspend; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status nothing suspend reset state/settings is warning"
+	);
+	check(
+		app_status_message_color("Nothing suspended; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status nothing suspended settings ignored is warning"
+	);
+	check(
 		app_status_message_color("No decks found; 2 ignored") ==
 			APP_STATUS_COLOR_WARNING,
 		"status no decks found is warning"
