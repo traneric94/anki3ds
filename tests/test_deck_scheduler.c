@@ -4155,6 +4155,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status editing limits reset state/settings is warning"
 	);
 	check(
+		app_status_message_color("Editing review_limit; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status editing field limit reached is warning"
+	);
+	check(
+		app_status_message_color("new_limit: 20; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status setting value settings ignored is warning"
+	);
+	check(
 		app_status_message_color("Restore requires X; limit reached") ==
 			APP_STATUS_COLOR_WARNING,
 		"status restore requires limit reached is warning"

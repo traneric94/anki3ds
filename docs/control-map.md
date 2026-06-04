@@ -146,8 +146,8 @@ In the daily-limits screen:
 `0` means all available cards.
 The screen shows `no changes` when the edited values match the active saved
 limits and warns about `unsaved changes` after a value change. The bottom
-status line uses the warning color for active deck warnings on entry and for
-unsaved edits, including after moving between fields while edits are still
-dirty. Canceling with unsaved changes discards the edit buffer and returns to
-actions.
+status line uses the warning color for active deck warnings on entry, after
+clean field movement or value movement, and for unsaved edits. Unsaved edits
+take priority over the active deck warning. Canceling with unsaved changes
+discards the edit buffer and returns to actions.
 Saving limits updates `settings.tsv` and leaves review progress status separate.

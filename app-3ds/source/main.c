@@ -596,6 +596,44 @@ static void app_set_settings_open_status(struct app_state *app)
 	);
 }
 
+static const char *app_settings_edit_status_suffix(
+	const struct app_state *app,
+	bool unsaved_changes
+)
+{
+	return unsaved_changes ? " unsaved" : active_deck_status_suffix(app);
+}
+
+static void app_set_setting_field_status(
+	struct app_state *app,
+	bool unsaved_changes
+)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Editing %s%s",
+		setting_item_name(app->selected_setting),
+		app_settings_edit_status_suffix(app, unsaved_changes)
+	);
+}
+
+static void app_set_setting_value_status(
+	struct app_state *app,
+	const char *limit_text,
+	bool unsaved_changes
+)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s: %s%s",
+		setting_item_name(app->selected_setting),
+		limit_text,
+		app_settings_edit_status_suffix(app, unsaved_changes)
+	);
+}
+
 static void app_set_canceled_status(struct app_state *app, const char *label)
 {
 	snprintf(
@@ -3495,13 +3533,7 @@ static bool app_handle_settings_input(
 		else
 			app->selected_setting = SETTING_ITEM_NEW_LIMIT;
 		unsaved_changes = app_settings_have_unsaved_changes(app);
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			"Editing %s%s",
-			setting_item_name(app->selected_setting),
-			unsaved_changes ? " unsaved" : ""
-		);
+		app_set_setting_field_status(app, unsaved_changes);
 		return true;
 	}
 
@@ -3517,14 +3549,7 @@ static bool app_handle_settings_input(
 		app->settings_message = unsaved_changes ?
 			"unsaved changes" :
 			"no changes";
-		snprintf(
-			app->status_message,
-			sizeof(app->status_message),
-			"%s: %s%s",
-			setting_item_name(app->selected_setting),
-			limit_text,
-			unsaved_changes ? " unsaved" : ""
-		);
+		app_set_setting_value_status(app, limit_text, unsaved_changes);
 		return true;
 	}
 
