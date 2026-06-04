@@ -1440,3 +1440,24 @@ Result: pass for automated post-run artifact gate only
 Notes:
 - This does not replace manual M7 interaction acceptance. It verifies SD-card
   evidence after that pass has already created progress files.
+
+## 2026-06-04 - M7 Artifact Target Settings Parameters
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make -n verify-m7-artifacts M7_SDMC=/tmp/sd M7_DECKS="sample limits-demo"
+  M7_REQUIRED_EVENTS="rating undo"
+  M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`
+Steps:
+- Parameterized `make verify-m7-artifacts` so manual passes can declare the
+  tested deck ids, required review-log events, and exact daily-limit settings.
+Observed:
+- The verifier CLI rejects a saved setting that does not match
+  `--expect-settings`.
+Expected:
+- M7 acceptance can now prove daily-limit persistence with the same Make target
+  used for post-run SD artifact verification.
+Result: pass for automated target wiring only
+Notes:
+- Manual M7 interaction acceptance remains pending.

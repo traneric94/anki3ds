@@ -78,7 +78,8 @@ Pass conditions:
   `log skipped`.
 - After the pass, `make verify-m7-artifacts M7_SDMC=/path/to/sdmc` accepts the
   tested SD root. For Azahar, omit `M7_SDMC` to use the configured
-  `AZAHAR_SDMC`.
+  `AZAHAR_SDMC`. Include `M7_EXPECT_SETTINGS="deck:new:review ..."` for the
+  exact daily-limit values changed during the pass.
 
 Fail the checkpoint for any uncontrolled multi-step movement from a quick
 direction tap, any rating button that does not advance or clearly keep the same

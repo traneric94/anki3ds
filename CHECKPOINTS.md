@@ -175,7 +175,9 @@ Acceptance test:
 7. Relaunch and confirm state and daily limits persisted.
 8. After the session, run `make verify-m7-artifacts M7_SDMC=/path/to/sdmc`
    against the tested SD root. For Azahar, the default `M7_SDMC` is the
-   configured `AZAHAR_SDMC`.
+   configured `AZAHAR_SDMC`. To prove exact daily-limit edits, pass settings
+   expectations such as
+   `M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`.
 
 Pass condition:
 

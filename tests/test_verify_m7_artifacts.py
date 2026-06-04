@@ -290,6 +290,31 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
             self.assertIn("state.tsv: missing", stderr.getvalue())
             self.assertNotIn("Traceback", stderr.getvalue())
 
+    def test_cli_rejects_unexpected_saved_settings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_m7_artifacts.py",
+                    "--sdmc",
+                    str(sdmc),
+                    "--deck",
+                    "sample",
+                    "--deck",
+                    "limits-demo",
+                    "--expect-settings",
+                    "sample:5:9",
+                ],
+            ), redirect_stderr(stderr):
+                exit_code = verify_m7_artifacts.main()
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("sample/settings.tsv: expected new_limit 5", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

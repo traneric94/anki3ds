@@ -16,6 +16,12 @@ VERIFY_AZAHAR_CONTROLS := python3 tools/verify_azahar_controls.py
 VERIFY_M7_ARTIFACTS := python3 tools/verify_m7_artifacts.py
 IMPORT_FE_THEME_ASSETS := python3 tools/import_fe_theme_assets.py
 M7_SDMC ?= $(AZAHAR_SDMC)
+M7_DECKS ?= limits-demo sample
+M7_REQUIRED_EVENTS ?= rating undo suspend restore
+M7_EXPECT_SETTINGS ?=
+M7_DECK_ARGS = $(foreach deck,$(M7_DECKS),--deck $(deck))
+M7_REQUIRED_EVENT_ARGS = $(foreach event,$(M7_REQUIRED_EVENTS),--require-event $(event))
+M7_EXPECT_SETTING_ARGS = $(foreach setting,$(M7_EXPECT_SETTINGS),--expect-settings $(setting))
 
 .PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-m7-preflight verify-m7-artifacts verify-sample-decks verify-azahar-controls verify-fe-theme-assets check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
 
@@ -70,10 +76,7 @@ verify-local: test verify-sample-decks verify-local-sd verify-package-sd
 verify-m7-preflight: verify-local verify-azahar-fresh-samples verify-azahar-controls
 
 verify-m7-artifacts:
-	$(VERIFY_M7_ARTIFACTS) --sdmc "$(M7_SDMC)" \
-		--deck limits-demo --deck sample \
-		--require-event rating --require-event undo \
-		--require-event suspend --require-event restore
+	$(VERIFY_M7_ARTIFACTS) --sdmc "$(M7_SDMC)" $(M7_DECK_ARGS) $(M7_REQUIRED_EVENT_ARGS) $(M7_EXPECT_SETTING_ARGS)
 
 verify-sample-decks:
 	@set -e; \
