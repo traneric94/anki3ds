@@ -23,6 +23,14 @@ shoulder buttons use `L`/`R`.
 The Azahar config file is `~/Library/Application Support/Azahar/config/qt-config.ini`.
 If Azahar rewrites the profile, reapply the same bindings in
 `Emulation > Configure > Controls`.
+To verify the local profile before an M7 emulator pass, run:
+
+```sh
+make verify-azahar-controls
+```
+
+Set `AZAHAR_CONFIG=/path/to/qt-config.ini` if the config file lives somewhere
+else.
 
 Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding
 a single direction for roughly 300 ms starts repeat movement, paging,

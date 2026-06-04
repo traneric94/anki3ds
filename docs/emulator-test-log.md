@@ -1382,3 +1382,35 @@ Result: pass for boot-crash regression; pending manual screen interaction
 Notes:
 - macOS assistive-access restrictions still prevented automated Azahar window
   inspection in this session.
+
+## 2026-06-04 - Azahar Control Profile Preflight Gate
+
+Build: local working tree
+Commands:
+- `make verify-azahar-controls`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Added a local Azahar control-profile verifier for the anki3ds emulator key
+  map.
+- Verified face buttons map to keyboard `A`/`B`/`X`/`Y`, shoulder buttons map
+  to `L`/`R`, `SELECT`/`START` map to `N`/`M`, and D-pad plus Circle Pad
+  directions map to keyboard arrows.
+- Ran the full M7 preflight after wiring the control-profile check into it.
+Observed:
+- `tools/verify_azahar_controls.py` accepted
+  `~/Library/Application Support/Azahar/config/qt-config.ini`.
+- Host C tests, 3DS key translation tests, converter tests, text-deck verifier
+  tests, and Azahar-control verifier tests passed.
+- Local SD, `dist/sdmc`, and Azahar sample-deck staging all verified with
+  fresh tracked-sample progress.
+Expected:
+- M7 emulator preflight now fails early if Azahar rewrites the profile away
+  from the documented intuitive keyboard bindings.
+Evidence:
+- `make verify-m7-preflight` completed with exit code 0.
+Result: pass for automated preflight only
+Notes:
+- Full M7 acceptance still requires manual emulator or hardware interaction for
+  rating, suspend, undo, daily-limit editing, relaunch persistence, and visual
+  readability.
