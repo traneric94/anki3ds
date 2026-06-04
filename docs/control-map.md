@@ -95,6 +95,9 @@ also update the bottom status line so manual input has immediate feedback and
 active warning context stays visible. If daily limits hide more calendar-due
 cards after the visible queue empties, the summary says `Daily limit reached`
 and shows new and review cards past the limit.
+When the battery sample is low and not charging, successful save-oriented
+actions add `; batt low` to the status line while the bottom battery line keeps
+showing the full low-battery prompt.
 
 ## Help Screen
 

@@ -793,6 +793,24 @@ static void app_append_active_deck_status_suffix(struct app_state *app)
 	app_append_status_suffix(app, active_deck_status_suffix(app));
 }
 
+static bool app_save_battery_warning_needed(const struct app_state *app)
+{
+	if (app == NULL)
+		return false;
+
+	return app_power_battery_save_warning_needed(
+		app->battery_status_available,
+		app->battery_charging,
+		app->battery_level
+	);
+}
+
+static void app_append_save_battery_status_suffix(struct app_state *app)
+{
+	if (app_save_battery_warning_needed(app))
+		app_append_status_suffix(app, "; batt low");
+}
+
 static bool app_status_suffix_is_redundant(
 	const char *suffix,
 	bool message_reports_limit,
@@ -933,6 +951,7 @@ static void app_set_undo_saved_status(struct app_state *app, bool log_saved)
 		log_saved ? "Undo saved" : "Undo saved; log skipped"
 	);
 	app_append_active_deck_status_suffix(app);
+	app_append_save_battery_status_suffix(app);
 }
 
 static void app_set_canceled_status(struct app_state *app, const char *label)
@@ -3486,6 +3505,7 @@ static bool rate_current_card(struct app_state *app, enum scheduler_rating ratin
 				"Rating saved; limit reached; log skipped"
 		);
 	}
+	app_append_save_battery_status_suffix(app);
 	app->mode = queue_complete ? APP_MODE_SUMMARY : APP_MODE_REVIEW;
 	app_diagnostics_mark_rating_saved(&app->diagnostics);
 	app_save_diagnostics(app);
@@ -3646,6 +3666,7 @@ static bool suspend_current_card(struct app_state *app)
 		app->mode = APP_MODE_REVIEW;
 	}
 
+	app_append_save_battery_status_suffix(app);
 	app_diagnostics_mark_suspend_saved(&app->diagnostics);
 	app_save_diagnostics(app);
 
@@ -3682,6 +3703,7 @@ static bool reset_progress(struct app_state *app)
 			log_deleted ? "Progress reset" : "Progress reset; log kept"
 		);
 		app_append_active_deck_status_suffix(app);
+		app_append_save_battery_status_suffix(app);
 	}
 	return true;
 }
@@ -3762,6 +3784,7 @@ static bool unsuspend_all_cards(struct app_state *app)
 		app->mode = APP_MODE_REVIEW;
 	}
 
+	app_append_save_battery_status_suffix(app);
 	app_diagnostics_mark_restore_saved(&app->diagnostics, unsuspended_count);
 	app_save_diagnostics(app);
 
@@ -3822,6 +3845,7 @@ static bool save_daily_limits(struct app_state *app)
 		app_append_active_deck_status_suffix(app);
 	}
 
+	app_append_save_battery_status_suffix(app);
 	app_diagnostics_mark_settings_saved(&app->diagnostics);
 	app_save_diagnostics(app);
 

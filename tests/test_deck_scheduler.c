@@ -395,6 +395,26 @@ static void test_app_power_battery_display_state(void)
 		) == APP_POWER_BATTERY_DISPLAY_NORMAL,
 		"healthy battery level displays normal"
 	);
+	check(
+		app_power_battery_save_warning_needed(
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"low battery warns around save actions"
+	);
+	check(
+		!app_power_battery_save_warning_needed(
+			true,
+			true,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"charging battery suppresses save warning"
+	);
+	check(
+		!app_power_battery_save_warning_needed(false, false, 0),
+		"missing battery sample does not claim low battery"
+	);
 }
 
 static void test_app_power_idle_input_backoff(void)

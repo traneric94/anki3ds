@@ -72,6 +72,10 @@ Pass conditions:
   cancels back to the prior screen; `A` exits.
 - After relaunch, reviewed cards, suspended/restored state, daily-limit edits,
   and deck selection behavior match the saved SD-card state.
+- If the battery line is low and not charging during a saved rating, undo,
+  suspend, restore, reset, or daily-limit save, the status line includes
+  `; batt low` after confirming the save. If the battery is unavailable,
+  normal, or charging, no low-battery save suffix is required.
 - On the SD card, the active test decks have expected app-owned files:
   `state.tsv` after saved study, `settings.tsv` after limit edits, and
   `review-log.tsv` after saved study actions unless the status reported

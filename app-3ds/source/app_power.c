@@ -74,6 +74,16 @@ enum app_power_battery_display_state app_power_battery_display_state(
 	return APP_POWER_BATTERY_DISPLAY_NORMAL;
 }
 
+bool app_power_battery_save_warning_needed(
+	bool status_available,
+	bool charging,
+	unsigned int level
+)
+{
+	return app_power_battery_display_state(status_available, charging, level) ==
+		APP_POWER_BATTERY_DISPLAY_LOW;
+}
+
 long long app_power_idle_input_wait_ns(unsigned int idle_wait_count)
 {
 	if (idle_wait_count < APP_POWER_IDLE_INPUT_FAST_WAIT_COUNT)

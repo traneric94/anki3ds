@@ -44,6 +44,11 @@ enum app_power_battery_display_state app_power_battery_display_state(
 	bool charging,
 	unsigned int level
 );
+bool app_power_battery_save_warning_needed(
+	bool status_available,
+	bool charging,
+	unsigned int level
+);
 long long app_power_idle_input_wait_ns(unsigned int idle_wait_count);
 unsigned int app_power_next_idle_input_wait_count(unsigned int idle_wait_count);
 
