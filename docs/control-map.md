@@ -71,8 +71,9 @@ actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
 `SELECT` to return. On a revealed review card, `Y` is reserved for Again.
 If `START` opens exit confirmation from the controls screen, canceling exit
 returns to the controls screen.
-If `START` opens exit confirmation from daily limits while edits are unsaved,
-the confirmation screen warns that those limit edits will be lost.
+If `START` opens exit confirmation from daily limits, or from controls opened
+by daily limits, while edits are unsaved, the confirmation screen warns that
+those limit edits will be lost.
 
 The controls screen is contextual. Its top screen lists controls for the screen
 that opened it, including empty deck-list and review-state-error variants, so it

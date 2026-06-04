@@ -469,6 +469,27 @@ static bool app_settings_have_unsaved_changes(const struct app_state *app)
 	);
 }
 
+static bool app_exit_would_discard_unsaved_limits(const struct app_state *app)
+{
+	if (!app_settings_have_unsaved_changes(app))
+		return false;
+	if (app->mode == APP_MODE_SETTINGS)
+		return true;
+	if (
+		app->mode == APP_MODE_CONTROLS ||
+		(
+			app->mode == APP_MODE_CONFIRM_EXIT &&
+			app->exit_return_mode == APP_MODE_CONTROLS
+		)
+	)
+	{
+		return app->controls_return_mode == APP_MODE_SETTINGS;
+	}
+
+	return app->mode == APP_MODE_CONFIRM_EXIT &&
+		app->exit_return_mode == APP_MODE_SETTINGS;
+}
+
 static bool settings_load_result_needs_warning(enum app_settings_load_result result)
 {
 	return result == APP_SETTINGS_LOAD_BAD_FORMAT;
@@ -1103,7 +1124,7 @@ static void app_open_exit_confirmation(struct app_state *app)
 	app->exit_return_mode = app->mode;
 	app_set_status(
 		app,
-		app->mode == APP_MODE_SETTINGS && app_settings_have_unsaved_changes(app) ?
+		app_exit_would_discard_unsaved_limits(app) ?
 			"Exit loses unsaved limits" :
 			"Exit requires A"
 	);
@@ -1578,10 +1599,7 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_WARNING "Exit app?" APP_COLOR_RESET);
-	if (
-		app->exit_return_mode == APP_MODE_SETTINGS &&
-		app_settings_have_unsaved_changes(app)
-	)
+	if (app_exit_would_discard_unsaved_limits(app))
 	{
 		printf("\x1b[6;1H" APP_COLOR_WARNING "Unsaved daily-limit edits" APP_COLOR_RESET);
 		printf("\x1b[7;1Hwill be lost.");
