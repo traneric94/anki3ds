@@ -264,27 +264,31 @@ that deck, and can undo the last rating or suspend action with `L`, suspend
 cards after opening suspend confirmation with `R` and confirming with `X`, see
 suspended-card counts in deck, action, and summary views, restore suspended
 cards from the actions screen after confirming with `X`, or reset saved
-progress after opening the reset action and confirming with `X`. The top screen
-shows review card text in an original light paper panel with amber trim and
-black text, while deck lists, prompts, and status chrome keep readable
-dark-terminal color cues that avoid blue, cyan, and violet accents. Headings,
+progress after opening the reset action and confirming with `X`. Before reveal,
+the top screen shows the card front in an original light paper panel; after
+reveal, the front stays on top and the back appears on the bottom screen with
+rating chips below it. Help-page `X` cycles four session-local panel trim
+themes: Amber, Forest, Ruby, and Chalk. Deck lists, prompts, and status chrome
+keep readable dark-terminal color cues that avoid blue, cyan, and violet
+accents. Headings,
 status labels, and selected rows use warm amber or amber reverse video, Good
 ratings, review counts, and safe states use green, Hard ratings, learning
 counts, and cautions use yellow/amber, Again ratings, suspended counts, and
 destructive/error states use red, and neutral text plus Easy ratings and new
 counts use white with dim white separators.
 The bottom screen
-shows controls, active deck context for deck-specific actions, review status,
-save feedback, and battery state, including an unavailable state before the
-first valid sample plus charging and low-battery states once sampled.
+shows answer text after reveal, compact prompts before reveal, active deck
+context for deck-specific actions, review status, save feedback, and battery
+state, including an unavailable state before the first valid sample plus
+charging and low-battery states once sampled.
 Successful ratings, suspend actions, undo actions, and
 restore-suspended actions append best-effort `review-log.tsv` rows for
 debugging. The no-due summary separates current-session rating counts from the
 persisted count of cards reviewed today and distinguishes daily-limit exhaustion
 from a fully clear deck. Valid saved state with no matching current card ids
 starts fresh with a visible unmatched-state warning. Deck load errors show the
-first failing line and parser reason when available. An in-app controls screen
-is available with `Y` from non-rating screens and unrevealed review cards.
+first failing line and parser reason when available. An in-app help screen is
+available with `Y` from non-rating screens and unrevealed review cards.
 
 See:
 
@@ -293,6 +297,7 @@ See:
 - [TESTING.md](TESTING.md)
 - [docs/control-map.md](docs/control-map.md)
 - [docs/algorithms-and-abstractions.md](docs/algorithms-and-abstractions.md)
+- [docs/theme-assets.md](docs/theme-assets.md)
 - [docs/deck-format.md](docs/deck-format.md)
 - [docs/c-style-and-architecture.md](docs/c-style-and-architecture.md)
 - [docs/emulator-feedback-loop.md](docs/emulator-feedback-loop.md)

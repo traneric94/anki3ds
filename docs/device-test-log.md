@@ -48,11 +48,14 @@ Pass conditions:
   and readable dark-terminal colors without hard-to-read blue text.
 - D-pad or Circle Pad Up/Down moves one deck per quick tap; holding a single
   direction repeats only after the expected short delay.
-- `A` opens the selected deck, `Y` opens contextual controls before reveal, and
-  `B`, `Y`, or `SELECT` closes controls.
+- `A` opens the selected deck, `Y` opens contextual help before reveal, and
+  `B`, `Y`, or `SELECT` closes help.
+- On the help screen, `X` cycles the panel theme between Amber, Forest, Ruby,
+  and Chalk without changing the active deck or daily-limit settings.
 - On `sample`, `A` reveals the first card. After reveal, `Y` Again, `X` Hard,
   `B` Good, and `A` Easy each save and advance or report that the same card is
-  still due. Ambiguous face-button chords must not rate a card.
+  still due. The card front remains on the top screen, the back appears on the
+  bottom screen, and ambiguous face-button chords must not rate a card.
 - `L` undoes the last rating or suspend action and leaves the restored card due
   again.
 - Long text on `sample` card `card-0011` scrolls with D-pad Up/Down on the

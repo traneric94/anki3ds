@@ -535,6 +535,16 @@ enum app_control_action app_controls_classify_action(
 		{
 			return APP_CONTROL_ACTION_CLOSE_CONTROLS;
 		}
+		if (
+			app_controls_command_triggered(
+				trigger_buttons,
+				active_buttons,
+				APP_CONTROL_BUTTON_X
+			)
+		)
+		{
+			return APP_CONTROL_ACTION_CYCLE_THEME;
+		}
 
 		return APP_CONTROL_ACTION_NONE;
 	}

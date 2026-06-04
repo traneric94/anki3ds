@@ -1328,3 +1328,28 @@ Notes:
   review due cards from both sample decks, suspend a card, undo a rating,
   restore suspended cards, save changed daily limits, relaunch, and confirm
   state plus settings persistence.
+
+## 2026-06-04 - Split Card Help Theme Local Gate
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make test`
+Steps:
+- Kept the review front on the top screen and moved the revealed back to the
+  bottom screen.
+- Reframed the contextual controls UI as a help screen and added help-page `X`
+  theme cycling for the card panel trim.
+- Added an FE asset note documenting candidate local asset folders and why no
+  FE assets are vendored into the public repo yet.
+Observed:
+- The 3DS target rebuilt successfully.
+- Host C tests, converter tests, and text-deck verifier tests passed through
+  `make test`.
+Expected:
+- Review should feel more like a two-screen flashcard: prompt/front on top,
+  answer/rating strip on bottom after reveal, and help available before reveal.
+Result: pass for automated build/test only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed to confirm bottom-screen
+  answer fit, panel theme contrast, and control prompts on real 3DS dimensions.

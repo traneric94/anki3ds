@@ -1186,6 +1186,15 @@ static void test_app_controls_classifies_app_actions(void)
 		APP_CONTROL_MODE_CONTROLS,
 		false,
 		true,
+		APP_CONTROL_BUTTON_X,
+		APP_CONTROL_BUTTON_X,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CYCLE_THEME, "X cycles theme from controls screen");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
 		0,
 		APP_CONTROL_BUTTON_B,
 		&rating

@@ -1,23 +1,28 @@
 # Control Map
 
-The app shows Nintendo 3DS button names on screen. In Azahar, those buttons are
-pressed with keyboard keys from the emulator's default control profile, so some
-letters do not match the 3DS button label.
+The app shows Nintendo 3DS button names on screen. The local Azahar profile is
+configured so the main 3DS buttons use matching keyboard labels where possible:
+face buttons use `A`/`B`/`X`/`Y`, D-pad directions use the keyboard arrows, and
+shoulder buttons use `L`/`R`.
 
 | 3DS button | Azahar key | Main use |
 | --- | --- | --- |
 | `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
-| `B` | `S` | Choose Good after reveal, go back, cancel |
-| `X` | `Z` | Choose Hard after reveal, confirm restore/suspend/reset |
-| `Y` | `X` | Choose Again after reveal, open controls where available |
-| `L` | `Q` | Undo last rating or suspend action |
-| `R` | `W` | Open suspend confirmation |
-| D-pad or Circle Pad Up | `T` | Move selection up, scroll review text up |
-| D-pad or Circle Pad Down | `G` | Move selection down, scroll review text down |
-| D-pad or Circle Pad Left | `F` | Page deck list up with wrap, decrease daily-limit preset |
-| D-pad or Circle Pad Right | `H` | Page deck list down with wrap, increase daily-limit preset |
+| `B` | `B` | Choose Good after reveal, go back, cancel |
+| `X` | `X` | Choose Hard after reveal, confirm restore/suspend/reset, cycle theme on help page |
+| `Y` | `Y` | Choose Again after reveal, open help before reveal and where available |
+| `L` | `L` | Undo last rating or suspend action |
+| `R` | `R` | Open suspend confirmation |
+| D-pad or Circle Pad Up | Up Arrow | Move selection up, scroll review text up |
+| D-pad or Circle Pad Down | Down Arrow | Move selection down, scroll review text down |
+| D-pad or Circle Pad Left | Left Arrow | Page deck list up with wrap, decrease daily-limit preset |
+| D-pad or Circle Pad Right | Right Arrow | Page deck list down with wrap, increase daily-limit preset |
 | `SELECT` | `N` | Rescan decks, open actions, cancel actions, return from settings |
 | `START` | `M` | Open exit confirmation |
+
+The Azahar config file is `~/Library/Application Support/Azahar/config/qt-config.ini`.
+If Azahar rewrites the profile, reapply the same bindings in
+`Emulation > Configure > Controls`.
 
 Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding
 a single direction for roughly 300 ms starts repeat movement, paging,
@@ -38,17 +43,20 @@ The deck selector shows the current position as `selected/total` on both
 screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
 list size and wraps between the first and last decks. Basic terminal-style
 colors use an amber/chalk/green/red palette. Review text appears in an original
-light paper flashcard panel with amber trim and black text, while the rest of
-the app stays in a dark terminal shell. Revealed review cards show the four
-rating buttons as bracketed chips on the bottom screen and controls reference.
+light paper flashcard panel with black text, while the rest of the app stays in
+a dark terminal shell. Before reveal, the front of the card is on the top
+screen and compact prompts/status are on the bottom screen. After reveal, the
+front stays on the top screen and the back moves to the bottom screen with the
+four rating buttons as bracketed chips below it. Help-page `X` cycles the card
+panel trim through four session-local themes: Amber, Forest, Ruby, and Chalk.
 Warm amber is used for headings, labels, key prompts, Hard ratings, learning
-counts, cautions, and normal reverse-video
-selected or focused items; green for Good ratings, review counts, and
-saved/safe state; red reverse-video for selected reset actions; red for Again
-ratings, suspended counts, errors, and reset actions; bright white for Easy
-ratings, new counts, and neutral values, with dim white separators and version
-text. Blue, cyan, and violet are intentionally avoided because they are hard to
-read on the dark 3DS console background.
+counts, cautions, and normal reverse-video selected or focused items; green for
+Good ratings, review counts, and saved/safe state; red reverse-video for
+selected reset actions; red for Again ratings, suspended counts, errors, and
+reset actions; bright white for Easy ratings, new counts, and neutral values,
+with dim white separators and version text. Blue, cyan, and violet are
+intentionally avoided because they are hard to read on the dark 3DS console
+background.
 If deck scan ignores non-hidden entries because they are not valid deck ids or
 do not contain `cards.tsv`, the selector shows an ignored count.
 If daily limits hide otherwise due cards, the deck row shows a `limit` warning
@@ -80,29 +88,30 @@ active warning context stays visible. If daily limits hide more calendar-due
 cards after the visible queue empties, the summary says `Daily limit reached`
 and shows new and review cards past the limit.
 
-## Controls Screen
+## Help Screen
 
 Press `Y` from deck select, load error, unrevealed review cards, summary,
-actions, or daily limits to show the in-app controls screen. Press `B`, `Y`, or
-`SELECT` to return. On a revealed review card, `Y` is reserved for Again.
-Controls opened from deck-specific screens keep warning status visible,
+actions, or daily limits to show the in-app help screen. Press `B`, `Y`, or
+`SELECT` to return. Press `X` on the help screen to cycle the card panel theme.
+On a revealed review card, `Y` is reserved for Again.
+Help opened from deck-specific screens keep warning status visible,
 including selected-deck, load-error, reset-needed, ignored-settings,
-unmatched-state, and daily-limit warnings. Returning from controls preserves
+unmatched-state, and daily-limit warnings. Returning from help preserves
 those warnings; returning to the deck selector restores the selected-deck
 status.
-If `START` opens exit confirmation from the controls screen, canceling exit
-returns to the controls screen and restores that controls-screen status.
-If `START` opens exit confirmation from daily limits, or from controls opened
+If `START` opens exit confirmation from the help screen, canceling exit
+returns to the help screen and restores that help-screen status.
+If `START` opens exit confirmation from daily limits, or from help opened
 by daily limits, while edits are unsaved, the confirmation screen warns that
 those limit edits will be lost.
-Otherwise, opening exit confirmation keeps selected-deck, load-error, controls,
+Otherwise, opening exit confirmation keeps selected-deck, load-error, help,
 or active-deck warning context visible in the status line.
-Controls opened from daily limits also show `Unsaved limit edits` while the
+Help opened from daily limits also show `Unsaved limit edits` while the
 edit buffer differs from the active saved limits. Opening or returning from
-controls, and canceling exit back to daily limits or its controls screen, keeps
+help, and canceling exit back to daily limits or its help screen, keeps
 the unsaved warning visible on the status line.
 
-The controls screen is contextual. Its top screen lists controls for the screen
+The help screen is contextual. Its top screen lists controls for the screen
 that opened it, including empty deck-list and review-state-error variants, so it
 does not show review-only controls from deck select, load error, summary, or
 daily limits.
@@ -124,7 +133,7 @@ too. Canceling exit from actions or those confirmations also preserves the
 active deck warning context.
 Opening daily limits preserves the same active deck warning context. The
 action, daily-limit, and restore/suspend/reset confirmation screens show the
-active deck name on the bottom controls screen as well as the top screen.
+active deck name on the bottom help/status screen as well as the top screen.
 
 - Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
 - Press `A` to choose the selected action.

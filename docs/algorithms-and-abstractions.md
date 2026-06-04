@@ -208,34 +208,37 @@ The app loop is a small mode machine:
 - `ACTIONS`: choose deck-level actions such as restoring suspended cards or
   resetting progress.
 - `SETTINGS`: edit per-deck daily limits.
-- `CONTROLS`: show the in-app key map, then return to the previous mode.
+- `CONTROLS`: show the in-app help/key map, then return to the previous mode.
 - `CONFIRM_RESTORE`: require explicit `X` before restoring suspended cards.
 - `CONFIRM_SUSPEND`: require explicit `X` before hiding the current card.
 - `CONFIRM_RESET`: require explicit `X` before deleting saved review state.
 - `CONFIRM_EXIT`: require explicit `A` before leaving the app.
 
 The console UI uses the top screen for deck/card content and the bottom screen
-for mode-specific controls and a short status line. This keeps button prompts
-and save feedback out of the review card area without introducing a graphics
+for compact prompts, answer text after reveal, and a short status line. This
+keeps save feedback out of the review card area without introducing a graphics
 framework yet. Review text is framed as an original light paper flashcard with
-amber trim and black card text, while the surrounding app chrome remains a dark
-terminal surface. Rendering uses a compact amber/chalk/green/red palette: warm
+themeable trim and black card text, while the surrounding app chrome remains a
+dark terminal surface. The front card stays on the top screen. After reveal, the
+back card moves to the bottom screen and the bottom rating strip stays directly
+under the answer. Rendering uses a compact amber/chalk/green/red palette: warm
 amber headings, status labels, key prompts, Hard ratings, learning counts,
 cautions, and normal reverse-video selected/focused items; green Good ratings,
 review counts, and successful, restored, or safe state; red reverse-video
 selected destructive actions; red Again ratings, suspended counts, errors, and
 destructive reset prompts; bright white Easy ratings, new counts, and neutral
-values, with dim white separators and version text. Blue, cyan, and violet are
-intentionally avoided because they are hard to read on the dark 3DS console
-background. Moving
+values, with dim white separators and version text. The help page can cycle the
+card panel trim through Amber, Forest, Ruby, and Chalk session themes. Blue,
+cyan, and violet are intentionally avoided because they are hard to read on the
+dark 3DS console background. Moving
 through the deck selector keeps the status line aligned
 with the selected row, including load errors,
-ignored settings, unmatched state, and daily-limit-blocked decks. Controls
+ignored settings, unmatched state, and daily-limit-blocked decks. Help screens
 opened from deck-specific screens, and closed back to those screens, inherit
 warning context from the selector or active deck. Returning to the selector
 restores the selected-deck status instead of a generic navigation message.
 Canceling exit confirmation restores the status context for the destination
-screen; unsaved daily-limit edits stay highest priority, controls restore their
+screen; unsaved daily-limit edits stay highest priority, help screens restore their
 own contextual status, and active deck screens keep reset, ignored-settings,
 unmatched-state, or daily-limit warnings visible.
 Opening exit, restore, suspend, and reset confirmations follows the same status
@@ -244,8 +247,8 @@ suffix rule so the prompt does not hide the warning context it was opened from.
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without
 libctru. `main.c` still owns state transitions and side effects, but it asks
-`app_controls` to classify global actions such as exit, controls, deck-list
-return, actions, undo, suspend confirmation, reveal, and rating. The stable
+`app_controls` to classify global actions such as exit, help, theme cycling,
+deck-list return, actions, undo, suspend confirmation, reveal, and rating. The stable
 review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
 Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
 ignored so a fat-fingered rating does not save the wrong answer.
@@ -262,8 +265,8 @@ selection in settings remains single-step so a held button cannot bounce between
 the two fields. In review mode, D-pad Up/Down scrolls the active text pane:
 front before reveal, back after reveal. Ratings and destructive actions stay
 single-press. Long active panes draw a compact `^ current/total v` cue in the
-top-screen section header so scrollability is visible without moving the
-controls off the bottom screen. Answer reveal and review-text scroll feedback
+active card panel header so scrollability is visible without hiding the
+bottom answer/status area. Answer reveal and review-text scroll feedback
 append active-deck warning context when present. Held input keeps the idle wait
 counter short while a repeatable button is down, so selector movement, action
 selection, value changes, and text scrolling do not slow down as if the app were
@@ -300,7 +303,7 @@ review session updates the scheduler's `today`, clears one-step undo,
 recomputes daily counts, and repositions to the next due card. If a review,
 summary, suspend-confirmation, or restore-confirmation screen is visible, the
 screen redraws immediately on the correct review or summary surface for the new
-day. Other deck-specific screens, such as actions, daily limits, controls, and
+day. Other deck-specific screens, such as actions, daily limits, help, and
 exit confirmation, redraw in place after the scheduler update and keep their
 current modal context. Their return targets are updated so canceling a modal
 lands on the correct review or summary screen for the new day. The status line

@@ -93,6 +93,15 @@ enum setting_item
 	SETTING_ITEM_COUNT,
 };
 
+enum app_theme
+{
+	APP_THEME_AMBER,
+	APP_THEME_FOREST,
+	APP_THEME_RUBY,
+	APP_THEME_CHALK,
+	APP_THEME_COUNT,
+};
+
 struct app_state
 {
 	enum app_mode mode;
@@ -100,6 +109,7 @@ struct app_state
 	enum app_mode exit_return_mode;
 	enum app_mode controls_return_mode;
 	enum action_item selected_action;
+	enum app_theme theme;
 	bool revealed;
 	bool exit_requested;
 	bool battery_service_available;
@@ -137,6 +147,47 @@ struct app_state
 
 static PrintConsole top_screen;
 static PrintConsole bottom_screen;
+
+struct app_visual_theme
+{
+	const char *name;
+	const char *accent_color;
+	const char *card_paper_color;
+};
+
+static const struct app_visual_theme app_visual_themes[] = {
+	{ "Amber", APP_COLOR_ACCENT, APP_COLOR_CARD_PAPER },
+	{ "Forest", APP_COLOR_SUCCESS, APP_COLOR_CARD_PAPER },
+	{ "Ruby", APP_COLOR_DANGER, APP_COLOR_CARD_PAPER },
+	{ "Chalk", APP_COLOR_TEXT, APP_COLOR_CARD_PAPER },
+};
+
+static const struct app_visual_theme *app_theme_visual(const struct app_state *app)
+{
+	enum app_theme theme = APP_THEME_AMBER;
+
+	if (app != NULL)
+		theme = app->theme;
+	if (theme < 0 || theme >= APP_THEME_COUNT)
+		theme = APP_THEME_AMBER;
+
+	return &app_visual_themes[theme];
+}
+
+static const char *app_theme_name(const struct app_state *app)
+{
+	return app_theme_visual(app)->name;
+}
+
+static const char *app_theme_accent_color(const struct app_state *app)
+{
+	return app_theme_visual(app)->accent_color;
+}
+
+static const char *app_theme_card_paper_color(const struct app_state *app)
+{
+	return app_theme_visual(app)->card_paper_color;
+}
 
 static void draw_scanning_progress_screen(
 	const struct app_state *app,
@@ -353,39 +404,66 @@ static void print_repeated_char(char value, int count)
 		putchar(value);
 }
 
-static void draw_flashcard_panel(int row, int height, const char *title)
+static void draw_flashcard_panel_at(
+	const struct app_state *app,
+	int row,
+	int height,
+	int left,
+	int width,
+	const char *title
+)
 {
-	int inner_width = APP_LAYOUT_REVIEW_CARD_WIDTH - 2;
+	const char *accent_color = app_theme_accent_color(app);
+	const char *paper_color = app_theme_card_paper_color(app);
+	int inner_width = width - 2;
 
 	if (height < 3 || inner_width <= 0)
 		return;
 
-	console_move(row, APP_LAYOUT_REVIEW_CARD_LEFT);
-	printf(APP_COLOR_ACCENT "+");
+	console_move(row, left);
+	printf("%s+", accent_color);
 	print_repeated_char('-', inner_width);
 	printf("+" APP_COLOR_RESET);
 	if (title != NULL && title[0] != '\0')
 	{
-		console_move(row, APP_LAYOUT_REVIEW_CARD_LEFT + 2);
-		printf(APP_COLOR_ACCENT " %s " APP_COLOR_RESET, title);
+		console_move(row, left + 2);
+		printf("%s %s " APP_COLOR_RESET, accent_color, title);
 	}
 
 	for (int body_row = row + 1; body_row < row + height - 1; body_row++)
 	{
-		console_move(body_row, APP_LAYOUT_REVIEW_CARD_LEFT);
-		printf(APP_COLOR_ACCENT "|" APP_COLOR_CARD_PAPER);
+		console_move(body_row, left);
+		printf("%s|%s", accent_color, paper_color);
 		print_repeated_char(' ', inner_width);
-		printf(APP_COLOR_RESET APP_COLOR_ACCENT "|" APP_COLOR_RESET);
+		printf(APP_COLOR_RESET "%s|" APP_COLOR_RESET, accent_color);
 	}
 
-	console_move(row + height - 1, APP_LAYOUT_REVIEW_CARD_LEFT);
-	printf(APP_COLOR_ACCENT "+");
+	console_move(row + height - 1, left);
+	printf("%s+", accent_color);
 	print_repeated_char('-', inner_width);
 	printf("+" APP_COLOR_RESET);
 }
 
-static void draw_review_scroll_hint(
+static void draw_flashcard_panel(
+	const struct app_state *app,
 	int row,
+	int height,
+	const char *title
+)
+{
+	draw_flashcard_panel_at(
+		app,
+		row,
+		height,
+		APP_LAYOUT_REVIEW_CARD_LEFT,
+		APP_LAYOUT_REVIEW_CARD_WIDTH,
+		title
+	);
+}
+
+static void draw_review_scroll_hint_at(
+	int row,
+	int column,
 	size_t scroll_offset,
 	size_t max_scroll_offset
 )
@@ -401,11 +479,25 @@ static void draw_review_scroll_hint(
 	printf(
 		"\x1b[%d;%dH" APP_COLOR_WARNING "%c %lu/%lu %c" APP_COLOR_RESET,
 		row,
-		APP_LAYOUT_REVIEW_SCROLL_HINT_COLUMN,
+		column,
 		up_marker,
 		(unsigned long)(scroll_offset + 1),
 		(unsigned long)(max_scroll_offset + 1),
 		down_marker
+	);
+}
+
+static void draw_review_scroll_hint(
+	int row,
+	size_t scroll_offset,
+	size_t max_scroll_offset
+)
+{
+	draw_review_scroll_hint_at(
+		row,
+		APP_LAYOUT_REVIEW_SCROLL_HINT_COLUMN,
+		scroll_offset,
+		max_scroll_offset
 	);
 }
 
@@ -962,7 +1054,7 @@ static void app_set_controls_status(struct app_state *app)
 
 	if (app->controls_return_mode == APP_MODE_LOAD_ERROR)
 	{
-		app_set_status(app, "Controls; load error");
+		app_set_status(app, "Help; load error");
 		return;
 	}
 
@@ -980,7 +1072,7 @@ static void app_set_controls_status(struct app_state *app)
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"Controls%s",
+			"Help%s",
 			suffix
 		);
 		return;
@@ -996,13 +1088,13 @@ static void app_set_controls_status(struct app_state *app)
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"Controls%s",
+			"Help%s",
 			active_deck_status_suffix(app)
 		);
 		return;
 	}
 
-	app_set_status(app, "Controls");
+	app_set_status(app, "Help");
 }
 
 static void app_set_controls_closed_status(
@@ -1035,13 +1127,13 @@ static void app_set_controls_closed_status(
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"Controls closed%s",
+			"Help closed%s",
 			active_deck_status_suffix(app)
 		);
 		return;
 	}
 
-	app_set_status(app, "Controls closed");
+	app_set_status(app, "Help closed");
 }
 
 static void app_set_exit_canceled_status(
@@ -1278,8 +1370,8 @@ static bool review_scroll_metrics(
 	if (app->revealed)
 	{
 		*text = card->back;
-		*max_columns = APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH;
-		*visible_rows = APP_LAYOUT_REVIEW_BACK_TEXT_ROWS;
+		*max_columns = APP_LAYOUT_BOTTOM_CARD_TEXT_WIDTH;
+		*visible_rows = APP_LAYOUT_BOTTOM_BACK_TEXT_ROWS;
 		return true;
 	}
 
@@ -1838,6 +1930,17 @@ static void app_close_controls(struct app_state *app)
 	app_set_controls_closed_status(app, return_mode);
 }
 
+static void app_cycle_theme(struct app_state *app)
+{
+	app->theme = (enum app_theme)((app->theme + 1) % APP_THEME_COUNT);
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"Theme: %s",
+		app_theme_name(app)
+	);
+}
+
 static enum app_power_battery_sample_result app_init(struct app_state *app)
 {
 	enum app_power_battery_sample_result battery_sample_result;
@@ -2024,35 +2127,23 @@ static void draw_review_screen(const struct app_state *app)
 
 	if (app->revealed)
 	{
-		draw_flashcard_panel(7, 8, "Front");
-		printf(APP_COLOR_CARD_PAPER);
+		draw_flashcard_panel(app, 7, 18, "Front");
+		printf("%s", app_theme_card_paper_color(app));
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
-			APP_LAYOUT_REVIEW_REVEALED_FRONT_TEXT_ROWS,
+			APP_LAYOUT_REVIEW_FRONT_TEXT_ROWS,
 			APP_LAYOUT_REVIEW_CARD_TEXT_LEFT,
 			APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH,
 			0
 		);
 		printf(APP_COLOR_RESET);
-		draw_flashcard_panel(15, 9, "Back");
-		draw_review_scroll_hint(15, app->review_scroll_offset, max_scroll_offset);
-		printf(APP_COLOR_CARD_PAPER);
-		draw_wrapped_text_columns(
-			card->back,
-			APP_LAYOUT_REVIEW_BACK_TEXT_ROW,
-			APP_LAYOUT_REVIEW_BACK_TEXT_ROWS,
-			APP_LAYOUT_REVIEW_CARD_TEXT_LEFT,
-			APP_LAYOUT_REVIEW_CARD_TEXT_WIDTH,
-			app->review_scroll_offset
-		);
-		printf(APP_COLOR_RESET);
 	}
 	else
 	{
-		draw_flashcard_panel(7, 18, "Front");
+		draw_flashcard_panel(app, 7, 18, "Front");
 		draw_review_scroll_hint(7, app->review_scroll_offset, max_scroll_offset);
-		printf(APP_COLOR_CARD_PAPER);
+		printf("%s", app_theme_card_paper_color(app));
 		draw_wrapped_text_columns(
 			card->front,
 			APP_LAYOUT_REVIEW_FRONT_TEXT_ROW,
@@ -2347,9 +2438,14 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	draw_use_key_prompt(12, "B/SELECT", "to cancel.");
 }
 
-static void draw_controls_screen_footer(void)
+static void draw_controls_screen_footer(const struct app_state *app)
 {
+	printf(
+		"\x1b[19;1H" APP_COLOR_LABEL "Theme:" APP_COLOR_RESET " %s",
+		app_theme_name(app)
+	);
 	draw_key_prompt(21, "START", "confirm exit");
+	draw_key_prompt(22, "X", "cycle theme");
 	printf(
 		"\x1b[24;1HHere: " APP_COLOR_KEY "B/Y/SELECT" APP_COLOR_RESET
 		" returns."
@@ -2364,7 +2460,7 @@ static void draw_controls_screen(const struct app_state *app)
 	switch (app->controls_return_mode)
 	{
 	case APP_MODE_DECK_SELECT:
-		printf("\x1b[3;1H" APP_COLOR_ACCENT "Deck list controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Deck list help" APP_COLOR_RESET);
 		if (app->deck_index.count > 0)
 		{
 			draw_key_prompt(5, "A", "open selected deck");
@@ -2372,57 +2468,57 @@ static void draw_controls_screen(const struct app_state *app)
 			draw_key_prompt(9, "D-pad/Circle L/R", "page");
 			printf("\x1b[11;1HHold direction to repeat");
 			draw_key_prompt(13, "SELECT", "rescan decks");
-			draw_key_prompt(15, "Y", "controls");
+			draw_key_prompt(15, "Y", "help");
 		}
 		else
 		{
 			draw_key_prompt(5, "SELECT", "rescan decks");
-			draw_key_prompt(7, "Y", "controls");
+			draw_key_prompt(7, "Y", "help");
 		}
 		break;
 	case APP_MODE_LOAD_ERROR:
-		printf("\x1b[3;1H" APP_COLOR_DANGER "Load error controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_DANGER "Load error help" APP_COLOR_RESET);
 		draw_key_prompt(5, "B/SELECT", "deck list");
-		draw_key_prompt(7, "Y", "controls");
+		draw_key_prompt(7, "Y", "help");
 		break;
 	case APP_MODE_SUMMARY:
 		if (!app_state_allows_study(app))
 		{
 			printf(
 				"\x1b[3;1H" APP_COLOR_DANGER
-				"Review state controls" APP_COLOR_RESET
+				"Review state help" APP_COLOR_RESET
 			);
 			draw_key_prompt(5, "SELECT", "actions");
 			draw_key_prompt(7, "B", "deck list");
-			draw_key_prompt(9, "Y", "controls");
+			draw_key_prompt(9, "Y", "help");
 			printf("\x1b[13;1HReset progress to study.");
 		}
 		else
 		{
 			printf(
 				"\x1b[3;1H" APP_COLOR_SUCCESS
-				"No-due controls" APP_COLOR_RESET
+				"No-due help" APP_COLOR_RESET
 			);
 			draw_key_prompt(5, "B", "deck list");
 			draw_key_prompt(7, "L", "undo last action");
 			draw_key_prompt(9, "SELECT", "actions");
-			draw_key_prompt(11, "Y", "controls");
+			draw_key_prompt(11, "Y", "help");
 		}
 		break;
 	case APP_MODE_ACTIONS:
-		printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions help" APP_COLOR_RESET);
 		draw_key_prompt(5, "A", "choose selected");
 		draw_key_prompt(7, "D-pad/Circle U/D", "move/hold");
 		draw_key_prompt(9, "B/SELECT", "cancel");
-		draw_key_prompt(11, "Y", "controls");
+		draw_key_prompt(11, "Y", "help");
 		break;
 	case APP_MODE_SETTINGS:
-		printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily-limit controls" APP_COLOR_RESET);
+		printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily-limit help" APP_COLOR_RESET);
 		draw_key_prompt(5, "D-pad/Circle U/D", "field");
 		draw_key_prompt(7, "D-pad/Circle L/R", "value/hold");
 		draw_key_prompt(9, "A", "save limits");
 		draw_key_prompt(11, "B/SELECT", "actions");
-		draw_key_prompt(13, "Y", "controls");
+		draw_key_prompt(13, "Y", "help");
 		if (app_settings_have_unsaved_changes(app))
 		{
 			printf(
@@ -2437,7 +2533,7 @@ static void draw_controls_screen(const struct app_state *app)
 		{
 			printf(
 				"\x1b[3;1H" APP_COLOR_ACCENT
-				"Review rating controls" APP_COLOR_RESET
+				"Review rating help" APP_COLOR_RESET
 			);
 			draw_review_rating_grid(5);
 			draw_key_prompt(9, "L", "undo last action");
@@ -2453,20 +2549,20 @@ static void draw_controls_screen(const struct app_state *app)
 		{
 			printf(
 				"\x1b[3;1H" APP_COLOR_ACCENT
-				"Review front controls" APP_COLOR_RESET
+				"Review front help" APP_COLOR_RESET
 			);
 			draw_key_prompt(5, "A", "show answer");
 			draw_key_prompt(7, "B", "deck list");
 			draw_key_prompt(9, "L", "undo last action");
 			draw_key_prompt(11, "R", "confirm suspend");
 			draw_key_prompt(13, "SELECT", "actions");
-			draw_key_prompt(15, "Y", "controls");
+			draw_key_prompt(15, "Y", "help");
 			draw_key_prompt(17, "D-pad U/D", "scroll front");
 		}
 		break;
 	}
 
-	draw_controls_screen_footer();
+	draw_controls_screen_footer(app);
 }
 
 static void draw_battery_status(const struct app_state *app)
@@ -2660,6 +2756,112 @@ static bool app_refresh_day_if_changed(struct app_state *app, unsigned int today
 	return true;
 }
 
+static void draw_review_bottom_screen(const struct app_state *app)
+{
+	const struct card *card = current_card(app);
+	size_t max_scroll_offset = review_max_scroll_offset(app);
+	char new_limit[16];
+	char review_limit[16];
+
+	app_console_clear();
+
+	if (card == NULL)
+	{
+		printf("\x1b[1;1H" APP_COLOR_SUCCESS "Review complete" APP_COLOR_RESET);
+		draw_status_message(app);
+		draw_battery_status(app);
+		return;
+	}
+
+	format_daily_limit(new_limit, sizeof(new_limit), app->session.new_limit);
+	format_daily_limit(review_limit, sizeof(review_limit), app->session.review_limit);
+
+	if (app->revealed)
+	{
+		printf(
+			"\x1b[1;1H%sBack" APP_COLOR_RESET
+			"  " APP_COLOR_LABEL "Theme:" APP_COLOR_RESET " %s",
+			app_theme_accent_color(app),
+			app_theme_name(app)
+		);
+		draw_flashcard_panel_at(
+			app,
+			APP_LAYOUT_BOTTOM_BACK_PANEL_ROW,
+			APP_LAYOUT_BOTTOM_BACK_PANEL_HEIGHT,
+			APP_LAYOUT_BOTTOM_CARD_LEFT,
+			APP_LAYOUT_BOTTOM_CARD_WIDTH,
+			"Answer"
+		);
+		draw_review_scroll_hint_at(
+			APP_LAYOUT_BOTTOM_BACK_PANEL_ROW,
+			APP_LAYOUT_BOTTOM_SCROLL_HINT_COLUMN,
+			app->review_scroll_offset,
+			max_scroll_offset
+		);
+		printf("%s", app_theme_card_paper_color(app));
+		draw_wrapped_text_columns(
+			card->back,
+			APP_LAYOUT_BOTTOM_BACK_TEXT_ROW,
+			APP_LAYOUT_BOTTOM_BACK_TEXT_ROWS,
+			APP_LAYOUT_BOTTOM_CARD_TEXT_LEFT,
+			APP_LAYOUT_BOTTOM_CARD_TEXT_WIDTH,
+			app->review_scroll_offset
+		);
+		printf(APP_COLOR_RESET);
+		draw_review_rating_grid(21);
+		if (max_scroll_offset > 0)
+		{
+			printf(
+				"\x1b[25;1H" APP_COLOR_KEY "D-pad U/D" APP_COLOR_RESET
+				": back text %lu/%lu",
+				(unsigned long)(app->review_scroll_offset + 1),
+				(unsigned long)(max_scroll_offset + 1)
+			);
+		}
+		draw_status_message(app);
+		draw_battery_status(app);
+		return;
+	}
+
+	printf("\x1b[1;1H" APP_COLOR_ACCENT "Review" APP_COLOR_RESET);
+	printf(
+		"\x1b[3;1H" APP_COLOR_LABEL "Due:" APP_COLOR_RESET
+		" " APP_COLOR_NEW "N %lu" APP_COLOR_RESET
+		"  " APP_COLOR_LEARNING "L %lu" APP_COLOR_RESET
+		"  " APP_COLOR_REVIEW "R %lu" APP_COLOR_RESET,
+		(unsigned long)scheduler_new_due_count(&app->session),
+		(unsigned long)scheduler_learning_due_count(&app->session),
+		(unsigned long)scheduler_review_due_count(&app->session)
+	);
+	printf(
+		"\x1b[4;1H" APP_COLOR_LABEL "Started:" APP_COLOR_RESET
+		" " APP_COLOR_NEW "N %u/%s" APP_COLOR_RESET
+		"  " APP_COLOR_REVIEW "R %u/%s" APP_COLOR_RESET,
+		app->session.new_count_today,
+		new_limit,
+		app->session.review_count_today,
+		review_limit
+	);
+	printf("\x1b[6;1H" APP_COLOR_KEY "A" APP_COLOR_RESET ": show answer");
+	printf("\x1b[8;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
+	printf("\x1b[10;1H" APP_COLOR_KEY "B" APP_COLOR_RESET ": deck list");
+	printf("\x1b[12;1H" APP_COLOR_KEY "L" APP_COLOR_RESET ": undo last action");
+	printf("\x1b[14;1H" APP_COLOR_KEY "R" APP_COLOR_RESET ": confirm suspend");
+	printf("\x1b[16;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": actions");
+	if (max_scroll_offset > 0)
+	{
+		printf(
+			"\x1b[18;1H" APP_COLOR_KEY "D-pad U/D" APP_COLOR_RESET
+			": front text %lu/%lu",
+			(unsigned long)(app->review_scroll_offset + 1),
+			(unsigned long)(max_scroll_offset + 1)
+		);
+	}
+	draw_due_legend(20, false);
+	draw_status_message(app);
+	draw_battery_status(app);
+}
+
 static void draw_bottom_controls_screen(const struct app_state *app)
 {
 	app_console_clear();
@@ -2692,7 +2894,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[7;1HHold direction to repeat");
 			printf("\x1b[9;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": rescan decks");
 			printf("\x1b[11;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-			printf("\x1b[13;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+			printf("\x1b[13;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 			if (
 				summary->deck_load_result == DECK_LOAD_OK &&
 				deck_summary_state_allows_study(summary)
@@ -2810,7 +3012,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		{
 			printf("\x1b[3;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": rescan decks");
 			printf("\x1b[5;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-			printf("\x1b[7;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+			printf("\x1b[7;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		}
 		if (app->deck_index.overflowed)
 		{
@@ -2838,7 +3040,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[1;1H" APP_COLOR_DANGER "Load error" APP_COLOR_RESET);
 		printf("\x1b[3;1H" APP_COLOR_KEY "B/SELECT" APP_COLOR_RESET ": deck list");
 		printf("\x1b[5;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-		printf("\x1b[7;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+		printf("\x1b[7;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		draw_load_error_detail(app, 10);
 		break;
 	case APP_MODE_REVIEW:
@@ -2890,7 +3092,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[12;1H" APP_COLOR_KEY "R" APP_COLOR_RESET ": confirm suspend");
 			printf("\x1b[14;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": actions");
 			printf("\x1b[16;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-			printf("\x1b[20;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+			printf("\x1b[20;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		}
 		if (max_scroll_offset > 0)
 		{
@@ -2926,7 +3128,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[3;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": actions");
 			printf("\x1b[5;1H" APP_COLOR_KEY "B" APP_COLOR_RESET ": deck list");
 			printf("\x1b[7;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-			printf("\x1b[9;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+			printf("\x1b[9;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 			draw_review_state_load_error_detail(
 				app->state_load_result,
 				&app->state_load_report,
@@ -2962,7 +3164,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[5;1H" APP_COLOR_KEY "L" APP_COLOR_RESET ": undo last action");
 		printf("\x1b[7;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": actions");
 		printf("\x1b[9;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-		printf("\x1b[17;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+		printf("\x1b[17;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		printf(
 			"\x1b[11;1H" APP_COLOR_LABEL "Started:" APP_COLOR_RESET
 			" " APP_COLOR_NEW "N %u/%s" APP_COLOR_RESET
@@ -3006,7 +3208,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		);
 		printf("\x1b[7;1H" APP_COLOR_KEY "B/SELECT" APP_COLOR_RESET ": cancel");
 		printf("\x1b[9;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-		printf("\x1b[11;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+		printf("\x1b[11;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		draw_deck_name_line(app, 13, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_SETTINGS:
@@ -3022,11 +3224,11 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 		printf("\x1b[7;1H" APP_COLOR_KEY "A" APP_COLOR_RESET ": save limits");
 		printf("\x1b[9;1H" APP_COLOR_KEY "B/SELECT" APP_COLOR_RESET ": actions");
 		printf("\x1b[11;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
-		printf("\x1b[13;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": controls");
+		printf("\x1b[13;1H" APP_COLOR_KEY "Y" APP_COLOR_RESET ": help");
 		draw_deck_name_line(app, 15, APP_LAYOUT_DECK_NAME_BOTTOM_WIDTH);
 		break;
 	case APP_MODE_CONTROLS:
-		printf("\x1b[1;1H" APP_COLOR_ACCENT "Controls" APP_COLOR_RESET);
+		printf("\x1b[1;1H" APP_COLOR_ACCENT "Help" APP_COLOR_RESET);
 		printf("\x1b[3;1H" APP_COLOR_KEY "B/Y/SELECT" APP_COLOR_RESET ": back");
 		printf("\x1b[5;1H" APP_COLOR_KEY "START" APP_COLOR_RESET ": confirm exit");
 		break;
@@ -3104,7 +3306,10 @@ static void draw_app(const struct app_state *app)
 	}
 
 	select_bottom_screen();
-	draw_bottom_controls_screen(app);
+	if (app->mode == APP_MODE_REVIEW)
+		draw_review_bottom_screen(app);
+	else
+		draw_bottom_controls_screen(app);
 	select_top_screen();
 }
 
@@ -3820,6 +4025,9 @@ static bool app_handle_input(
 		return true;
 	case APP_CONTROL_ACTION_OPEN_CONTROLS:
 		app_open_controls(app);
+		return true;
+	case APP_CONTROL_ACTION_CYCLE_THEME:
+		app_cycle_theme(app);
 		return true;
 	case APP_CONTROL_ACTION_RETURN_TO_DECK_SELECT:
 		app_return_to_deck_select(app);
