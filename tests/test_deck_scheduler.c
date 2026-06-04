@@ -4134,6 +4134,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status cancel is warning"
 	);
 	check(
+		app_status_message_color("Actions canceled; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status actions cancel limit reached is warning"
+	);
+	check(
+		app_status_message_color("Reset canceled; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset cancel reset state/settings is warning"
+	);
+	check(
 		app_status_message_color("Controls") == APP_STATUS_COLOR_NEUTRAL,
 		"status controls is neutral"
 	);

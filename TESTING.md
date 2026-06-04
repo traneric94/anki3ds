@@ -329,6 +329,8 @@ Acceptance steps:
   losing unsaved edits
 - confirm opening actions from reset-needed, ignored-settings, or limit-blocked
   decks preserves that warning context in the status line
+- confirm canceling actions or restore/suspend/reset confirmations preserves
+  active deck warning context in the status line
 - confirm action, daily-limit, restore, suspend, and reset screens show the
   expected active deck before taking deck-specific actions
 - exit, relaunch, and confirm review state and daily limits persisted

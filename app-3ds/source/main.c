@@ -570,6 +570,17 @@ static void app_set_actions_status(struct app_state *app)
 	);
 }
 
+static void app_set_canceled_status(struct app_state *app, const char *label)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s canceled%s",
+		label,
+		active_deck_status_suffix(app)
+	);
+}
+
 static bool app_settings_have_unsaved_changes(const struct app_state *app)
 {
 	return (
@@ -3268,7 +3279,7 @@ static bool app_handle_actions_input(
 	)
 	{
 		app->mode = app->action_return_mode;
-		app_set_status(app, "Actions canceled");
+		app_set_canceled_status(app, "Actions");
 		return true;
 	}
 
@@ -3294,7 +3305,7 @@ static bool app_handle_restore_confirmation_input(
 	)
 	{
 		app->mode = APP_MODE_ACTIONS;
-		app_set_status(app, "Restore canceled");
+		app_set_canceled_status(app, "Restore");
 		return true;
 	}
 
@@ -3324,7 +3335,7 @@ static bool app_handle_reset_confirmation_input(
 	)
 	{
 		app->mode = APP_MODE_ACTIONS;
-		app_set_status(app, "Reset canceled");
+		app_set_canceled_status(app, "Reset");
 		return true;
 	}
 
@@ -3350,7 +3361,7 @@ static bool app_handle_suspend_confirmation_input(
 	)
 	{
 		app->mode = APP_MODE_REVIEW;
-		app_set_status(app, "Suspend canceled");
+		app_set_canceled_status(app, "Suspend");
 		return true;
 	}
 

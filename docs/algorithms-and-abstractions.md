@@ -330,10 +330,12 @@ progress during normal study. If suspended cards exist, restore opens a
 confirmation screen and `X` performs the restore because restore-all clears the
 one-step undo slot. Opening actions preserves active-deck warning context in
 the status line, including reset-needed state, ignored settings, unmatched
-state, and daily-limit exhaustion. If a deck opens with malformed saved state,
-reset is selected by default so the recovery path is direct. Daily limits can
-be edited from the same actions screen. Reset remains available by moving the
-action selection first, then confirming on a separate reset screen with `X`.
+state, and daily-limit exhaustion. Canceling actions and action confirmation
+screens preserves the same warning context. If a deck opens with malformed saved
+state, reset is selected by default so the recovery path is direct. Daily
+limits can be edited from the same actions screen. Reset remains available by
+moving the action selection first, then confirming on a separate reset screen
+with `X`.
 If malformed settings are present at the same time, the reset-needed screens
 still show the settings warning so fixing state does not hide a second setup
 problem.
