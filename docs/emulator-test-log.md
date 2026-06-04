@@ -388,6 +388,28 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Deck Helper Null-Safety Gate
+
+Build: local working tree
+Command: `git diff --check`, `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Added null-argument guards to exported deck index and deck summary helper
+  functions used by the multi-deck selector flow.
+- Added host coverage for null deck-index lookup and null deck-summary inputs.
+Observed:
+- Whitespace check passed.
+- Host C tests passed.
+- The 3DS target rebuilt successfully.
+Expected:
+- Future selector or summary callers should fail closed on missing helper
+  inputs instead of crashing during deck discovery or summary refresh.
+Result: pass for automated host/build gate only
+Notes:
+- Manual emulator or hardware review remains pending for end-to-end acceptance.
+
 ## 2026-06-04 - Restore Log Snapshot Gate
 
 Build: local working tree

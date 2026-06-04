@@ -4,6 +4,9 @@
 
 void deck_summary_init(struct deck_summary *summary)
 {
+	if (summary == NULL)
+		return;
+
 	summary->deck_load_result = DECK_LOAD_NOT_FOUND;
 	summary->deck_load_report.line_number = 0;
 	summary->deck_load_report.parse_result = DECK_PARSE_OK;
@@ -29,6 +32,9 @@ void deck_summary_from_session(
 	const struct scheduler_session *session
 )
 {
+	if (summary == NULL)
+		return;
+
 	deck_summary_init(summary);
 	summary->deck_load_result = deck_load_result;
 	summary->settings_load_result = settings_load_result;
@@ -67,8 +73,10 @@ void deck_summary_load(
 	enum app_settings_load_result settings_load_result;
 	enum review_state_load_result state_load_result;
 
-	deck_summary_init(summary);
+	if (summary == NULL)
+		return;
 
+	deck_summary_init(summary);
 	if (entry == NULL)
 		return;
 

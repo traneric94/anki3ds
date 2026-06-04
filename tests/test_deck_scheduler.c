@@ -5091,6 +5091,7 @@ static void test_deck_index_builds_paths(void)
 	check(!deck_index_build_entry(&entry, "/root", "bad/id"), "slash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad\\id"), "backslash id rejected");
 	check(!deck_index_build_entry(&entry, "/root", "bad id"), "space id rejected");
+	check(deck_index_get(NULL, 0) == NULL, "deck index get rejects null index");
 	check(
 		deck_index_build_entry(&entry, "/root", longest_valid_id),
 		"longest deck id accepted"
@@ -5332,6 +5333,28 @@ static void test_deck_summary_counts_due_cards(void)
 	check(summary.suspended_count == 1, "summary suspended count includes saved state");
 
 	cleanup_deck_index_test_root();
+}
+
+static void test_deck_summary_rejects_null_arguments(void)
+{
+	struct deck_summary summary;
+
+	deck_summary_init(NULL);
+	deck_summary_from_session(
+		NULL,
+		DECK_LOAD_OK,
+		APP_SETTINGS_LOAD_OK,
+		REVIEW_STATE_LOAD_OK,
+		NULL
+	);
+	deck_summary_load(NULL, NULL, TEST_TODAY);
+
+	deck_summary_load(&summary, NULL, TEST_TODAY);
+	check(
+		summary.deck_load_result == DECK_LOAD_NOT_FOUND,
+		"deck summary null entry leaves initialized summary"
+	);
+	check(summary.card_count == 0, "deck summary null entry clears card count");
 }
 
 static void test_deck_summary_reports_bad_settings_with_default_counts(void)
@@ -6216,6 +6239,7 @@ int main(void)
 	test_deck_index_loads_display_names();
 	test_deck_index_reports_overflow();
 	test_deck_summary_counts_due_cards();
+	test_deck_summary_rejects_null_arguments();
 	test_deck_summary_reports_bad_settings_with_default_counts();
 	test_deck_summary_suppresses_bad_state_counts();
 	test_deck_summary_from_session_counts_due_cards();

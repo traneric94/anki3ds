@@ -325,6 +325,8 @@ void deck_index_scan(struct deck_index *index, const char *root_path)
 
 const struct deck_entry *deck_index_get(const struct deck_index *index, size_t entry_index)
 {
+	if (index == NULL)
+		return NULL;
 	if (entry_index >= index->count)
 		return NULL;
 
