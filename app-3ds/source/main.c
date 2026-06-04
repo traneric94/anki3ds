@@ -817,6 +817,7 @@ static const char *status_message_color(const char *message)
 	if (
 		strstr(message, "saved") != NULL ||
 		strstr(message, "Loaded") != NULL ||
+		strstr(message, "Restored") != NULL ||
 		strstr(message, "reset") != NULL ||
 		strstr(message, "Reset") != NULL
 	)
