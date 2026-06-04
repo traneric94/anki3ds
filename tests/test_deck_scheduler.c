@@ -1104,11 +1104,38 @@ static void test_app_controls_classifies_app_actions(void)
 		APP_CONTROL_MODE_CONTROLS,
 		false,
 		true,
+		APP_CONTROL_BUTTON_B,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CLOSE_CONTROLS, "B closes controls screen");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
 		APP_CONTROL_BUTTON_Y,
 		APP_CONTROL_BUTTON_Y,
 		&rating
 	);
 	check(action == APP_CONTROL_ACTION_CLOSE_CONTROLS, "Y closes controls screen");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
+		APP_CONTROL_BUTTON_SELECT,
+		APP_CONTROL_BUTTON_SELECT,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_CLOSE_CONTROLS, "SELECT closes controls screen");
+	action = app_controls_classify_action(
+		APP_CONTROL_MODE_CONTROLS,
+		false,
+		true,
+		0,
+		APP_CONTROL_BUTTON_B,
+		&rating
+	);
+	check(action == APP_CONTROL_ACTION_NONE, "held B does not close controls again");
 	action = app_controls_classify_action(
 		APP_CONTROL_MODE_CONTROLS,
 		false,
