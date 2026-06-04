@@ -87,6 +87,8 @@ returns to the controls screen and restores that controls-screen status.
 If `START` opens exit confirmation from daily limits, or from controls opened
 by daily limits, while edits are unsaved, the confirmation screen warns that
 those limit edits will be lost.
+Otherwise, opening exit confirmation keeps selected-deck, load-error, controls,
+or active-deck warning context visible in the status line.
 Controls opened from daily limits also show `Unsaved limit edits` while the
 edit buffer differs from the active saved limits. Opening or returning from
 controls, and canceling exit back to daily limits or its controls screen, keeps
@@ -104,7 +106,7 @@ restore suspended cards. If a deck opens with malformed saved state, reset is
 selected by default so the repair flow is immediately reachable.
 Opening actions preserves active deck warnings in the status line, including
 reset-needed state, ignored settings, unmatched state, and daily-limit
-exhaustion. Canceling actions or restore/suspend/reset confirmations preserves
+exhaustion. Opening or canceling restore/suspend/reset confirmations preserves
 that warning context too. Canceling exit from actions or those confirmations
 also preserves the active deck warning context.
 The action, daily-limit, and restore/suspend/reset confirmation screens show

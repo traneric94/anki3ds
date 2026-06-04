@@ -234,6 +234,8 @@ Canceling exit confirmation restores the status context for the destination
 screen; unsaved daily-limit edits stay highest priority, controls restore their
 own contextual status, and active deck screens keep reset, ignored-settings,
 unmatched-state, or daily-limit warnings visible.
+Opening exit, restore, suspend, and reset confirmations follows the same status
+suffix rule so the prompt does not hide the warning context it was opened from.
 
 The review button map and app-level command priority live in the small
 `app_controls` module so reveal/rating rules can be host-tested without

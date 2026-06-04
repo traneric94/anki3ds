@@ -4130,6 +4130,21 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status actions limit reached is warning"
 	);
 	check(
+		app_status_message_color("Restore requires X; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status restore requires limit reached is warning"
+	);
+	check(
+		app_status_message_color("Reset requires X; reset state/settings") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset requires reset state/settings is warning"
+	);
+	check(
+		app_status_message_color("Exit requires A; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status exit requires settings ignored is warning"
+	);
+	check(
 		app_status_message_color("Actions canceled") == APP_STATUS_COLOR_WARNING,
 		"status cancel is warning"
 	);

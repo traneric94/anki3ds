@@ -327,6 +327,8 @@ Acceptance steps:
   status line
 - confirm exit from daily limits and from its controls screen warns before
   losing unsaved edits
+- confirm opening exit, restore, suspend, and reset confirmations preserves
+  selected-deck, load-error, controls, or active-deck warning context
 - confirm canceling exit from controls, actions, confirmations, and warning
   surfaces preserves the relevant status-line warning context
 - confirm opening actions from reset-needed, ignored-settings, or limit-blocked

@@ -586,6 +586,63 @@ static void app_set_canceled_status(struct app_state *app, const char *label)
 	);
 }
 
+static const char *app_confirmation_status_suffix(
+	const struct app_state *app,
+	enum app_mode return_mode
+)
+{
+	if (return_mode == APP_MODE_CONTROLS)
+	{
+		if (app->controls_return_mode == APP_MODE_CONTROLS)
+			return "";
+		return app_confirmation_status_suffix(app, app->controls_return_mode);
+	}
+	if (return_mode == APP_MODE_DECK_SELECT)
+	{
+		if (app->selected_deck_index < app->deck_index.count)
+		{
+			return deck_selection_status_suffix(
+				&app->deck_summaries[app->selected_deck_index]
+			);
+		}
+
+		return "";
+	}
+	if (return_mode == APP_MODE_LOAD_ERROR)
+		return "; load error";
+	if (
+		return_mode == APP_MODE_REVIEW ||
+		return_mode == APP_MODE_SUMMARY ||
+		return_mode == APP_MODE_ACTIONS ||
+		return_mode == APP_MODE_SETTINGS ||
+		return_mode == APP_MODE_CONFIRM_RESTORE ||
+		return_mode == APP_MODE_CONFIRM_SUSPEND ||
+		return_mode == APP_MODE_CONFIRM_RESET
+	)
+	{
+		return active_deck_status_suffix(app);
+	}
+
+	return "";
+}
+
+static void app_set_required_status(
+	struct app_state *app,
+	const char *label,
+	const char *button,
+	enum app_mode return_mode
+)
+{
+	snprintf(
+		app->status_message,
+		sizeof(app->status_message),
+		"%s requires %s%s",
+		label,
+		button,
+		app_confirmation_status_suffix(app, return_mode)
+	);
+}
+
 static bool app_settings_have_unsaved_changes(const struct app_state *app)
 {
 	return (
@@ -1467,31 +1524,29 @@ static void app_open_settings(struct app_state *app)
 
 static void app_open_restore_confirmation(struct app_state *app)
 {
-	app_set_status(app, "Restore requires X");
+	app_set_required_status(app, "Restore", "X", app->mode);
 	app->mode = APP_MODE_CONFIRM_RESTORE;
 }
 
 static void app_open_reset_confirmation(struct app_state *app)
 {
-	app_set_status(app, "Reset requires X");
+	app_set_required_status(app, "Reset", "X", app->mode);
 	app->mode = APP_MODE_CONFIRM_RESET;
 }
 
 static void app_open_suspend_confirmation(struct app_state *app)
 {
-	app_set_status(app, "Suspend requires X");
+	app_set_required_status(app, "Suspend", "X", app->mode);
 	app->mode = APP_MODE_CONFIRM_SUSPEND;
 }
 
 static void app_open_exit_confirmation(struct app_state *app)
 {
 	app->exit_return_mode = app->mode;
-	app_set_status(
-		app,
-		app_exit_would_discard_unsaved_limits(app) ?
-			"Exit loses unsaved limits" :
-			"Exit requires A"
-	);
+	if (app_exit_would_discard_unsaved_limits(app))
+		app_set_status(app, "Exit loses unsaved limits");
+	else
+		app_set_required_status(app, "Exit", "A", app->exit_return_mode);
 	app->mode = APP_MODE_CONFIRM_EXIT;
 }
 
