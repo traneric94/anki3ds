@@ -1,8 +1,11 @@
 import importlib.util
 import json
+import io
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -155,6 +158,22 @@ class VerifyTextDeckTests(unittest.TestCase):
                 self.verify(deck_dir),
                 "must not be committed or packaged",
             )
+
+    def test_cli_reports_errors_without_traceback(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "state.tsv").write_text("progress\n", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "sys.argv",
+                ["verify_text_deck.py", str(deck_dir)],
+            ), redirect_stderr(stderr):
+                exit_code = verify_text_deck.main()
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("must not be committed or packaged", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_rejects_media_or_extra_files_in_text_deck(self):
         with tempfile.TemporaryDirectory() as temp_dir:

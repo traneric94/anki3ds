@@ -9,6 +9,7 @@ APP_SD_DIR := 3ds/anki3ds
 SAMPLE_DECKS := limits-demo sample
 REMOVED_SAMPLE_DECKS := media-demo
 SAMPLE_DECK_SD_ROOT := $(APP_SD_DIR)/decks
+SAMPLE_PROGRESS_FILE_CASE := state.tsv|state.tsv.tmp|state.tsv.bak|review-log.tsv|review-log.tsv.tmp|review-log.tsv.bak
 VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 
 .PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-sample-decks check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
@@ -124,11 +125,14 @@ install-local-sample-decks: verify-sample-decks
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(LOCAL_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
-		rm -f "$$deck_dir/deck.json" "$$deck_dir/cards.tsv" "$$deck_dir/settings.tsv" \
-			"$$deck_dir/deck.json.tmp" "$$deck_dir/deck.json.bak" \
-			"$$deck_dir/cards.tsv.tmp" "$$deck_dir/cards.tsv.bak" \
-			"$$deck_dir/settings.tsv.tmp" "$$deck_dir/settings.tsv.bak"; \
-		rm -rf "$$deck_dir/media"; \
+		for path in "$$deck_dir"/* "$$deck_dir"/.[!.]* "$$deck_dir"/..?*; do \
+			test -e "$$path" || continue; \
+			name=$${path##*/}; \
+			case "$$name" in \
+				$(SAMPLE_PROGRESS_FILE_CASE)) ;; \
+				*) rm -rf "$$path" ;; \
+			esac; \
+		done; \
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \
 	done
 
@@ -151,11 +155,14 @@ install-azahar-sample-decks: verify-sample-decks
 	for deck in $(SAMPLE_DECKS); do \
 		deck_dir="$(AZAHAR_SDMC)/$(SAMPLE_DECK_SD_ROOT)/$$deck"; \
 		mkdir -p "$$deck_dir"; \
-		rm -f "$$deck_dir/deck.json" "$$deck_dir/cards.tsv" "$$deck_dir/settings.tsv" \
-			"$$deck_dir/deck.json.tmp" "$$deck_dir/deck.json.bak" \
-			"$$deck_dir/cards.tsv.tmp" "$$deck_dir/cards.tsv.bak" \
-			"$$deck_dir/settings.tsv.tmp" "$$deck_dir/settings.tsv.bak"; \
-		rm -rf "$$deck_dir/media"; \
+		for path in "$$deck_dir"/* "$$deck_dir"/.[!.]* "$$deck_dir"/..?*; do \
+			test -e "$$path" || continue; \
+			name=$${path##*/}; \
+			case "$$name" in \
+				$(SAMPLE_PROGRESS_FILE_CASE)) ;; \
+				*) rm -rf "$$path" ;; \
+			esac; \
+		done; \
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \
 	done
 
