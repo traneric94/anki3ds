@@ -15,6 +15,10 @@ VERIFY_TEXT_DECK := python3 tools/verify_text_deck.py
 VERIFY_AZAHAR_CONTROLS := python3 tools/verify_azahar_controls.py
 VERIFY_M7_ARTIFACTS := python3 tools/verify_m7_artifacts.py
 IMPORT_FE_THEME_ASSETS := python3 tools/import_fe_theme_assets.py
+FE_BG_VIEWER_DIR := tools/fe-bg-viewer-3ds
+FE_BG_VIEWER_3DSX := $(abspath $(FE_BG_VIEWER_DIR)/fe-bg-viewer.3dsx)
+FE_THEME_FRAMEBUFFER_DIR := build/fe-theme-framebuffers
+FE_THEME_SD_DIR := $(APP_SD_DIR)/fe-themes
 M7_SDMC ?= $(AZAHAR_SDMC)
 M7_DECKS ?= limits-demo sample
 M7_REQUIRED_EVENTS ?= rating undo suspend restore
@@ -40,15 +44,22 @@ M7_ARTIFACT_ARGS = $(strip \
 	$(M7_ALLOW_MISSING_REVIEW_LOG_ARG) \
 	$(M7_NO_REQUIRED_EVENTS_ARG))
 
-.PHONY: all app-3ds clean test test-host test-converter test-tools verify-ci verify-local verify-m7-preflight verify-m7-artifacts verify-sample-decks verify-azahar-controls verify-fe-theme-assets check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples
+.PHONY: all app-3ds fe-bg-viewer-3ds clean clean-fe-bg-viewer-3ds test test-host test-converter test-tools verify-ci verify-local verify-m7-preflight verify-m7-artifacts verify-sample-decks verify-azahar-controls verify-fe-theme-assets check-package-sd-root package-sd verify-package-sd install-local-sd verify-local-sd install-local-sample-deck install-local-sample-decks reset-local-sample-progress prepare-local-samples-fresh install-azahar-sample-deck install-azahar-sample-decks install-azahar-fe-bg-viewer reset-azahar-sample-progress prepare-azahar-samples-fresh verify-azahar-fresh-samples check-emulator run-emulator run-emulator-samples run-emulator-fresh-samples run-emulator-fe-bg-viewer
 
 all: app-3ds
 
 app-3ds:
 	$(MAKE) -C app-3ds
 
+fe-bg-viewer-3ds: verify-fe-theme-assets
+	$(MAKE) -C $(FE_BG_VIEWER_DIR)
+
 clean:
 	$(MAKE) -C app-3ds clean
+	$(MAKE) -C $(FE_BG_VIEWER_DIR) clean
+
+clean-fe-bg-viewer-3ds:
+	$(MAKE) -C $(FE_BG_VIEWER_DIR) clean
 
 test: test-host test-converter test-tools
 
@@ -208,6 +219,13 @@ install-azahar-sample-decks: verify-sample-decks
 		cp -R "sample-decks/$$deck/." "$$deck_dir/"; \
 	done
 
+install-azahar-fe-bg-viewer: fe-bg-viewer-3ds
+	mkdir -p "$(AZAHAR_SDMC)/3ds/fe-bg-viewer"
+	mkdir -p "$(AZAHAR_SDMC)/$(FE_THEME_SD_DIR)"
+	cp "$(FE_BG_VIEWER_3DSX)" "$(AZAHAR_SDMC)/3ds/fe-bg-viewer/fe-bg-viewer.3dsx"
+	cp "$(FE_BG_VIEWER_DIR)/fe-bg-viewer.smdh" "$(AZAHAR_SDMC)/3ds/fe-bg-viewer/fe-bg-viewer.smdh"
+	cp "$(FE_THEME_FRAMEBUFFER_DIR)"/*.bin "$(AZAHAR_SDMC)/$(FE_THEME_SD_DIR)/"
+
 reset-azahar-sample-progress:
 	set -e; \
 	for deck in $(SAMPLE_DECKS); do \
@@ -237,3 +255,6 @@ run-emulator: app-3ds check-emulator
 run-emulator-samples: install-azahar-sample-decks run-emulator
 
 run-emulator-fresh-samples: verify-azahar-fresh-samples run-emulator
+
+run-emulator-fe-bg-viewer: install-azahar-fe-bg-viewer check-emulator
+	open -a "$(AZAHAR_APP)" "$(FE_BG_VIEWER_3DSX)"

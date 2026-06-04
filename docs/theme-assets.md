@@ -81,7 +81,16 @@ Moving beyond converted backdrops requires a renderer pass:
    framebuffer round-trip previews, and
    `python3 -m unittest tests/test_fe_theme_assets.py`.
 2. Choose either direct framebuffer drawing or citro2d/citro3d sprites.
-3. Render one background in an isolated 3DS test before touching app screens.
+3. Render the backgrounds in the isolated `tools/fe-bg-viewer-3ds` homebrew
+   before touching app screens:
+
+   ```sh
+   make install-azahar-fe-bg-viewer
+   make run-emulator-fe-bg-viewer
+   ```
+
+   Controls are `A`/Right/`R` for next theme, `B`/Left/`L` for previous theme,
+   `X` to reload from SD, and `Start` to exit.
 4. Keep console text over the sprites, or replace console text with a bitmap
    font renderer.
 5. Only after the renderer exists, consider a custom font. Font import is the
