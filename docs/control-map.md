@@ -113,6 +113,7 @@ In the daily-limits screen:
 
 `0` means all available cards.
 The screen shows `no changes` when the edited values match the active saved
-limits and warns about `unsaved changes` after a value change. Canceling with
-unsaved changes discards the edit buffer and returns to actions.
+limits and warns about `unsaved changes` after a value change. The bottom
+status line uses the warning color for unsaved edits. Canceling with unsaved
+changes discards the edit buffer and returns to actions.
 Saving limits updates `settings.tsv` and leaves review progress status separate.

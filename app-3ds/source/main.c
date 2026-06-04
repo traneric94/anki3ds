@@ -755,7 +755,8 @@ static const char *status_message_color(const char *message)
 		strstr(message, "reset state") != NULL ||
 		strstr(message, "limit reached") != NULL ||
 		strstr(message, "unmatched") != NULL ||
-		strstr(message, "ignored") != NULL
+		strstr(message, "ignored") != NULL ||
+		strstr(message, "unsaved") != NULL
 	)
 	{
 		return APP_COLOR_WARNING;
