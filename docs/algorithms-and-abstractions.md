@@ -385,12 +385,13 @@ stale confirmation prompt open.
 
 After a rating, suspend, undo, or restore-suspended action saves `state.tsv`,
 the app appends diagnostic rows to `review-log.tsv` with the before/after
-scheduler fields for the affected cards. Review logging is best-effort and
-normally appended until the next row would exceed the configured size cap. If
-the existing file ends with a partial non-newline row, the log writer rewrites
-the complete prefix before appending the new row. A log append or repair failure
-does not roll back a saved study action; the bottom status reports
-`log skipped` so the diagnostic gap is visible.
+scheduler fields for the affected cards, including first/last review day so
+daily-limit and migration behavior can be diagnosed from hardware logs. Review
+logging is best-effort and normally appended until the next row would exceed
+the configured size cap. If the existing file ends with a partial non-newline
+row, the log writer rewrites the complete prefix before appending the new row.
+A log append or repair failure does not roll back a saved study action; the
+bottom status reports `log skipped` so the diagnostic gap is visible.
 
 The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant

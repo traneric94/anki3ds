@@ -388,6 +388,30 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Review Log Day-Fields Gate
+
+Build: local working tree
+Command: `git diff --check`, `make test-host`, `make -C app-3ds`
+Gate: pass for host/build only
+Sample prep: not run
+Decks: not run
+Steps:
+- Extended diagnostic `review-log.tsv` transition rows with before/after
+  `first_review_day` and `last_review_day` fields.
+- Kept review logging best-effort and unread by the 3DS app; this only improves
+  hardware-session diagnosis of daily-limit and migration behavior.
+Observed:
+- Whitespace check passed.
+- Host C tests passed, including exact review-log row formatting, partial-row
+  repair, pending-repair recovery, and capacity-boundary coverage.
+- The 3DS target rebuilt successfully.
+Expected:
+- Manual M7 logs should now contain the review-day fields needed to explain why
+  a card counted as new or review work after a saved study transition.
+Result: pass for automated host/build gate only
+Notes:
+- Manual emulator or hardware review remains pending for end-to-end acceptance.
+
 ## 2026-06-04 - Migrated Learning Daily-Count Gate
 
 Build: local working tree

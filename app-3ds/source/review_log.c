@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #define REVIEW_LOG_ROW_FORMAT \
-	"%ld\t%u\t%s\t%s\t%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n"
+	"%ld\t%u\t%s\t%s\t%s\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n"
 
 static const char *review_log_rating_field(enum scheduler_rating rating)
 {
@@ -90,12 +90,16 @@ static int review_log_format_length(
 		entry->card_id,
 		rating,
 		entry->before.review_count,
+		entry->before.first_review_day,
+		entry->before.last_review_day,
 		entry->before.due_day,
 		entry->before.interval_days,
 		entry->before.ease_permille,
 		entry->before.lapses,
 		entry->before.suspended ? 1u : 0u,
 		entry->after.review_count,
+		entry->after.first_review_day,
+		entry->after.last_review_day,
 		entry->after.due_day,
 		entry->after.interval_days,
 		entry->after.ease_permille,
@@ -120,12 +124,16 @@ static int review_log_write_entry(
 		entry->card_id,
 		rating,
 		entry->before.review_count,
+		entry->before.first_review_day,
+		entry->before.last_review_day,
 		entry->before.due_day,
 		entry->before.interval_days,
 		entry->before.ease_permille,
 		entry->before.lapses,
 		entry->before.suspended ? 1u : 0u,
 		entry->after.review_count,
+		entry->after.first_review_day,
+		entry->after.last_review_day,
 		entry->after.due_day,
 		entry->after.interval_days,
 		entry->after.ease_permille,

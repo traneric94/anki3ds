@@ -38,6 +38,15 @@
 #define TEST_DECK_ROOT "/tmp/anki3ds-deck-index-test"
 #define TEST_TODAY 20000
 #define TEST_SECONDS_PER_DAY 86400
+#define TEST_REVIEW_LOG_GOOD_ROW \
+	"12345\t20000\trating\tcard-1\tgood\t0\t0\t0\t20000\t0\t2500\t0\t0\t" \
+	"1\t20000\t20000\t20001\t1\t2500\t0\t0\n"
+#define TEST_REVIEW_LOG_UNDO_ROW \
+	"12346\t20000\tundo\tcard-1\t-\t1\t20000\t20000\t20001\t1\t2500\t0\t0\t" \
+	"0\t0\t0\t20000\t0\t2500\t0\t0\n"
+#define TEST_REVIEW_LOG_RESTORE_ROW \
+	"12347\t20000\trestore\tcard-1\t-\t0\t0\t0\t20000\t0\t2500\t0\t1\t" \
+	"0\t0\t0\t20000\t0\t2500\t0\t0\n"
 
 static int failures;
 
@@ -3721,8 +3730,7 @@ static void test_review_log_appends_study_events(void)
 	check(
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
 		),
 		"review log writes rating transition"
 	);
@@ -3737,10 +3745,8 @@ static void test_review_log_appends_study_events(void)
 	check(
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
-			"12346\t20000\tundo\tcard-1\t-\t1\t20001\t1\t2500\t0\t0\t"
-			"0\t20000\t0\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
+			TEST_REVIEW_LOG_UNDO_ROW
 		),
 		"review log preserves appended transitions"
 	);
@@ -3756,12 +3762,9 @@ static void test_review_log_appends_study_events(void)
 	check(
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
-			"12346\t20000\tundo\tcard-1\t-\t1\t20001\t1\t2500\t0\t0\t"
-			"0\t20000\t0\t2500\t0\t0\n"
-			"12347\t20000\trestore\tcard-1\t-\t0\t20000\t0\t2500\t0\t1\t"
-			"0\t20000\t0\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
+			TEST_REVIEW_LOG_UNDO_ROW
+			TEST_REVIEW_LOG_RESTORE_ROW
 		),
 		"review log writes restore transition"
 	);
@@ -3826,8 +3829,7 @@ static void test_review_log_repairs_partial_final_row(void)
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
 			"complete row\n"
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
 		),
 		"review log preserves complete rows before repaired append"
 	);
@@ -3843,8 +3845,7 @@ static void test_review_log_repairs_partial_final_row(void)
 	check(
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
 		),
 		"review log replaces fully partial file with appended row"
 	);
@@ -3871,8 +3872,7 @@ static void test_review_log_recovers_pending_repair_before_append(void)
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
 			"complete row\n"
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
 		),
 		"review log keeps recovered complete prefix"
 	);
@@ -3896,8 +3896,7 @@ static void test_review_log_recovers_pending_repair_before_append(void)
 		file_equals(
 			TEST_REVIEW_LOG_PATH,
 			"existing row\n"
-			"12345\t20000\trating\tcard-1\tgood\t0\t20000\t0\t2500\t0\t0\t"
-			"1\t20001\t1\t2500\t0\t0\n"
+			TEST_REVIEW_LOG_GOOD_ROW
 		),
 		"review log appends after stale repair cleanup"
 	);
