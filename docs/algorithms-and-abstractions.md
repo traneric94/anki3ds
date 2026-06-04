@@ -217,14 +217,14 @@ The app loop is a small mode machine:
 The console UI uses the top screen for deck/card content and the bottom screen
 for mode-specific controls and a short status line. This keeps button prompts
 and save feedback out of the review card area without introducing a graphics
-framework yet. Rendering uses a compact dark-terminal palette: green
-headings/status labels, Good ratings, review counts, and successful, restored,
-or safe state; amber reverse-video selected/focused items; yellow/amber Hard
-ratings, learning counts, and cautions; red Again ratings, suspended counts,
-errors, and destructive reset prompts; and white neutral status, Easy ratings,
-and new counts, with dim white separators. Blue, cyan, and magenta are
-intentionally avoided because they are hard to read on the dark 3DS console
-background. Moving through the deck selector keeps the status line aligned
+framework yet. Rendering uses a compact dark-terminal palette: bright magenta
+headings/status labels, Easy ratings, and new counts; green Good ratings,
+review counts, and successful, restored, or safe state; amber reverse-video
+selected/focused items; yellow/amber Hard ratings, learning counts, and
+cautions; red Again ratings, suspended counts, errors, and destructive reset
+prompts; and bright white neutral status, with dim white separators. Standard
+blue is intentionally avoided because it is hard to read on the dark 3DS
+console background. Moving through the deck selector keeps the status line aligned
 with the selected row, including load errors,
 ignored settings, unmatched state, and daily-limit-blocked decks. Controls
 opened from deck-specific screens, and closed back to those screens, inherit
