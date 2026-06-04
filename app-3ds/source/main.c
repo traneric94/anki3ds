@@ -3084,15 +3084,19 @@ static bool app_handle_settings_input(
 
 	if (app_controls_up_down_triggered(buttons_down, buttons_active, &down))
 	{
+		bool unsaved_changes;
+
 		if (app->selected_setting == SETTING_ITEM_NEW_LIMIT)
 			app->selected_setting = SETTING_ITEM_REVIEW_LIMIT;
 		else
 			app->selected_setting = SETTING_ITEM_NEW_LIMIT;
+		unsaved_changes = app_settings_have_unsaved_changes(app);
 		snprintf(
 			app->status_message,
 			sizeof(app->status_message),
-			"Editing %s",
-			setting_item_name(app->selected_setting)
+			"Editing %s%s",
+			setting_item_name(app->selected_setting),
+			unsaved_changes ? " unsaved" : ""
 		);
 		return true;
 	}
