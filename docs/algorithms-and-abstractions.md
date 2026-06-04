@@ -554,9 +554,11 @@ Algorithm:
     daily-limit settings into the new single folder before deleting the
     obsolete chunk folders.
 14. When split output stays split but card boundaries move between numbered
-    chunks, rewrite matching `state.tsv` rows and complete `review-log.tsv`
-    rows into the chunk that now owns each card. If a rewritten chunk has no
-    matching rows, remove stale state/log files so the chunk starts fresh.
+    chunks, rewrite matching `state.tsv` rows and structurally complete
+    `review-log.tsv` rows into the chunk that now owns each card. Migrated log
+    rows must be newline-terminated and have the expected field count. If a
+    rewritten chunk has no matching rows, remove stale state/log files so the
+    chunk starts fresh.
 
 During same-folder re-import, the converter deliberately does not open or
 rewrite existing `state.tsv`, `review-log.tsv`, or `settings.tsv`, so review

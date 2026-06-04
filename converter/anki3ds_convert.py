@@ -28,6 +28,7 @@ STATE_FILE_FOOTER = "#anki3ds-state-complete"
 REVIEW_STATE_FILES = ("state.tsv", "state.tsv.tmp", "state.tsv.bak")
 SETTINGS_FILES = ("settings.tsv", "settings.tsv.tmp", "settings.tsv.bak")
 REVIEW_LOG_FILE = "review-log.tsv"
+REVIEW_LOG_FIELD_COUNT = 21
 
 BLOCK_TAGS = {
     "address",
@@ -681,7 +682,7 @@ def collect_state_rows(source_dirs: list[Path], state_filename: str) -> list[str
 def review_log_row_card_id(row: str) -> str | None:
     fields = row.split("\t")
 
-    if len(fields) < 4 or not fields[3]:
+    if len(fields) != REVIEW_LOG_FIELD_COUNT or not fields[3]:
         return None
 
     return fields[3]

@@ -204,8 +204,9 @@ Rules:
 `state.tsv` and `review-log.tsv` are owned by the 3DS app. The converter should
 preserve them when updating card content. When split output changes shape, the
 converter preserves complete `review-log.tsv` rows whose `card_id` still exists
-in the target deck or chunk; incomplete final log rows are ignored, matching the
-app's partial-row repair policy.
+in the target deck or chunk. Rows must be newline-terminated and use the
+expected field count; incomplete final log rows are ignored, matching the app's
+partial-row repair policy.
 
 The app may briefly create `state.tsv.tmp` and `state.tsv.bak` while saving.
 If `state.tsv` is missing or malformed after an interrupted save, the app can

@@ -691,8 +691,9 @@ Steps:
 - Added converter migration support for complete `review-log.tsv` rows when a
   converter-generated deck changes between single-folder and split output, or
   when split chunk boundaries move.
-- Review-log rows are filtered by the target card IDs so stale chunk logs do
-  not follow unrelated cards.
+- Review-log rows are filtered by the target card IDs and expected field count
+  so stale chunk logs and truncated diagnostic rows do not follow unrelated
+  cards.
 Observed:
 - Converter tests passed.
 Expected:

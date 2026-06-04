@@ -1031,6 +1031,7 @@ class ConverterTests(unittest.TestCase):
                     review_log_row(old_cards[0].card_id, 1)
                     + review_log_row(old_cards[1].card_id, 2)
                     + review_log_row("missing-card", 3)
+                    + f"4\t20000\trating\t{old_cards[0].card_id}\tgood\n"
                     + review_log_row(old_cards[0].card_id, 4).rstrip("\n")
                 ),
                 encoding="utf-8",
