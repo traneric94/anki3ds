@@ -566,12 +566,11 @@ static const char *active_deck_status_suffix(const struct app_state *app)
 	return "";
 }
 
-static void app_append_active_deck_status_suffix(struct app_state *app)
+static void app_append_status_suffix(struct app_state *app, const char *suffix)
 {
-	const char *suffix = active_deck_status_suffix(app);
 	size_t length;
 
-	if (suffix[0] == '\0')
+	if (suffix == NULL || suffix[0] == '\0')
 		return;
 
 	length = strlen(app->status_message);
@@ -586,22 +585,46 @@ static void app_append_active_deck_status_suffix(struct app_state *app)
 	);
 }
 
-static bool app_day_change_status_suffix_is_redundant(const char *suffix)
+static void app_append_active_deck_status_suffix(struct app_state *app)
 {
-	return (
-		strcmp(suffix, "; limit reached") == 0 ||
-		strcmp(suffix, "; reset state") == 0
-	);
+	app_append_status_suffix(app, active_deck_status_suffix(app));
 }
 
-static void app_append_day_change_status_suffix(struct app_state *app)
+static bool app_status_suffix_is_redundant(
+	const char *suffix,
+	bool message_reports_limit,
+	bool message_reports_reset_state
+)
+{
+	if (message_reports_limit && strcmp(suffix, "; limit reached") == 0)
+		return true;
+	if (message_reports_reset_state && strcmp(suffix, "; reset state") == 0)
+		return true;
+
+	return false;
+}
+
+static void app_append_nonredundant_active_deck_status_suffix(
+	struct app_state *app,
+	bool message_reports_limit,
+	bool message_reports_reset_state
+)
 {
 	const char *suffix = active_deck_status_suffix(app);
 
-	if (suffix[0] == '\0' || app_day_change_status_suffix_is_redundant(suffix))
+	if (
+		suffix[0] == '\0' ||
+		app_status_suffix_is_redundant(
+			suffix,
+			message_reports_limit,
+			message_reports_reset_state
+		)
+	)
+	{
 		return;
+	}
 
-	app_append_active_deck_status_suffix(app);
+	app_append_status_suffix(app, suffix);
 }
 
 static void app_set_actions_status(struct app_state *app)
@@ -1283,7 +1306,7 @@ static void app_set_day_change_status(struct app_state *app)
 		app->state_load_result,
 		&app->session
 	);
-	app_append_day_change_status_suffix(app);
+	app_append_nonredundant_active_deck_status_suffix(app, true, true);
 }
 
 static bool scroll_review_text(struct app_state *app, bool scroll_down)
@@ -3232,10 +3255,13 @@ static bool reset_progress(struct app_state *app)
 
 	app_load_selected_deck(app);
 	if (app->load_result == DECK_LOAD_OK)
+	{
 		app_set_status(
 			app,
 			log_deleted ? "Progress reset" : "Progress reset; log kept"
 		);
+		app_append_active_deck_status_suffix(app);
+	}
 	return true;
 }
 
@@ -3352,19 +3378,28 @@ static bool save_daily_limits(struct app_state *app)
 	if (!app_state_allows_study(app))
 	{
 		app_set_status(app, "Limits saved; reset state");
+		app_append_nonredundant_active_deck_status_suffix(app, false, true);
 	}
 	else if (app->mode == APP_MODE_SUMMARY)
 	{
+		bool daily_limit_reached = app_daily_limit_blocks_cards(app);
+
 		app_set_status(
 			app,
-			app_daily_limit_blocks_cards(app) ?
+			daily_limit_reached ?
 				"Limits saved; daily limit reached" :
 				"Limits saved; no cards due"
+		);
+		app_append_nonredundant_active_deck_status_suffix(
+			app,
+			daily_limit_reached,
+			false
 		);
 	}
 	else
 	{
 		app_set_status(app, "Limits saved");
+		app_append_active_deck_status_suffix(app);
 	}
 
 	return true;

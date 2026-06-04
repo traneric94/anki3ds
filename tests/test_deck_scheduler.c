@@ -4115,6 +4115,31 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status restore saved state unmatched is warning"
 	);
 	check(
+		app_status_message_color("Progress reset; settings ignored") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset settings ignored is warning"
+	);
+	check(
+		app_status_message_color("Progress reset; log kept; limit reached") ==
+			APP_STATUS_COLOR_WARNING,
+		"status reset log kept limit reached is warning"
+	);
+	check(
+		app_status_message_color("Limits saved; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limits saved state unmatched is warning"
+	);
+	check(
+		app_status_message_color("Limits saved; no cards due; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limits saved no due state unmatched is warning"
+	);
+	check(
+		app_status_message_color("Limits saved; daily limit reached; state unmatched") ==
+			APP_STATUS_COLOR_WARNING,
+		"status limits saved daily limit state unmatched is warning"
+	);
+	check(
 		app_status_message_color("No decks found; 2 ignored") ==
 			APP_STATUS_COLOR_WARNING,
 		"status no decks found is warning"

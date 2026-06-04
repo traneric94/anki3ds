@@ -383,9 +383,9 @@ The bottom status line reports successful ratings with the next card index, and
 reports save failures as non-advancing actions. This is intentionally redundant
 with the top-screen state string because SD-card save failures are otherwise
 easy to mistake for scheduler bugs during emulator or hardware testing.
-Successful rating, suspend, restore, and undo feedback appends active-deck
-warning context unless a save-failure or daily-limit-complete message has
-priority.
+Successful rating, suspend, restore, undo, reset, and daily-limit save feedback
+appends active-deck warning context unless a save-failure or redundant
+daily-limit/reset-state message has priority.
 
 `SELECT` opens an actions screen from review and summary modes. Choosing reset
 opens a confirmation screen. Pressing `X` there removes active state recovery
@@ -393,8 +393,10 @@ files before the primary `state.tsv`, then removes `review-log.tsv` as
 diagnostic cleanup and reloads the selected deck. If state removal and reload
 succeed, the bottom status confirms `Progress reset`; if only the diagnostic
 log cleanup fails, progress still stays reset and the status reports that the
-log was kept. If state removal fails, the app leaves the current session in
-place and shows `reset failed`.
+log was kept. Reset success feedback appends active-deck warning context when
+present, such as ignored settings or daily-limit exhaustion after reload. If
+state removal fails, the app leaves the current session in place and shows
+`reset failed`.
 
 `START` opens an exit confirmation screen from every normal app mode. Pressing
 `A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This
@@ -431,9 +433,11 @@ visible.
 Settings save feedback stays in the settings/status messages and does not
 overwrite the review-state status line. Saving settings after a malformed
 review-state load still leaves the deck on the reset-needed summary; settings
-changes do not make an unsafe review queue visible. Opening the daily-limits
-screen, moving between fields before edits, and cycling a value back to its
-saved value preserve active deck warning context; unsaved edit feedback takes
+changes do not make an unsafe review queue visible. Limits-save success
+feedback preserves active deck warning context, while omitting redundant
+reset-state or daily-limit suffixes. Opening the daily-limits screen, moving
+between fields before edits, and cycling a value back to its saved value
+preserve active deck warning context; unsaved edit feedback takes
 priority until save or cancel replaces it. Canceling daily-limit edits returns
 to actions with discarded-edit feedback and the active deck warning suffix.
 

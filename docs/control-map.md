@@ -126,8 +126,9 @@ active deck name on the bottom controls screen as well as the top screen.
 - Choosing restore when no cards are suspended keeps the actions screen open
   and reports `Nothing suspended` with active deck warning context when present.
 - Reset progress requires `X` on the reset confirmation screen.
-- A successful reset reloads the deck and shows `Progress reset`; if only the
-  diagnostic log cleanup fails, it shows `Progress reset; log kept`.
+- A successful reset reloads the deck and shows `Progress reset` with active
+  deck warning context when present; if only the diagnostic log cleanup fails,
+  it shows `Progress reset; log kept`.
 - If a deck opens with malformed saved state, use this reset flow before study;
   normal study controls such as undo remain disabled until reset succeeds.
 
@@ -157,3 +158,5 @@ take priority over the active deck warning. Canceling with unsaved changes
 discards the edit buffer and returns to actions while restoring active deck
 warning context.
 Saving limits updates `settings.tsv` and leaves review progress status separate.
+Save feedback keeps active deck warning context visible when present, while
+omitting redundant reset-state or daily-limit wording.
