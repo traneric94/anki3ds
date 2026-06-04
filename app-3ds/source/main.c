@@ -24,14 +24,16 @@
 #define DAY_CHECK_INTERVAL_SECONDS 60
 #define APP_COLOR_RESET CONSOLE_RESET
 /*
- * High-contrast terminal palette for the dark 3DS console. Blue and cyan are
- * avoided because they wash out on 3DS LCDs, especially at low brightness.
+ * High-contrast terminal palette for the dark 3DS console. Amber and violet
+ * carry the app chrome, while green/yellow/red keep their review semantics.
+ * Blue and cyan are avoided because they wash out on 3DS LCDs, especially at
+ * low brightness.
  */
 #define APP_COLOR_PRIMARY CONSOLE_ESC(32;1m)
 #define APP_COLOR_ACCENT CONSOLE_ESC(33;1m)
 #define APP_COLOR_TEXT CONSOLE_ESC(37;1m)
 #define APP_COLOR_MUTED CONSOLE_ESC(37m)
-#define APP_COLOR_FOCUS CONSOLE_ESC(32;1;7m)
+#define APP_COLOR_FOCUS CONSOLE_ESC(35;1;7m)
 #define APP_COLOR_CAUTION CONSOLE_ESC(33;1m)
 #define APP_COLOR_SUCCESS APP_COLOR_PRIMARY
 #define APP_COLOR_DANGER CONSOLE_ESC(31;1m)

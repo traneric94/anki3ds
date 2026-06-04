@@ -497,6 +497,27 @@ Notes:
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
 
+## 2026-06-04 - Complementary Dark Palette Focus Gate
+
+Build: local working tree
+Command: `make -C app-3ds`
+Steps:
+- Switched normal selected/focused rows from green reverse video to bright
+  violet reverse video.
+- Kept warm amber for app chrome and preserved green/yellow/red for review
+  meaning: Good/review/safe, Hard/learning/caution, and Again/error/danger.
+Observed:
+- The 3DS target rebuilt successfully with the selected/focused-row palette
+  change.
+Expected:
+- Selected deck rows, menu rows, and setting rows should read as navigation
+  focus instead of success state, while the dark background keeps a
+  complementary amber/violet palette without blue or cyan.
+Result: pass for build only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
+
 ## 2026-06-04 - Warm Dark Palette Refresh
 
 Build: local working tree
