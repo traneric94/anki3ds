@@ -1292,3 +1292,39 @@ Result: pass for automated build/test only; pending manual render check
 Notes:
 - Manual emulator or hardware rendering is still needed for true 3DS screen
   contrast.
+
+## 2026-06-04 - Paper Card And Rating Chip M7 Preflight
+
+Build: `bead593`
+Command: `make verify-m7-preflight`
+Gate: pass
+Sample prep: `verify-local` plus `prepare-azahar-samples-fresh`
+Decks: `limits-demo`, `sample`
+Steps:
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, package payload
+  verification, and Azahar fresh-sample staging.
+- Used the current artifact with light paper review cards, amber terminal
+  chrome, and bracketed bottom-screen rating chips.
+Observed:
+- Host C tests passed, including daily-use workflow persistence, 3DS key
+  translation, command chord rejection, per-screen navigation repeat coverage,
+  battery polling cadence, idle input wait tiers, scheduler behavior,
+  state/settings persistence, and review-log recovery/capping behavior.
+- Converter and text-deck verifier tests passed.
+- Source sample decks, local SD sample decks, `dist/sdmc`, and Azahar sample
+  decks all verified as text-only decks with fresh tracked-sample progress
+  cleared where applicable.
+- `dist/sdmc/3ds/anki3ds/` contains the copy-ready `.3dsx`, `.smdh`, and
+  tracked sample decks for manual copy or release staging.
+Expected:
+- The current build is ready for `make run-emulator-fresh-samples` or hardware
+  copy before the final manual M7 study-session acceptance pass.
+Evidence:
+- `make verify-m7-preflight` completed with exit code 0.
+Result: pass for automated preflight only
+Notes:
+- Full M7 acceptance still requires manual emulator or hardware interaction:
+  review due cards from both sample decks, suspend a card, undo a rating,
+  restore suspended cards, save changed daily limits, relaunch, and confirm
+  state plus settings persistence.
