@@ -534,7 +534,16 @@ def verify_session(
         if session_unsigned(session, counter_key) == 0:
             errors.append(f"session.tsv: missing {counter_key}")
 
-    if expected_settings and session_unsigned(session, "settings_saved_count") == 0:
+    if "rating" in required_events:
+        if session_unsigned(session, "answer_shown_count") == 0:
+            errors.append("session.tsv: missing answer_shown_count")
+        if (
+            session_unsigned(session, "answer_shown_count") <
+            session_unsigned(session, "rating_saved_count")
+        ):
+            errors.append("session.tsv: answer_shown_count below rating_saved_count")
+
+    if session_unsigned(session, "settings_saved_count") == 0:
         errors.append("session.tsv: missing settings_saved_count")
     if (
         reset_deck_ids

@@ -160,6 +160,7 @@ def write_session(
     restore_saved_count: int = 1,
     settings_saved_count: int = 1,
     reset_progress_count: int = 1,
+    answer_shown_count: int = 1,
     scan_completed: int = 1,
     exit_confirmed: int = 1,
 ) -> Path:
@@ -180,7 +181,7 @@ def write_session(
         "review_screen_count\t1",
         "summary_screen_count\t1",
         "load_error_count\t0",
-        "answer_shown_count\t1",
+        f"answer_shown_count\t{answer_shown_count}",
         f"rating_saved_count\t{rating_saved_count}",
         f"undo_saved_count\t{undo_saved_count}",
         f"suspend_saved_count\t{suspend_saved_count}",
@@ -337,6 +338,38 @@ class VerifyM7ArtifactsTests(unittest.TestCase):
                 errors,
             )
             self.assertIn("session.tsv: missing rating_saved_count", errors)
+
+    def test_rejects_rating_without_answer_reveal_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            write_session(sdmc, answer_shown_count=0)
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["sample", "limits-demo"],
+                ["rating"],
+                [],
+            )
+
+            self.assertIn("session.tsv: missing answer_shown_count", errors)
+            self.assertIn(
+                "session.tsv: answer_shown_count below rating_saved_count",
+                errors,
+            )
+
+    def test_rejects_missing_settings_save_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sdmc = self.write_valid_sdmc(Path(temp_dir))
+            write_session(sdmc, settings_saved_count=0)
+
+            errors = verify_m7_artifacts.verify_m7_artifacts(
+                sdmc,
+                ["sample", "limits-demo"],
+                REQUIRED_EVENTS,
+                [],
+            )
+
+            self.assertIn("session.tsv: missing settings_saved_count", errors)
 
     def test_rejects_bad_settings_row(self):
         with tempfile.TemporaryDirectory() as temp_dir:

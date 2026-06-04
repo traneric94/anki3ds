@@ -193,7 +193,8 @@ Pass condition:
   `settings.tsv`
 - the root `session.tsv` proves the app scanned decks, opened the tested decks,
   preserved action evidence across relaunch with `launch_count` of at least 2,
-  saved the required daily-use actions, and exited through the confirmation flow
+  showed answers before ratings, saved daily-limit edits and the required
+  daily-use actions, and exited through the confirmation flow
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result
