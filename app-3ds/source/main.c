@@ -1101,7 +1101,12 @@ static void app_open_suspend_confirmation(struct app_state *app)
 static void app_open_exit_confirmation(struct app_state *app)
 {
 	app->exit_return_mode = app->mode;
-	app_set_status(app, "Exit requires A");
+	app_set_status(
+		app,
+		app->mode == APP_MODE_SETTINGS && app_settings_have_unsaved_changes(app) ?
+			"Exit loses unsaved limits" :
+			"Exit requires A"
+	);
 	app->mode = APP_MODE_CONFIRM_EXIT;
 }
 
@@ -1573,8 +1578,19 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 	app_console_clear();
 	draw_app_title("Review");
 	printf("\x1b[3;1H" APP_COLOR_WARNING "Exit app?" APP_COLOR_RESET);
-	printf("\x1b[6;1HProgress is saved after");
-	printf("\x1b[7;1Heach review action.");
+	if (
+		app->exit_return_mode == APP_MODE_SETTINGS &&
+		app_settings_have_unsaved_changes(app)
+	)
+	{
+		printf("\x1b[6;1H" APP_COLOR_WARNING "Unsaved daily-limit edits" APP_COLOR_RESET);
+		printf("\x1b[7;1Hwill be lost.");
+	}
+	else
+	{
+		printf("\x1b[6;1HProgress is saved after");
+		printf("\x1b[7;1Heach review action.");
+	}
 	printf("\x1b[10;1HUse A to exit.");
 	printf("\x1b[12;1HUse B or SELECT to cancel.");
 }

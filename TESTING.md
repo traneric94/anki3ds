@@ -319,6 +319,7 @@ Acceptance steps:
 - change `new_limit` and `review_limit` from the actions screen
 - confirm daily-limit edits show an unsaved-changes cue before saving and
   return to no-changes state after save or cancel
+- confirm exit from daily limits warns before losing unsaved edits
 - confirm action, daily-limit, restore, suspend, and reset screens show the
   expected active deck before taking deck-specific actions
 - exit, relaunch, and confirm review state and daily limits persisted
