@@ -2943,13 +2943,14 @@ static bool app_handle_input(
 		return true;
 	case APP_CONTROL_ACTION_CANCEL_EXIT:
 		app->mode = app->exit_return_mode;
+		app_set_status(app, "Exit canceled");
 		return true;
 	case APP_CONTROL_ACTION_OPEN_EXIT:
 		app_open_exit_confirmation(app);
 		return true;
 	case APP_CONTROL_ACTION_CLOSE_CONTROLS:
 		app->mode = app->controls_return_mode;
-		app_set_status(app, "Returned");
+		app_set_status(app, "Controls closed");
 		return true;
 	case APP_CONTROL_ACTION_OPEN_CONTROLS:
 		app_open_controls(app);
