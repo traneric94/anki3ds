@@ -102,6 +102,9 @@ The controls screen is contextual. Its top screen lists controls for the screen
 that opened it, including empty deck-list and review-state-error variants, so it
 does not show review-only controls from deck select, load error, summary, or
 daily limits.
+In-app key prompts color the active key names in amber and avoid bare `L/R`
+wording for deck paging so D-pad left/right is not confused with the shoulder
+buttons.
 
 ## Actions Flow
 

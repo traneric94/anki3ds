@@ -216,6 +216,26 @@ static void draw_app_title(const char *section)
 	printf(APP_COLOR_RESET APP_COLOR_MUTED " %s" APP_COLOR_RESET, APP_VERSION);
 }
 
+static void draw_key_prompt(int row, const char *keys, const char *action)
+{
+	printf(
+		"\x1b[%d;1H" APP_COLOR_KEY "%s" APP_COLOR_RESET ": %s",
+		row,
+		keys,
+		action
+	);
+}
+
+static void draw_use_key_prompt(int row, const char *keys, const char *action)
+{
+	printf(
+		"\x1b[%d;1HUse " APP_COLOR_KEY "%s" APP_COLOR_RESET " %s",
+		row,
+		keys,
+		action
+	);
+}
+
 static void draw_wrapped_text_columns(
 	const char *text,
 	int row,
@@ -2179,7 +2199,7 @@ static void draw_reset_confirmation_screen(const struct app_state *app)
 	printf("\x1b[9;1Hstate for this deck.");
 	printf("\x1b[12;1HCards stay in cards.tsv.");
 	printf("\x1b[15;1HUse " APP_COLOR_DANGER "X" APP_COLOR_RESET " to reset.");
-	printf("\x1b[17;1HUse B or SELECT to cancel.");
+	draw_use_key_prompt(17, "B/SELECT", "to cancel.");
 }
 
 static void draw_restore_confirmation_screen(const struct app_state *app)
@@ -2195,7 +2215,7 @@ static void draw_restore_confirmation_screen(const struct app_state *app)
 	printf("\x1b[11;1HRestored cards can become");
 	printf("\x1b[12;1Hdue again if scheduled.");
 	printf("\x1b[15;1HUse " APP_COLOR_SUCCESS "X" APP_COLOR_RESET " to restore.");
-	printf("\x1b[17;1HUse B or SELECT to cancel.");
+	draw_use_key_prompt(17, "B/SELECT", "to cancel.");
 }
 
 static void draw_suspend_confirmation_screen(const struct app_state *app)
@@ -2214,7 +2234,7 @@ static void draw_suspend_confirmation_screen(const struct app_state *app)
 	printf("\x1b[11;1HThis hides the card from");
 	printf("\x1b[12;1Hreview until restored.");
 	printf("\x1b[15;1HUse " APP_COLOR_WARNING "X" APP_COLOR_RESET " to suspend.");
-	printf("\x1b[17;1HUse B or SELECT to cancel.");
+	draw_use_key_prompt(17, "B/SELECT", "to cancel.");
 }
 
 static void draw_exit_confirmation_screen(const struct app_state *app)
@@ -2232,14 +2252,17 @@ static void draw_exit_confirmation_screen(const struct app_state *app)
 		printf("\x1b[6;1HProgress is saved after");
 		printf("\x1b[7;1Heach review action.");
 	}
-	printf("\x1b[10;1HUse A to exit.");
-	printf("\x1b[12;1HUse B or SELECT to cancel.");
+	draw_use_key_prompt(10, "A", "to exit.");
+	draw_use_key_prompt(12, "B/SELECT", "to cancel.");
 }
 
 static void draw_controls_screen_footer(void)
 {
-	printf("\x1b[21;1HSTART: confirm exit");
-	printf("\x1b[24;1HHere: B, Y, or SELECT returns.");
+	draw_key_prompt(21, "START", "confirm exit");
+	printf(
+		"\x1b[24;1HHere: " APP_COLOR_KEY "B/Y/SELECT" APP_COLOR_RESET
+		" returns."
+	);
 }
 
 static void draw_controls_screen(const struct app_state *app)
@@ -2253,22 +2276,23 @@ static void draw_controls_screen(const struct app_state *app)
 		printf("\x1b[3;1H" APP_COLOR_ACCENT "Deck list controls" APP_COLOR_RESET);
 		if (app->deck_index.count > 0)
 		{
-			printf("\x1b[5;1HA: open selected deck");
-			printf("\x1b[7;1HD-pad U/D move, L/R page");
-			printf("\x1b[9;1HHold direction to repeat");
-			printf("\x1b[11;1HSELECT: rescan decks");
-			printf("\x1b[13;1HY: controls");
+			draw_key_prompt(5, "A", "open selected deck");
+			draw_key_prompt(7, "D-pad/Circle U/D", "move");
+			draw_key_prompt(9, "D-pad/Circle L/R", "page");
+			printf("\x1b[11;1HHold direction to repeat");
+			draw_key_prompt(13, "SELECT", "rescan decks");
+			draw_key_prompt(15, "Y", "controls");
 		}
 		else
 		{
-			printf("\x1b[5;1HSELECT: rescan decks");
-			printf("\x1b[7;1HY: controls");
+			draw_key_prompt(5, "SELECT", "rescan decks");
+			draw_key_prompt(7, "Y", "controls");
 		}
 		break;
 	case APP_MODE_LOAD_ERROR:
 		printf("\x1b[3;1H" APP_COLOR_DANGER "Load error controls" APP_COLOR_RESET);
-		printf("\x1b[5;1HB or SELECT: deck list");
-		printf("\x1b[7;1HY: controls");
+		draw_key_prompt(5, "B/SELECT", "deck list");
+		draw_key_prompt(7, "Y", "controls");
 		break;
 	case APP_MODE_SUMMARY:
 		if (!app_state_allows_study(app))
@@ -2277,9 +2301,9 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[3;1H" APP_COLOR_DANGER
 				"Review state controls" APP_COLOR_RESET
 			);
-			printf("\x1b[5;1HSELECT: actions");
-			printf("\x1b[7;1HB: deck list");
-			printf("\x1b[9;1HY: controls");
+			draw_key_prompt(5, "SELECT", "actions");
+			draw_key_prompt(7, "B", "deck list");
+			draw_key_prompt(9, "Y", "controls");
 			printf("\x1b[13;1HReset progress to study.");
 		}
 		else
@@ -2288,26 +2312,26 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[3;1H" APP_COLOR_SUCCESS
 				"No-due controls" APP_COLOR_RESET
 			);
-			printf("\x1b[5;1HB: deck list");
-			printf("\x1b[7;1HL: undo last action");
-			printf("\x1b[9;1HSELECT: actions");
-			printf("\x1b[11;1HY: controls");
+			draw_key_prompt(5, "B", "deck list");
+			draw_key_prompt(7, "L", "undo last action");
+			draw_key_prompt(9, "SELECT", "actions");
+			draw_key_prompt(11, "Y", "controls");
 		}
 		break;
 	case APP_MODE_ACTIONS:
 		printf("\x1b[3;1H" APP_COLOR_ACCENT "Actions controls" APP_COLOR_RESET);
-		printf("\x1b[5;1HA: choose selected");
-		printf("\x1b[7;1HD-pad/Circle U/D: move/hold");
-		printf("\x1b[9;1HB or SELECT: cancel");
-		printf("\x1b[11;1HY: controls");
+		draw_key_prompt(5, "A", "choose selected");
+		draw_key_prompt(7, "D-pad/Circle U/D", "move/hold");
+		draw_key_prompt(9, "B/SELECT", "cancel");
+		draw_key_prompt(11, "Y", "controls");
 		break;
 	case APP_MODE_SETTINGS:
 		printf("\x1b[3;1H" APP_COLOR_ACCENT "Daily-limit controls" APP_COLOR_RESET);
-		printf("\x1b[5;1HD-pad/Circle U/D: field");
-		printf("\x1b[7;1HD-pad/Circle L/R: value/hold");
-		printf("\x1b[9;1HA: save limits");
-		printf("\x1b[11;1HB or SELECT: actions");
-		printf("\x1b[13;1HY: controls");
+		draw_key_prompt(5, "D-pad/Circle U/D", "field");
+		draw_key_prompt(7, "D-pad/Circle L/R", "value/hold");
+		draw_key_prompt(9, "A", "save limits");
+		draw_key_prompt(11, "B/SELECT", "actions");
+		draw_key_prompt(13, "Y", "controls");
 		if (app_settings_have_unsaved_changes(app))
 		{
 			printf(
@@ -2332,14 +2356,14 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[7;1H" APP_COLOR_SUCCESS "B: Good" APP_COLOR_RESET
 				"       " APP_COLOR_EASY "A: Easy" APP_COLOR_RESET
 			);
-			printf("\x1b[9;1HL: undo last action");
-			printf("\x1b[11;1HR: confirm suspend");
-			printf("\x1b[13;1HSELECT: actions");
+			draw_key_prompt(9, "L", "undo last action");
+			draw_key_prompt(11, "R", "confirm suspend");
+			draw_key_prompt(13, "SELECT", "actions");
 			printf(
 				"\x1b[15;1H" APP_COLOR_WARNING
 				"Use one rating button only." APP_COLOR_RESET
 			);
-			printf("\x1b[17;1HD-pad U/D: scroll back");
+			draw_key_prompt(17, "D-pad U/D", "scroll back");
 		}
 		else
 		{
@@ -2347,13 +2371,13 @@ static void draw_controls_screen(const struct app_state *app)
 				"\x1b[3;1H" APP_COLOR_ACCENT
 				"Review front controls" APP_COLOR_RESET
 			);
-			printf("\x1b[5;1HA: show answer");
-			printf("\x1b[7;1HB: deck list");
-			printf("\x1b[9;1HL: undo last action");
-			printf("\x1b[11;1HR: confirm suspend");
-			printf("\x1b[13;1HSELECT: actions");
-			printf("\x1b[15;1HY: controls");
-			printf("\x1b[17;1HD-pad U/D: scroll front");
+			draw_key_prompt(5, "A", "show answer");
+			draw_key_prompt(7, "B", "deck list");
+			draw_key_prompt(9, "L", "undo last action");
+			draw_key_prompt(11, "R", "confirm suspend");
+			draw_key_prompt(13, "SELECT", "actions");
+			draw_key_prompt(15, "Y", "controls");
+			draw_key_prompt(17, "D-pad U/D", "scroll front");
 		}
 		break;
 	}
@@ -2579,7 +2603,7 @@ static void draw_bottom_controls_screen(const struct app_state *app)
 			printf("\x1b[3;1H" APP_COLOR_KEY "A" APP_COLOR_RESET ": open selected deck");
 			printf(
 				"\x1b[5;1H" APP_COLOR_KEY "D-pad U/D" APP_COLOR_RESET
-				": move  " APP_COLOR_KEY "L/R" APP_COLOR_RESET ": page"
+				": move  " APP_COLOR_KEY "D-pad L/R" APP_COLOR_RESET ": page"
 			);
 			printf("\x1b[7;1HHold direction to repeat");
 			printf("\x1b[9;1H" APP_COLOR_KEY "SELECT" APP_COLOR_RESET ": rescan decks");

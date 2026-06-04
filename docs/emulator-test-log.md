@@ -757,6 +757,30 @@ Notes:
 - Manual emulator or hardware rendering is still needed for true 3DS screen
   contrast.
 
+## 2026-06-04 - Contextual Key Prompt Palette Local Gate
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make test`
+Steps:
+- Added a small shared renderer for amber key prompts.
+- Applied the key-prompt palette to contextual controls and confirmation
+  screens.
+- Changed deck paging prompts away from bare `L/R` wording so D-pad or Circle
+  Pad left/right is not confused with shoulder buttons.
+Observed:
+- The 3DS target rebuilt successfully.
+- Host C tests, converter tests, and text-deck verifier tests passed through
+  `make test`.
+Expected:
+- The in-app controls screen should better match the dark-console palette and
+  make the daily-use key map easier to follow during manual acceptance.
+Result: pass for automated build/test only; pending manual render check
+Notes:
+- Manual emulator or hardware rendering is still needed for true 3DS screen
+  contrast.
+
 ## 2026-06-04 - Complementary Dark Palette Focus Gate
 
 Build: local working tree
