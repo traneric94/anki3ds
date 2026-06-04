@@ -1,30 +1,68 @@
 # Theme Assets
 
 The local Fire Emblem graphics repo at `/Users/eric/codebase/FE-Repo` has the
-right kinds of source material for a more advanced skin:
+right kinds of source material for a more advanced skin. Its top-level README
+describes the repo as public free-to-use, with an F2U/F2E distinction:
 
-- `BGs, Interface Elements/Battle Frames & Backgrounds`
-- `BGs, Interface Elements/Status Screen Backgrounds`
-- `BGs, Interface Elements/Vanilla Fonts & Logos & Save Slots`
+- F2U assets are treated as use-only unless the creator grants broader terms.
+- F2E assets are safe for this app's crop, resize, and darkening import path.
+- Unlisted assets are treated conservatively as F2U.
 
-The repo README distinguishes F2U and F2E assets and says unlisted resources
-should be treated conservatively as F2U unless the original creator confirms
-broader permission. Several folders are also game rips or preservation material.
-Because `anki3ds` is a public repo and not a Fire Emblem ROM hack, this project
-does not vendor FE assets until a specific asset has clear redistribution and
-reuse permission for this app.
+`anki3ds` currently has a conversion-only FE asset checkpoint. The 3DS app does
+not render these backgrounds yet.
 
-Current implementation uses original console-rendered panels instead:
+## Current Sources
+
+The converter uses only generated derivatives from an explicitly `[F2E]`
+folder:
+
+| Theme | Source | Credit |
+| --- | --- | --- |
+| Amber | `BGs, Interface Elements/Background CGs/WAve's BGs {WAve} [F2E]/Ballroom.png` | WAve |
+| Forest | `BGs, Interface Elements/Background CGs/WAve's BGs {WAve} [F2E]/Grassland.png` | WAve |
+| Ruby | `BGs, Interface Elements/Background CGs/WAve's BGs {WAve} [F2E]/Red Castle.png` | WAve |
+| Chalk | `BGs, Interface Elements/Background CGs/WAve's BGs {WAve} [F2E]/Blue Castle.png` | WAve |
+
+## Conversion
+
+Regenerate the raw files and desktop previews with:
+
+```sh
+python3 tools/import_fe_theme_assets.py
+```
+
+Set `FE_REPO_PATH` or pass `--fe-repo` if the FE repo clone is somewhere other
+than `~/codebase/FE-Repo`.
+
+Outputs:
+
+- `assets/fe-themes/raw/fe_bg_*_128x80_bgr888.bin`: tracked raw BGR888 files.
+- `build/fe-theme-previews/*_raw_128x80.bmp`: exact small converted images.
+- `build/fe-theme-previews/*_top_400x240.bmp`: desktop preview for top-screen
+  scale.
+- `build/fe-theme-previews/*_bottom_320x240.bmp`: desktop preview for
+  bottom-screen scale.
+- `build/fe-theme-previews/themes_top_sheet.bmp` and
+  `themes_bottom_sheet.bmp`: contact sheets for quick visual inspection.
+- Matching `.png` previews are generated next to the BMPs for tools that do not
+  open BMP files.
+
+Do not put the raw files under `app-3ds/data/` until the renderer is ready:
+the app Makefile links every file in that directory into the `.3dsx`.
+
+## Future Renderer
+
+Current implementation still uses original console-rendered panels:
 
 - Card paper stays a readable black-on-white panel.
 - Help-page `X` cycles the panel trim through Amber, Forest, Ruby, and Chalk.
 - The theme is session-local and does not change `settings.tsv`.
 
-Importing real bitmap assets would require a renderer pass:
+Moving beyond converted backdrops requires a renderer pass:
 
-1. Pick explicitly permitted F2E or otherwise compatible assets.
-2. Convert PNGs into 3DS textures with a build step.
-3. Render background and border sprites with citro2d/citro3d.
+1. Prove the conversion output with desktop BMP previews.
+2. Choose either direct framebuffer drawing or citro2d/citro3d sprites.
+3. Render one background in an isolated 3DS test before touching app screens.
 4. Keep console text over the sprites, or replace console text with a bitmap
    font renderer.
 5. Only after the renderer exists, consider a custom font. Font import is the
@@ -34,6 +72,9 @@ Importing real bitmap assets would require a renderer pass:
 Practical scope order:
 
 1. Original theme colors and console borders.
-2. Sprite-backed borders/backgrounds.
-3. Per-theme persisted settings.
-4. Bitmap font renderer.
+2. Conversion and desktop preview pipeline.
+3. Isolated 3DS background renderer test.
+4. App integration.
+5. Sprite-backed borders.
+6. Per-theme persisted settings.
+7. Bitmap font renderer.
