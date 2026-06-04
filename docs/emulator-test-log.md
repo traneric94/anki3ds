@@ -449,3 +449,33 @@ Notes:
 - Button-level review, rendered palette contrast, save-feedback visibility,
   SD-card behavior, and relaunch persistence still need the final manual
   emulator or hardware acceptance pass.
+
+## 2026-06-04 - Live Summary Coverage Local Gate
+
+Build: `702a7b3`
+Command: `make verify-local`
+Gate: pass
+Sample prep: `make verify-local` ran `prepare-local-samples-fresh` for the
+local SD mirror and `package-sd` for the copy-ready payload.
+Decks: `limits-demo`, `sample`
+Steps:
+- Ran host C tests, converter tests, text-deck verifier tests, tracked
+  sample-deck verification, local fresh-sample staging, and package payload
+  verification.
+Observed:
+- Host C tests passed, including the daily-use workflow, live deck-summary
+  coverage after daily-limit changes, 3DS key translation, escape-key coverage,
+  battery retry policy, per-screen navigation repeat coverage, and idle input
+  wait tiers.
+- Converter and text-deck verifier tests passed.
+- Tracked sample decks verified in source, local SD mirror, and `dist/sdmc/`.
+Expected:
+- Current code-complete artifact remains ready for the final manual M7
+  emulator or hardware pass.
+Evidence:
+- `make verify-local` completed with exit code 0.
+Result: pass for automated gate only
+Notes:
+- Button-level review, rendered palette contrast, save-feedback visibility,
+  SD-card behavior, and relaunch persistence still need the final manual
+  emulator or hardware acceptance pass.
