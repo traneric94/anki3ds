@@ -2,23 +2,24 @@
 
 The app shows Nintendo 3DS button names on screen. The local Azahar profile is
 configured so the main 3DS buttons use matching keyboard labels where possible:
-face buttons use `A`/`B`/`X`/`Y`, D-pad directions use the keyboard arrows, and
-shoulder buttons use `L`/`R`.
+face buttons use `A`/`B`/`X`/`Y`, D-pad directions use the keyboard arrows,
+Circle Pad uses a separate `W`/`S`/`Q`/`E` cluster, and shoulder buttons use
+`L`/`R`.
 
 | 3DS button | Azahar key | Main use |
 | --- | --- | --- |
-| `A` | `A` | Open deck, reveal answer, choose Easy, confirm selected action, save limits, confirm exit |
-| `B` | `B` | Choose Good after reveal, go back, cancel |
-| `X` | `X` | Choose Hard after reveal, confirm restore/suspend/reset, cycle theme on help page |
-| `Y` | `Y` | Choose Again after reveal, open help before reveal and where available |
-| `L` | `L` | Undo last rating or suspend action |
-| `R` | `R` | Open suspend confirmation |
-| D-pad or Circle Pad Up | Up Arrow | Move selection up, scroll review text up |
-| D-pad or Circle Pad Down | Down Arrow | Move selection down, scroll review text down |
-| D-pad or Circle Pad Left | Left Arrow | Page deck list up with wrap, decrease daily-limit preset |
-| D-pad or Circle Pad Right | Right Arrow | Page deck list down with wrap, increase daily-limit preset |
-| `SELECT` | `N` | Rescan decks, open actions, cancel actions, return from settings |
-| `START` | `M` | Open exit confirmation |
+| `A` | `A` | Open deck, reveal answer, review again on completion, choose Again, confirm exit |
+| `B` | `B` | Undo last rating in review, cancel settings or confirmations |
+| `X` | `X` | Open study settings before reveal, choose Good after reveal, save settings, confirm restore/suspend/reset |
+| `Y` | `Y` | Choose Easy after reveal, open reset before reveal, open exit from deck selector |
+| `L` | `L` | Page deck list up on selector, choose Hard after reveal |
+| `R` | `R` | Page deck list down on selector, open suspend or restore confirmation in review |
+| D-pad Up/Down | Up/Down Arrow | Move deck selection, scroll answer text after reveal |
+| Circle Pad Up/Down | `W`/`S` | Move deck selection, scroll question/front text in review |
+| D-pad Left/Right | Left/Right Arrow | Page deck list with wrap, adjust settings preset |
+| Circle Pad Left/Right | `Q`/`E` | Same left/right navigation as D-pad |
+| `SELECT` | Backspace | Rescan decks, return to deck selector, cancel settings or confirmations |
+| `START` | Enter | Toggle help on deck/review screens, open exit from settings |
 
 The Azahar config file is `~/Library/Application Support/Azahar/config/qt-config.ini`.
 If Azahar rewrites the profile, reapply the same bindings in
@@ -29,169 +30,161 @@ To verify the local profile before an M7 emulator pass, run:
 make verify-azahar-controls
 ```
 
+Run `make fix-azahar-controls` to rewrite the active local profile with the
+expected bindings.
 Set `AZAHAR_CONFIG=/path/to/qt-config.ini` if the config file lives somewhere
 else.
 
-Tapping a D-pad or Circle Pad direction moves, pages, or scrolls once. Holding
-a single direction for roughly 300 ms starts repeat movement, paging,
-review-text scrolling, or daily-limit value changes, then repeats roughly every
-80 ms. Daily-limit field selection with Up/Down is single-step so a held button
-does not bounce between fields. The app keeps the input loop responsive while a
-repeatable direction is held so deck selection, action selection, value
-changes, and review text scrolling do not fall into the idle backoff cadence.
-Pressing multiple directions together does not move or change values.
-Directions pressed or held together with command buttons are ignored.
-Face-button actions such as reveal, rating, save, reset, and exit remain
-single-press actions. After reveal, pressing more than one rating button at the
-same time does not save a rating. Save, restore-confirm, suspend-confirm,
-reset, action-confirm, exit-open, and exit-confirm buttons are also ignored
-when another button is active or held.
+A repeatable Azahar smoke driver is available for the tracked sample deck flow:
 
-The deck selector shows the current position as `selected/total` on both
-screens. Up/Down moves one deck with wrap; Left/Right pages by the visible
-list size and wraps between the first and last decks. Basic terminal-style
-colors use an amber/chalk/green/red palette. Review text appears in an original
-light paper flashcard panel with black text, while the rest of the app stays in
-a dark terminal shell. Before reveal, the front of the card is on the top
-screen and compact prompts/status are on the bottom screen. After reveal, the
-front stays on the top screen and the back moves to the bottom screen with the
-four rating buttons as bracketed chips below it. Help-page `X` cycles the card
-panel trim through four session-local themes: Amber, Forest, Ruby, and Chalk.
-Warm amber is used for headings, labels, key prompts, Hard ratings, learning
-counts, cautions, and normal reverse-video selected or focused items; green for
-Good ratings, review counts, and saved/safe state; red reverse-video for
-selected reset actions; red for Again ratings, suspended counts, errors, and
-reset actions; bright white for Easy ratings, new counts, and neutral values,
-with dim white separators and version text. Blue, cyan, and violet are
-intentionally avoided because they are hard to read on the dark 3DS console
-background.
-If deck scan ignores non-hidden entries because they are not valid deck ids or
-do not contain `cards.tsv`, the selector shows an ignored count.
-If daily limits hide otherwise due cards, the deck row shows a `limit` warning
-and the bottom selected-deck details show the hidden new/review counts. Moving
-onto that deck also reports `limit reached` in the status line.
-If a deck has both ignored settings and unmatched saved state, the selector row
-uses the compact `settings! state!` warning, deck-move status reports the
-warning, and the bottom screen shows details.
+```sh
+make run-emulator-m7-smoke
+```
+
+The target assumes fresh sample staging and discovers the current Azahar SD deck
+folder order before sending keys, so personal imported decks may be present.
+It navigates to `limits-demo`, saves study settings as `5` new and `10` review,
+saves a rating, undoes it with `B`, suspends and restores all six active cards,
+returns to deck select to confirm exit with `Y` then `A`, relaunches once,
+reopens `limits-demo`, returns to the deck selector, navigates to `sample`,
+rates one card, resets `sample`, returns to deck select for final exit, then
+runs the artifact verifier with `M7_DECKS=limits-demo`,
+`M7_RESET_DECKS=sample`, and
+`M7_EXPECT_SETTINGS="limits-demo:5:10 sample:20:200"`. To rerun only that
+post-smoke verifier, use `make verify-azahar-m7-smoke-artifacts`. To inspect
+the planned key sequence without controlling Azahar, run
+`make drive-azahar-m7-smoke-dry-run`.
+macOS must grant Accessibility permission to the terminal or Codex host process
+that runs the target; otherwise `osascript` cannot send the key events.
+
+Each physical key press is handled with both the 3DS key-down and key-held
+snapshots. Mixed button chords are rejected by the screen-specific reducers, so
+save, reset, suspend/restore confirmation, exit confirmation, settings edits,
+rating, and review actions do not fire when another button is pressed with
+them. This also applies when a command is pressed while a navigation key is
+already held, such as pressing `A` while holding Down.
+
+The D-pad and Circle Pad are preserved as separate navigation sources before
+the shell handles a frame. In review, D-pad Up/Down scrolls the answer on the
+bottom screen while Circle Pad Up/Down scrolls the front/question on the top
+screen. If both physical navigation sources are active in the same frame, the
+input frame treats that as ambiguous and emits no navigation action, even when
+both sources point in the same direction.
+
+Pure navigation holds repeat after a short delay: deck select repeats
+Up/Down/Left/Right and L/R page movement, review repeats Up/Down scrolling,
+and study settings repeat Left/Right value changes. Confirmation screens do
+not repeat held input.
+
+The app starts on the deck selector. Up/Down moves one deck with wrap;
+Left/Right pages by the visible list size, and `L`/`R` provide the same fast
+deck-page movement from the shoulder buttons. `A` opens the selected deck;
+`START` toggles the compact/detailed legend; `SELECT` rescans SD; `Y`
+opens exit confirmation. The selector reports the current deck window and any
+ignored entries from SD scanning. When stats are available, each deck row labels
+`Due`, `New`, and `Susp` counts explicitly; malformed deck state is marked as
+`state?`. The bottom footer summarizes learning across the whole deck list as
+`All decks: Due ... | New ... | Susp ...`, with an `Issues` count when a deck's
+state or stats cannot be trusted.
+
+The active app uses the centralized Citro2D FE shell. Review text is drawn from
+backend strings on top of embedded parchment/background textures through one
+shared Citro2D text scale. Before reveal, the current prompt is shown as the
+primary review text on the top screen. After reveal, the answer is shown on
+the bottom screen. D-pad Up/Down scrolls the answer panel; circle-pad Up/Down
+scrolls the front/question panel. Side scrollbars appear when more rows are
+available. If a revealed card has tags, the answer side shows one chip per tag.
+Otherwise the footer spells out daily counters as `Today New x/y` and
+`Review x/y`.
 
 ## Review Flow
 
 1. Press `A` to reveal the answer.
-2. Rate the card with `Y` Again, `X` Hard, `B` Good, or `A` Easy.
-3. Use D-pad Up/Down to scroll long front text before reveal or long back text
-   after reveal. The active text pane shows a compact `^ 1/3 v` style cue when
-   more rows are available.
-4. Press `L` to undo the last rating or suspend action.
+2. Rate the card with `A` Again, `L` Hard, `X` Good, or `Y` Easy.
+3. Use Circle Pad Up/Down to scroll the top front/question panel. Use D-pad
+   Up/Down to scroll the bottom answer panel after reveal.
+4. Press `B` to undo the last rating.
 5. Press `R`, then `X`, to suspend the current card.
-6. Press `SELECT` to open deck actions.
+6. Press `R`, then `X`, on the completion screen to restore all suspended
+   cards when any are suspended.
+7. Press `A` on the completion screen to review introduced cards again without
+   resetting progress.
+8. Press `X` before reveal to edit study settings.
+9. Press `Y` before reveal, or on the completion screen, to reset deck
+   progress after confirmation.
+10. Press `SELECT` to return to the deck selector.
+11. Press `START` before reveal, after reveal, on completion, or on the deck
+    selector to toggle the compact/detailed legend.
+12. To exit from review, press `SELECT` to return to deck select, then `Y` to
+    open exit confirmation.
 
-After a rating, the bottom status line shows whether the rating saved and which
-card is next. If saving fails, the app keeps the old scheduler state and shows
-that the card did not advance. Successful rating, suspend, restore, and undo
-save feedback keep active deck warning context visible unless a stronger
-save-failure or daily-limit-complete message takes priority. Navigation, action
-selection, daily-limit value changes, review-text scrolling, and answer reveal
-also update the bottom status line so manual input has immediate feedback and
-active warning context stays visible. If daily limits hide more calendar-due
-cards after the visible queue empties, the summary says `Daily limit reached`
-and shows new and review cards past the limit.
-When the battery sample is low and not charging, successful save-oriented
-actions add `; batt low` to the status line while the bottom battery line keeps
-showing the full low-battery prompt.
+## Legend Toggle
+
+The bottom legend is compact by default. `START` expands or collapses it on the
+deck selector and review screens.
+Expanded help uses grouped `button: action` labels for `A/B`, `X/Y`, arrows,
+`L/R`, `SELECT`, and `START`. On deck select, `L/R` page through the deck list;
+in review, `B` is undo, `R` is suspend/restore, and `L` is Hard only after the
+answer is visible. Settings and confirmation screens keep `B` as cancel.
+
+After a rating, suspend, restore, or undo, the app saves compact deck state and
+then appends review-log evidence when possible. If the diagnostic log append
+fails after a state save, or if low battery makes that optional write
+undesirable, the accepted action remains saved and the status reports
+`Saved; log skipped`. Daily limits can block new-card reveals or review ratings
+with status feedback instead of mutating the card.
+When the battery sample first becomes low and not charging, the status line
+announces `Battery low; charge soon` once for that low-battery episode. While
+the sample remains low, repeated battery polls keep that warning intact, and
+successful save-oriented actions preserve active warning context and add
+warning-colored `; batt low` status context.
 The root `session.tsv` diagnostic snapshot is written at boot, deck scan, deck
-open, durable save actions, reset, and confirmed exit. Revealing an answer only
-updates the in-memory session counter; it is flushed by the next snapshot write
-so ordinary card flips do not add SD-card writes.
+open, reveal, durable save actions, reset, and confirmed exit. Revealing an
+answer also saves compact state so introduced-card and `new_limit` progress
+survives exit and relaunch.
 If a fresh pass exits and relaunches, the app loads the existing complete
 snapshot, increments `launch_count`, and keeps earlier saved-action counters so
 the final verifier can prove the whole pass instead of only the last launch.
 
-## Help Screen
-
-Press `Y` from deck select, load error, unrevealed review cards, summary,
-actions, or daily limits to show the in-app help screen. Press `B`, `Y`, or
-`SELECT` to return. Press `X` on the help screen to cycle the card panel theme.
-On a revealed review card, `Y` is reserved for Again.
-Help opened from deck-specific screens keep warning status visible,
-including selected-deck, load-error, reset-needed, ignored-settings,
-unmatched-state, and daily-limit warnings. Returning from help preserves
-those warnings; returning to the deck selector restores the selected-deck
-status.
-If `START` opens exit confirmation from the help screen, canceling exit
-returns to the help screen and restores that help-screen status.
-If `START` opens exit confirmation from daily limits, or from help opened
-by daily limits, while edits are unsaved, the confirmation screen warns that
-those limit edits will be lost.
-Otherwise, opening exit confirmation keeps selected-deck, load-error, help,
-or active-deck warning context visible in the status line.
-Help opened from daily limits also show `Unsaved limit edits` while the
-edit buffer differs from the active saved limits. Opening or returning from
-help, and canceling exit back to daily limits or its help screen, keeps
-the unsaved warning visible on the status line.
-
-The help screen is contextual. Its top screen lists controls for the screen
-that opened it, including empty deck-list and review-state-error variants, so it
-does not show review-only controls from deck select, load error, summary, or
-daily limits.
-In-app key prompts color the active key names in amber and avoid bare `L/R`
-wording for deck paging so D-pad left/right is not confused with the shoulder
-buttons.
-
-## Actions Flow
-
-From review or summary, `SELECT` opens actions. The default selected action is
-restore suspended cards. If a deck opens with malformed saved state, reset is
-selected by default so the repair flow is immediately reachable.
-Opening actions preserves active deck warnings in the status line, including
-reset-needed state, ignored settings, unmatched state, and daily-limit
-exhaustion. Moving through actions preserves that warning context too, and the
-reset action keeps a warning status even on otherwise healthy decks. Opening or
-canceling restore/suspend/reset confirmations preserves that warning context
-too. Canceling exit from actions or those confirmations also preserves the
-active deck warning context.
-Opening daily limits preserves the same active deck warning context. The
-action, daily-limit, and restore/suspend/reset confirmation screens show the
-active deck name on the bottom help/status screen as well as the top screen.
-
-- Use D-pad Up/Down to choose restore suspended, daily limits, or reset.
-- Press `A` to choose the selected action.
-- Press `B` or `SELECT` to cancel.
-- Restoring suspended cards requires `X` on the restore confirmation screen if
-  any suspended cards exist.
-- Choosing restore when no cards are suspended keeps the actions screen open
-  and reports `Nothing suspended` with active deck warning context when present.
-- Reset progress requires `X` on the reset confirmation screen.
-- A successful reset reloads the deck and shows `Progress reset` with active
-  deck warning context when present; if only review-log cleanup fails,
-  it shows `Progress reset; log kept`.
-- If a deck opens with malformed saved state, use this reset flow before study;
-  normal study controls such as undo remain disabled until reset succeeds.
-
-Suspending from review also uses a confirmation screen:
+## Confirmations
 
 - Press `R` on the current card to open suspend confirmation.
-- Press `X` to suspend the card.
+- Press `R` on the completion screen, when suspended cards exist, to open
+  restore confirmation.
+- Press `R` on the completion screen with no suspended cards to report
+  `Nothing suspended` while keeping any active warning context visible.
+- Press `B` when no undo is available to report `Nothing to undo` while keeping
+  any active warning context visible.
+- Press `Y` before reveal or on the completion screen to open reset
+  confirmation.
+- Press `Y` from the deck selector to open exit confirmation.
+- Press `START` from settings to open exit confirmation.
+- Press `X` to confirm suspend, restore, or reset.
+- Press `A` to confirm exit.
 - Press `B` or `SELECT` to cancel.
-No-op undo, suspend, and restore attempts keep active deck warning context in
-the status line.
+- Press `START` from a suspend/restore/reset confirmation to open exit
+  confirmation instead. On the exit confirmation itself, `START` is inert.
 
-## Daily Limits
+## Study Settings
 
-In the daily-limits screen:
+In the study-settings screen:
 
-- D-pad Up/Down chooses `new_limit` or `review_limit`.
-- D-pad Left/Right cycles preset values and repeats while held.
-- `A` saves.
-- `B` or `SELECT` returns to actions without saving.
+- D-pad Up/Down chooses `new_limit`, `review_limit`, or learning mode.
+- D-pad Left/Right cycles preset limit values or toggles learning mode.
+- `X` saves.
+- `B` or `SELECT` returns to review without saving.
+- `START` opens exit confirmation. If edits are unsaved, the status warns
+  `Exit loses unsaved settings` before the confirmation.
 
-`0` means all available cards.
-The screen shows `no changes` when the edited values match the active saved
-limits and warns about `unsaved changes` after a value change. The bottom
-status line uses the warning color for active deck warnings on entry, after
-clean field movement or value movement, and for unsaved edits. Unsaved edits
-take priority over the active deck warning. Canceling with unsaved changes
-discards the edit buffer and returns to actions while restoring active deck
-warning context.
-Saving limits updates `settings.tsv` and leaves review progress status separate.
-Save feedback keeps active deck warning context visible when present, while
-omitting redundant reset-state or daily-limit wording.
+Preset values cycle through `5`, `10`, `20`, `50`, `100`, `200`, `500`,
+`1000`, then `all`; `all` is saved as `0` and means all available cards.
+If an existing settings file contains an off-ladder value, the next Left/Right
+press snaps to the nearest preset in that direction.
+Learning mode toggles between `Due first` and `Cooldown`; cooldown spaces
+same-session repeats by other cards before they reappear.
+The current clean shell shows `no changes` when the edited values match the
+active saved limits and reports `unsaved changes` after a value change.
+Canceling with unsaved changes discards the edit buffer and returns to review
+with `Settings canceled; discarded`.
+Saving updates `settings.tsv` and reports `Settings saved`, with the
+low-battery save suffix when applicable.

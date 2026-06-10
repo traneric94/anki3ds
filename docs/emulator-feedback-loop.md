@@ -14,6 +14,13 @@ Useful local loop:
 edit code -> make -> make run-emulator-samples -> fix obvious problems
 ```
 
+For quick renderer/layout tweaks after decks are already installed, use
+`make install-azahar-app` to copy only the rebuilt app binary into Azahar's SD
+mirror without resetting sample or personal deck progress.
+Use `make prepare-azahar-daily-use` before manual passes on imported personal
+decks; it updates the app/assets, verifies controls, verifies configured
+personal decks, and does not clear progress. Use `make run-emulator-daily-use`
+to do that prep and launch the current build.
 Use `make run-emulator-samples` when continuing from existing sample progress.
 Use `make run-emulator-fresh-samples` for acceptance passes that should start
 from clean tracked sample state.
@@ -87,6 +94,15 @@ Or install the sample decks and launch the current build in one command:
 make run-emulator-samples
 ```
 
+For imported personal decks that already exist in Azahar's SD card mirror:
+
+```sh
+make prepare-azahar-daily-use
+make run-emulator-daily-use
+```
+
+Those targets preserve existing personal deck progress and root diagnostics.
+
 For a clean sample-deck launch that clears tracked sample progress first:
 
 ```sh
@@ -120,7 +136,8 @@ For the toolchain proof, the emulator test is intentionally small:
 1. Build `anki3ds.3dsx` with `make`.
 2. Launch it in Azahar with `make run-emulator`.
 3. Confirm the top screen shows the app name and version.
-4. Press `Start`, confirm the exit screen appears, then press `A`.
+4. Press `Y` on the deck selector, confirm the exit screen appears, then
+   press `A`.
 
 Pass condition:
 

@@ -1,10 +1,9 @@
 #include "app_time.h"
 
 #include <stdbool.h>
+#include <time.h>
 
-#include "scheduler.h"
-
-static bool is_leap_year(int year)
+static bool app_time_is_leap_year(int year)
 {
 	if (year % 4 != 0)
 		return false;
@@ -14,31 +13,35 @@ static bool is_leap_year(int year)
 	return year % 400 == 0;
 }
 
-static unsigned int add_days_capped(unsigned int days, unsigned int addend)
+static unsigned int app_time_add_days_capped(
+	unsigned int days,
+	unsigned int addend
+)
 {
-	if (days > SCHEDULER_MAX_DAY - addend)
-		return SCHEDULER_MAX_DAY;
+	if (days > APP_TIME_MAX_DAY - addend)
+		return APP_TIME_MAX_DAY;
 
 	return days + addend;
 }
 
-static unsigned int days_before_year(int year)
+static unsigned int app_time_days_before_year(int year)
 {
 	unsigned int days = 0;
 
 	for (int current_year = 1970; current_year < year; current_year++)
 	{
-		unsigned int year_days = is_leap_year(current_year) ? 366u : 365u;
+		unsigned int year_days =
+			app_time_is_leap_year(current_year) ? 366u : 365u;
 
-		days = add_days_capped(days, year_days);
-		if (days == SCHEDULER_MAX_DAY)
+		days = app_time_add_days_capped(days, year_days);
+		if (days == APP_TIME_MAX_DAY)
 			return days;
 	}
 
 	return days;
 }
 
-static unsigned int days_in_month(int year, int month)
+static unsigned int app_time_days_in_month(int year, int month)
 {
 	static const unsigned int month_days[] = {
 		31,
@@ -57,18 +60,18 @@ static unsigned int days_in_month(int year, int month)
 
 	if (month < 1 || month > 12)
 		return 0;
-	if (month == 2 && is_leap_year(year))
+	if (month == 2 && app_time_is_leap_year(year))
 		return 29;
 
 	return month_days[month - 1];
 }
 
-static unsigned int days_before_month(int year, int month)
+static unsigned int app_time_days_before_month(int year, int month)
 {
 	unsigned int days = 0;
 
 	for (int current_month = 1; current_month < month; current_month++)
-		days += days_in_month(year, current_month);
+		days += app_time_days_in_month(year, current_month);
 
 	return days;
 }
@@ -81,12 +84,15 @@ unsigned int app_time_day_from_local_date(int year, int month, int month_day)
 		return 0;
 	if (month < 1 || month > 12)
 		return 0;
-	if (month_day < 1 || month_day > (int)days_in_month(year, month))
+	if (month_day < 1 || month_day > (int)app_time_days_in_month(year, month))
 		return 0;
 
-	days = days_before_year(year);
-	days = add_days_capped(days, days_before_month(year, month));
-	days = add_days_capped(days, (unsigned int)(month_day - 1));
+	days = app_time_days_before_year(year);
+	days = app_time_add_days_capped(
+		days,
+		app_time_days_before_month(year, month)
+	);
+	days = app_time_add_days_capped(days, (unsigned int)(month_day - 1));
 
 	return days;
 }

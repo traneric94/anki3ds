@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DECK_ID_MAX_LENGTH = 64
-DECK_MAX_CARDS = 4096
+DECK_MAX_CARDS = 1024
 DECK_INDEX_MAX_DECKS = 64
 DECK_MAX_ID_LENGTH = 32
 DECK_MAX_NAME_LENGTH = 64

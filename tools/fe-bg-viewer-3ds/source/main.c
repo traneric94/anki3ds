@@ -10,40 +10,62 @@
 #define TOP_FRAMEBUFFER_SIZE (TOP_SCREEN_WIDTH * SCREEN_HEIGHT * BYTES_PER_PIXEL)
 #define BOTTOM_FRAMEBUFFER_SIZE (BOTTOM_SCREEN_WIDTH * SCREEN_HEIGHT * BYTES_PER_PIXEL)
 #define THEME_PATH_PREFIX "sdmc:/3ds/anki3ds/fe-themes/"
+#define THEME_LAYER_PATH_PREFIX THEME_PATH_PREFIX "layers/"
 
 struct theme_asset
 {
+	const char *id;
 	const char *name;
-	const char *top_path;
-	const char *bottom_path;
+};
+
+struct layer_asset
+{
+	const char *id;
+	const char *name;
 };
 
 static const struct theme_asset themes[] = {
 	{
+		"amber",
 		"Amber",
-		THEME_PATH_PREFIX "fe_bg_amber_top_400x240_bgr888_fb.bin",
-		THEME_PATH_PREFIX "fe_bg_amber_bottom_320x240_bgr888_fb.bin",
 	},
 	{
+		"forest",
 		"Forest",
-		THEME_PATH_PREFIX "fe_bg_forest_top_400x240_bgr888_fb.bin",
-		THEME_PATH_PREFIX "fe_bg_forest_bottom_320x240_bgr888_fb.bin",
 	},
 	{
+		"ruby",
 		"Ruby",
-		THEME_PATH_PREFIX "fe_bg_ruby_top_400x240_bgr888_fb.bin",
-		THEME_PATH_PREFIX "fe_bg_ruby_bottom_320x240_bgr888_fb.bin",
 	},
 	{
+		"chalk",
 		"Chalk",
-		THEME_PATH_PREFIX "fe_bg_chalk_top_400x240_bgr888_fb.bin",
-		THEME_PATH_PREFIX "fe_bg_chalk_bottom_320x240_bgr888_fb.bin",
+	},
+};
+
+static const struct layer_asset layers[] = {
+	{
+		"background",
+		"Background",
+	},
+	{
+		"legend",
+		"Parchment",
+	},
+	{
+		"font",
+		"Text",
 	},
 };
 
 static size_t theme_count(void)
 {
 	return sizeof(themes) / sizeof(themes[0]);
+}
+
+static size_t layer_count(void)
+{
+	return sizeof(layers) / sizeof(layers[0]);
 }
 
 static size_t framebuffer_offset(int x, int y)
@@ -120,23 +142,58 @@ static bool read_exact_file(const char *path, u8 *destination, size_t expected_s
 	return exact_size;
 }
 
-static bool draw_theme(size_t theme_index)
+static void build_layer_paths(
+	size_t theme_index,
+	size_t layer_index,
+	char *top_path,
+	size_t top_path_size,
+	char *bottom_path,
+	size_t bottom_path_size
+)
+{
+	snprintf(
+		top_path,
+		top_path_size,
+		THEME_LAYER_PATH_PREFIX "fe_bg_%s_top_layer_%s_400x240_bgr888_fb.bin",
+		themes[theme_index].id,
+		layers[layer_index].id
+	);
+	snprintf(
+		bottom_path,
+		bottom_path_size,
+		THEME_LAYER_PATH_PREFIX "fe_bg_%s_bottom_layer_%s_320x240_bgr888_fb.bin",
+		themes[theme_index].id,
+		layers[layer_index].id
+	);
+}
+
+static bool draw_theme(size_t theme_index, size_t layer_index)
 {
 	u8 *top_framebuffer;
 	u8 *bottom_framebuffer;
+	char top_path[192];
+	char bottom_path[192];
 	bool top_loaded;
 	bool bottom_loaded;
 
 	top_framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 	bottom_framebuffer = gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, NULL, NULL);
+	build_layer_paths(
+		theme_index,
+		layer_index,
+		top_path,
+		sizeof(top_path),
+		bottom_path,
+		sizeof(bottom_path)
+	);
 
 	top_loaded = read_exact_file(
-		themes[theme_index].top_path,
+		top_path,
 		top_framebuffer,
 		TOP_FRAMEBUFFER_SIZE
 	);
 	bottom_loaded = read_exact_file(
-		themes[theme_index].bottom_path,
+		bottom_path,
 		bottom_framebuffer,
 		BOTTOM_FRAMEBUFFER_SIZE
 	);
@@ -172,21 +229,35 @@ static size_t previous_theme_index(size_t theme_index)
 	return theme_index - 1;
 }
 
+static size_t previous_layer_index(size_t layer_index)
+{
+	if (layer_index == 0)
+		return layer_count() - 1;
+
+	return layer_index - 1;
+}
+
 static size_t next_theme_index(size_t theme_index)
 {
 	return (theme_index + 1) % theme_count();
 }
 
+static size_t next_layer_index(size_t layer_index)
+{
+	return (layer_index + 1) % layer_count();
+}
+
 int main(int argc, char **argv)
 {
-	size_t theme_index = 0;
+	size_t theme_index = 1;
+	size_t layer_index = 0;
 	(void)argc;
 	(void)argv;
 
 	gfxInitDefault();
 	gfxSetDoubleBuffering(GFX_TOP, false);
 	gfxSetDoubleBuffering(GFX_BOTTOM, false);
-	draw_theme(theme_index);
+	draw_theme(theme_index, layer_index);
 
 	while (aptMainLoop())
 	{
@@ -200,16 +271,26 @@ int main(int argc, char **argv)
 		if (keys_down & (KEY_DLEFT | KEY_L | KEY_B))
 		{
 			theme_index = previous_theme_index(theme_index);
-			draw_theme(theme_index);
+			draw_theme(theme_index, layer_index);
 		}
 		else if (keys_down & (KEY_DRIGHT | KEY_R | KEY_A))
 		{
 			theme_index = next_theme_index(theme_index);
-			draw_theme(theme_index);
+			draw_theme(theme_index, layer_index);
+		}
+		else if (keys_down & KEY_DUP)
+		{
+			layer_index = previous_layer_index(layer_index);
+			draw_theme(theme_index, layer_index);
+		}
+		else if (keys_down & KEY_DDOWN)
+		{
+			layer_index = next_layer_index(layer_index);
+			draw_theme(theme_index, layer_index);
 		}
 		else if (keys_down & KEY_X)
 		{
-			draw_theme(theme_index);
+			draw_theme(theme_index, layer_index);
 		}
 
 		gspWaitForVBlank();

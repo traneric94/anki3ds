@@ -2,6 +2,9 @@
 
 Each checkpoint should produce a build or artifact the user can test directly.
 Record hardware results in `docs/device-test-log.md`.
+For current-session context before continuing active work, read
+`docs/sleep-context-2026-06-08.md` first, then `docs/session-handoff.md` for
+the full historical record.
 
 ## Checkpoint Rules
 
@@ -54,16 +57,18 @@ Local emulator acceptance test:
 1. Build the `.3dsx`.
 2. Launch it in Azahar with `make run-emulator`.
 3. Confirm it displays a title and version string.
-4. Press `START`, confirm the exit screen appears, then press `A`.
-5. Confirm it exits cleanly.
+4. Press `START` and confirm help toggles.
+5. Press `Y`, confirm the exit screen appears, then press `A`.
+6. Confirm it exits cleanly.
 
 Hardware acceptance test:
 
 1. Copy the `.3dsx` build to the SD card.
 2. Launch it from the Homebrew Launcher.
 3. Confirm it displays a title and version string.
-4. Press `START`, confirm the exit screen appears, then press `A`.
-5. Confirm it exits cleanly.
+4. Press `START` and confirm help toggles.
+5. Press `Y`, confirm the exit screen appears, then press `A`.
+6. Confirm it exits cleanly.
 
 Pass condition:
 
@@ -76,8 +81,9 @@ Acceptance test:
 1. Launch the app.
 2. Press `A`.
 3. Press D-pad directions.
-4. Press `START` to open exit confirmation.
-5. Press `A` to exit, or `B`/`SELECT` to cancel.
+4. Press `START` to toggle help.
+5. Press `Y` to open exit confirmation.
+6. Press `A` to exit, or `B`/`SELECT` to cancel.
 
 Pass condition:
 
@@ -124,7 +130,7 @@ Acceptance test:
 2. Exit the app.
 3. Relaunch the app.
 4. Confirm reviewed cards are no longer immediately due unless rated Again.
-5. Press `SELECT` to reset progress.
+5. Press `Y` before reveal, then `X`, to reset progress.
 
 Pass condition:
 
@@ -170,17 +176,22 @@ Acceptance test:
 2. Review due cards from each deck.
 3. Suspend one card.
 4. Undo one rating.
-5. Restore suspended cards from the actions screen.
-6. Set `new_limit` and `review_limit` from the actions screen.
+5. Restore suspended cards from the completion screen with `R`, then `X`.
+6. Set `new_limit` and `review_limit` from the direct daily-limit editor
+   opened with `X` before reveal. If testing the scheduler-policy toggle, also
+   change learning mode.
 7. Relaunch and confirm state and daily limits persisted.
-8. Reset progress on one tested deck and confirm settings are preserved. If
-   reset is the final state for that deck, include it in `M7_RESET_DECKS`.
+8. Reset progress on one tested deck with `Y` before reveal, then `X` to
+   confirm, and confirm settings are preserved. If reset is the final state for
+   that deck, include it in `M7_RESET_DECKS`.
 9. After the session, run `make verify-m7-artifacts M7_SDMC=/path/to/sdmc`
    against the tested SD root. For Azahar, the default `M7_SDMC` is the
-   configured `AZAHAR_SDMC`. To prove exact daily-limit edits, pass settings
-   expectations such as
-   `M7_EXPECT_SETTINGS="sample:5:20 limits-demo:1:10"`; each expected-settings
-   deck must be part of `M7_DECKS` or `M7_RESET_DECKS`.
+   configured `AZAHAR_SDMC`. To prove exact settings edits, pass expectations
+   as `deck:new_limit:review_limit[:learning_mode]`, for example
+   `M7_EXPECT_SETTINGS="sample:5:20:1 limits-demo:1:10"`; each
+   expected-settings deck must be part of `M7_DECKS` or `M7_RESET_DECKS`. The
+   optional `learning_mode` field is `0` for Due first and `1` for Cooldown.
+   The post-run verifier fails if no expected settings are supplied.
 
 Pass condition:
 
@@ -189,12 +200,19 @@ Pass condition:
   why a missing `review-log.tsv` is expected from an in-app `log skipped`
   status and verifies with `M7_ALLOW_MISSING_REVIEW_LOG=1` and
   `M7_NO_REQUIRED_EVENTS=1`
+- saved-action session counters do not exceed matching review-log event counts
+  unless the pass explicitly uses the `log skipped` allowance above or verifies
+  a deck whose progress was reset at the end
 - any deck reset at the end verifies with `M7_RESET_DECKS` and still has valid
   `settings.tsv`
 - the root `session.tsv` proves the app scanned decks, opened the tested decks,
+  has monotonic session time/day fields,
+  has internally consistent deck-open outcome counters,
   preserved action evidence across relaunch with `launch_count` of at least 2,
-  showed answers before ratings, saved daily-limit edits and the required
-  daily-use actions, and exited through the confirmation flow
+  entered a review screen for rating-required passes, showed answers before
+  ratings, saved daily-limit edits and the required daily-use actions, ended
+  with `last_deck_id` inside the tested deck set, and exited through the
+  confirmation flow with `last_event=exit_confirmed`
 - evidence is recorded in `docs/emulator-test-log.md` or
   `docs/device-test-log.md`, including deck ids, sample-prep command or copy
   method, settings changed, and relaunch persistence result

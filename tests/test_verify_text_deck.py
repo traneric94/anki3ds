@@ -48,8 +48,15 @@ class VerifyTextDeckTests(unittest.TestCase):
         )
         return deck_dir
 
-    def verify(self, deck_dir: Path) -> list[str]:
-        return verify_text_deck.verify_text_deck(deck_dir)
+    def verify(
+        self,
+        deck_dir: Path,
+        allow_progress_files: bool = False,
+    ) -> list[str]:
+        return verify_text_deck.verify_text_deck(
+            deck_dir,
+            allow_progress_files=allow_progress_files,
+        )
 
     def assert_error_contains(self, errors: list[str], expected: str) -> None:
         self.assertTrue(
@@ -71,6 +78,16 @@ class VerifyTextDeckTests(unittest.TestCase):
             deck_dir = self.write_deck(Path(temp_dir))
             (deck_dir / "settings.tsv").write_text(
                 "# daily limits\n\nnew_limit\t20\nreview_limit\t200\n# end\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(self.verify(deck_dir), [])
+
+    def test_accepts_optional_learning_mode_setting(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "settings.tsv").write_text(
+                "new_limit\t20\nreview_limit\t200\nlearning_mode\t1\n",
                 encoding="utf-8",
             )
 
@@ -196,6 +213,27 @@ class VerifyTextDeckTests(unittest.TestCase):
                 "must not be committed or packaged",
             )
 
+    def test_live_sd_mode_accepts_progress_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            for progress_file in verify_text_deck.PROGRESS_FILES:
+                (deck_dir / progress_file).write_text("progress\n", encoding="utf-8")
+
+            self.assertEqual(self.verify(deck_dir, allow_progress_files=True), [])
+
+    def test_live_sd_mode_still_rejects_unknown_entries(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "state.tsv").write_text("progress\n", encoding="utf-8")
+            (deck_dir / "media").mkdir()
+
+            errors = self.verify(deck_dir, allow_progress_files=True)
+
+            self.assert_error_contains(errors, "media: unexpected entry")
+            self.assertFalse(
+                any("state.tsv: unexpected entry" in error for error in errors)
+            )
+
     def test_cli_reports_errors_without_traceback(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             deck_dir = self.write_deck(Path(temp_dir))
@@ -211,6 +249,26 @@ class VerifyTextDeckTests(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertIn("must not be committed or packaged", stderr.getvalue())
             self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_cli_live_sd_mode_accepts_progress_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "state.tsv").write_text("progress\n", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "sys.argv",
+                [
+                    "verify_text_deck.py",
+                    "--quiet",
+                    "--allow-progress-files",
+                    str(deck_dir),
+                ],
+            ), redirect_stderr(stderr):
+                exit_code = verify_text_deck.main()
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stderr.getvalue(), "")
 
     def test_rejects_media_or_extra_files_in_text_deck(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -233,6 +291,19 @@ class VerifyTextDeckTests(unittest.TestCase):
             self.assert_error_contains(
                 self.verify(deck_dir),
                 "limit must be at most 1000000",
+            )
+
+    def test_rejects_bad_learning_mode_setting(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deck_dir = self.write_deck(Path(temp_dir))
+            (deck_dir / "settings.tsv").write_text(
+                "new_limit\t20\nreview_limit\t200\nlearning_mode\t2\n",
+                encoding="utf-8",
+            )
+
+            self.assert_error_contains(
+                self.verify(deck_dir),
+                "learning_mode must be at most 1",
             )
 
 

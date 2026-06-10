@@ -28,6 +28,596 @@ For M7 daily-use acceptance, include the deck ids tested, the exact fresh-sample
 command if one was used, the settings values changed, and whether relaunch
 persistence was confirmed.
 
+## 2026-06-06 - Automation Precheck Still Blocked
+
+Build: current dirty Citro2D clean-shell worktree after adding
+`app_input_policy`
+Command: `make run-emulator-m7-smoke`
+Gate: automation precheck only
+Sample prep: none; target failed before staging or launch
+Decks: planned `limits-demo` plus reset `sample`
+Steps:
+- Retried the deterministic M7 smoke target.
+- Extracted and tested the app-shell repeat-input mask locally after the
+  automation precheck failed.
+Observed:
+- `tools/drive_azahar_m7_smoke.py --check-automation` failed because macOS
+  denied `osascript` keystrokes.
+- No Azahar launch/input or post-run artifact verification occurred.
+- Local input-policy extraction verification passed separately with
+  `make test-host`, `python3 tools/verify_app_theme.py`,
+  `python3 -m unittest tests/test_verify_app_theme.py`, direct
+  `make -C app-3ds`, and `git diff --check`.
+Expected:
+- Automated M7 smoke still requires Accessibility/Assistive Access permission
+  for the terminal or Codex host process.
+Evidence:
+- `make run-emulator-m7-smoke`
+- `make test-host`
+- `python3 tools/verify_app_theme.py`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+Result: automation blocked before emulator input; local hardening pass
+Notes:
+- Manual M7 acceptance remains pending.
+
+## 2026-06-06 - Direct Smoke Reset-Deck Artifact Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extending the
+direct-control smoke path with a reset-deck leg
+Command: focused smoke-driver tests, focused M7 artifact verifier tests,
+`make test-host`, dry-run smoke sequence, `make test`, `git diff --check`,
+direct `make -C app-3ds`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the next Azahar fresh-sample pass.
+Decks:
+- studied deck: `limits-demo`
+- reset deck: `sample`
+Steps:
+- Extended `tools/drive_azahar_m7_smoke.py` after the relaunch persistence
+  reopen: return to deck select with `SELECT`, open `sample`, reveal/rate one
+  card, reset `sample` with `Y` then `X`, then final-exit with `START` then
+  `A`.
+- Updated `verify-azahar-m7-smoke-artifacts` to expect studied
+  `limits-demo`, reset `sample`, and exact settings
+  `limits-demo:5:10 sample:20:200`.
+- Updated the synthetic verifier fixture and real-module host smoke test so
+  the direct smoke proof includes reset cleanup with `sample` settings
+  preserved.
+Observed:
+- `python3 -m unittest tests/test_drive_azahar_m7_smoke.py` passed.
+- `python3 -m unittest tests/test_verify_m7_artifacts.py` passed.
+- `make test-host` passed.
+- `python3 tools/drive_azahar_m7_smoke.py --dry-run` now prints a 39-step
+  sequence ending with `M7_DECKS=limits-demo M7_RESET_DECKS=sample
+  M7_EXPECT_SETTINGS=limits-demo:5:10 sample:20:200`.
+- Full `make test`, whitespace check, direct 3DS build, sample validation,
+  package/local SD staging, fresh Azahar sample staging, and Azahar key-profile
+  validation passed.
+Expected:
+- A successful future `make run-emulator-m7-smoke` should now prove the
+  repeatable core path plus reset cleanup/preserved settings in the artifact
+  verifier, assuming macOS Accessibility permits Azahar key automation.
+Evidence:
+- focused smoke-driver unit tests
+- focused M7 artifact verifier unit tests
+- `make test-host`
+- dry-run driver output
+- `make test`
+- `git diff --check`
+- `make -C app-3ds`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending actual Azahar input
+Notes:
+- This still does not replace the manual M7 acceptance pass. It strengthens the
+  repeatable smoke path and post-run artifact contract while local key
+  automation remains dependent on macOS Accessibility permission.
+
+## 2026-06-06 - Status Text Save Warning Composition M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after centralizing warning
+context plus low-battery suffix composition in `app_status_text`
+Command: focused `tests/test_app_status_text.c` through `make test-host`,
+direct `make -C app-3ds`, broader `make test`, `git diff --check`, then
+`make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Added `app_status_text_copy_with_warning_context_and_low_battery_suffix()`
+  so save status composition is tested outside `main.c`.
+- Updated `main.c` to use that helper when setting successful save feedback
+  that must retain prior warning context and append `; batt low` only when the
+  sampled battery state requires it.
+- Added host coverage for context-plus-suffix composition, duplicate suffix
+  avoidance, and suffix suppression when the battery warning is not active.
+Observed:
+- Full host/tool tests, 3DS build, whitespace check, sample validation,
+  package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- Save feedback should preserve warning context such as `Settings ignored` or
+  `Review limit reached` while adding at most one low-battery save suffix.
+Evidence:
+- `make test-host`
+- `make -C app-3ds`
+- `make test`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Deck Select Action Reducer M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extracting deck-selector
+input into `app_deck_select_action`
+Command: focused `tests/test_app_deck_select_action.c`, `make test-host`,
+`make test`, `python3 tools/verify_app_theme.py`, `make -C app-3ds`,
+`git diff --check`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Extracted deck-selector button classification from `main.c` into the pure
+  `app_deck_select_action_apply()` reducer.
+- Added host coverage for mixed-button chord rejection, exit/rescan/open-deck
+  command requests, Up/Down movement, Left/Right paging, and no-op navigation
+  on empty deck lists.
+Observed:
+- Full host/tool tests, 3DS build, theme verifier, whitespace check, sample
+  validation, package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- Deck-selector input should now be safer to change without emulator feedback
+  because command classification and selection mutation are host-tested
+  separately from SD scanning, deck opening, and session writes.
+Evidence:
+- focused `cc` compile/run for `tests/test_app_deck_select_action.c`
+- `make test-host`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Battery Status Policy M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extracting battery
+status transitions into `app_battery_status`
+Command: focused `tests/test_app_battery_status.c`, `make test-host`,
+`make test`, `python3 tools/verify_app_theme.py`, `make -C app-3ds`,
+`git diff --check`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Extracted battery status-string transitions from `main.c` into
+  `app_battery_status_apply_sample()`.
+- Fixed the repeated-low-sample behavior so the low warning remains visible
+  while the sample is still low, instead of clearing to `Battery ok` after the
+  one-shot latch suppresses duplicate announcements.
+- Added host coverage for first low announcement, repeated still-low samples,
+  charging/recovery/unavailable clearing, closed-shell no-op samples, and
+  unrelated status preservation on normal samples.
+Observed:
+- Full host/tool tests, 3DS build, theme verifier, whitespace check, sample
+  validation, package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- Low-battery status behavior should now be safer to change without emulator
+  feedback because status transitions are host-tested separately from PTMU
+  sampling and app drawing.
+Evidence:
+- focused `cc` compile/run for `tests/test_app_battery_status.c`
+- `make test-host`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Confirm Action Reducer M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extracting
+suspend/restore/reset/exit confirmation input into `app_confirm_action`
+Command: focused `tests/test_app_confirm_action.c`, `make test-host`,
+`make test`, `python3 tools/verify_app_theme.py`, `make -C app-3ds`,
+`git diff --check`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Extracted confirmation-screen button classification from `main.c` into the
+  pure `app_confirm_action_apply()` reducer.
+- Added host coverage for mixed-button chord rejection, `B`/`SELECT` cancel,
+  `X` confirm, `START` opening nested exit from non-exit confirmations, inert
+  `START` on exit confirmation, and cancel status labels.
+Observed:
+- Full host/tool tests, 3DS build, theme verifier, whitespace check, sample
+  validation, package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- Confirmation input for destructive/reset/exit flows should now be safer to
+  change without emulator feedback because command classification is
+  host-tested and separated from file/session side effects.
+Evidence:
+- focused `cc` compile/run for `tests/test_app_confirm_action.c`
+- `make test-host`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Settings Action Reducer M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extracting daily-limit
+editor input into `app_settings_action`
+Command: focused `tests/test_app_settings_action.c`, `make test-host`,
+`make test`, `python3 tools/verify_app_theme.py`, `make -C app-3ds`,
+`git diff --check`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Extracted daily-limit editor button handling from `main.c` into the pure
+  `app_settings_action_apply()` reducer.
+- Added host coverage for mixed-button chord rejection, selected-field
+  movement, preset value cycling, save/cancel/exit requests, and
+  `no changes` / `unsaved changes` edit-status classification.
+- Wired the clean shell to show `no changes` on settings entry,
+  `unsaved changes` after value edits, `Limits canceled; discarded` after
+  canceling an unsaved draft, and `Exit loses unsaved limits` before exit
+  confirmation would discard unsaved settings.
+Observed:
+- Full host/tool tests, 3DS build, theme verifier, whitespace check, sample
+  validation, package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- Daily-limit editor input should now be safer to change without emulator
+  feedback because command classification and draft mutation are host-tested.
+Evidence:
+- focused `cc` compile/run for `tests/test_app_settings_action.c`
+- `make test-host`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Review Action Reducer M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after extracting review
+action side effects into `app_review_action`
+Command: `python3 -m unittest tests/test_verify_app_theme.py`, `make test`,
+`python3 tools/verify_app_theme.py`, `make -C app-3ds`, `git diff --check`,
+then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Extracted review action side effects from `main.c` into the pure
+  `app_review_action_apply()` reducer.
+- Added host coverage for scroll clamp/up/down, scroll reset on
+  reveal/rating/undo, dirty flags, review-log metadata, and exit signaling.
+- Updated the theme verifier so `main.c` may expose answer/rating transitions
+  through `app_review_action_apply()` while `study_backend.c` remains excluded
+  from app-shell transition evidence.
+Observed:
+- Focused verifier tests passed for both direct backend transition calls and
+  the reducer-mediated transition path.
+- Full host/tool tests, 3DS build, theme verifier, whitespace check, sample
+  validation, package/local SD staging, fresh Azahar sample staging, and Azahar
+  key-profile validation passed.
+Expected:
+- The current reducer split should preserve the same review behavior while
+  keeping review action side effects directly host-testable and renderer-free.
+Evidence:
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Completed-Today Queue State M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after adding compact
+`completed_today_count` / `completed_today_index` state rows
+Command: focused backend and clean-shell tests, `python3 -m unittest
+tests/test_verify_m7_artifacts.py`, `make test`, `make -C app-3ds`,
+`python3 tools/verify_app_theme.py`, `git diff --check`, then
+`make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Persisted same-day completed-card indexes in compact `state.tsv`.
+- Changed the clean-shell backend queue to offer due introduced cards not
+  completed today before offering new cards, including sparse introduced-card
+  layouts where earlier cards are still new.
+- Updated the M7 artifact verifier to validate completed-today compact rows.
+Observed:
+- Host C backend coverage passed for sparse introduced-before-new day rollover,
+  same-day completed-today reload, malformed completed-today state rejection,
+  and existing first-load dayless migration behavior.
+- Clean-shell daily-use integration passed.
+- M7 artifact verifier tests passed with completed-today row coverage.
+- Full preflight passed and refreshed app/assets/sample decks in all non-launch
+  SD roots.
+Expected:
+- Same-day relaunch should not reopen cards already completed today, and a true
+  next-day rollover should review introduced cards before new cards consume
+  `new_limit`.
+Evidence:
+- `make test`
+- `make -C app-3ds`
+- `python3 tools/verify_app_theme.py`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. Manual emulator or hardware
+  evidence is still required for M7 acceptance.
+
+## 2026-06-06 - Day-Aware Daily-Limit M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after adding day-aware
+daily-limit counters, first-load progress-day migration persistence, and
+compact-state progress-day artifact checks, then restoring local-calendar-day
+daily rollover through `app_time`, and tightening root session day rollover
+diagnostics
+Command: `make test`, `make -C app-3ds`, `python3 tools/verify_app_theme.py`,
+`git diff --check`, then `make verify-m7-preflight`
+Gate:
+- All listed commands passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Ran the full host/tool/sample/package/local/Azahar preflight after compact
+  `state.tsv` gained `progress_day`, `introduced_today_count`, and
+  `reviewed_today_count`, then again after `main.c` switched session days and
+  daily-limit rollover from `timestamp / 86400` to the local-calendar-day
+  helper, then again after rollover-only session day updates were saved before
+  mode-specific early continues.
+Observed:
+- Host C tests passed, including local-day daily-limit counters, day rollover,
+  first-load day establishment for existing progress, compact state save/load
+  validation, review-card footer strings, and the integrated clean-shell
+  daily-use workflow.
+- Host C tests also passed for `tests/test_app_time.c`, covering leap dates,
+  max-day clamping, invalid timestamps, and UTC-evening versus local-day
+  rollover.
+- Host C tests also passed for `tests/test_study_session.c`, covering
+  rollover-only `current_day` / `updated_at` updates that preserve the last
+  user-visible event.
+- Converter, text-deck verifier, app-theme verifier, M7 artifact verifier,
+  Azahar smoke-driver planning tests, FE theme asset tests, and Azahar
+  key-profile verification passed.
+- M7 artifact verifier tests now reject stale compact `progress_day` evidence
+  when it does not match root `session.tsv current_day`.
+- The current `.3dsx`, `.smdh`, FE theme assets, and fresh tracked text sample
+  decks are staged for local/package/Azahar SD roots.
+Expected:
+- Current day-aware daily-limit build should be ready for a manual M7 emulator
+  pass without stale sample progress or root session diagnostics.
+Evidence:
+- `make test`
+- `make -C app-3ds`
+- `python3 tools/verify_app_theme.py`
+- `git diff --check`
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched for this checkpoint. The next proof step is a manual
+  `make run-emulator-fresh-samples` pass or a hardware pass, followed by
+  `make verify-m7-artifacts` with exact `M7_EXPECT_SETTINGS` and any reset or
+  log-skipped options matching the run.
+- This preflight now covers day-counter rollover, first-load progress-day
+  migration, and repeat daily-review rewind through host tests. It still does
+  not replace manual M7 interaction evidence.
+
+## 2026-06-06 - Raw Text-View Contract M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after parallel renderer/backend split
+Command: `make verify-m7-preflight`
+Gate:
+- `make verify-m7-preflight` passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Ran full host/tool/sample/package/local/Azahar preflight after replacing the
+  legacy review adapter with the raw `app_flashcard_text_view_build()` contract.
+Observed:
+- Host C tests passed, including the raw review text-view contract, current
+  clean-shell daily-use integration test, deck/settings/confirm contracts,
+  backend, controls, key-map, power, status-text, review-log, and session
+  coverage.
+- Converter, text-deck verifier, app-theme verifier, M7 artifact verifier,
+  Azahar smoke-driver planning tests, FE theme asset tests, and Azahar
+  key-profile verification passed.
+- The current `.3dsx`, `.smdh`, FE theme assets, and fresh tracked text sample
+  decks are staged for local/package/Azahar SD roots.
+Expected:
+- Current raw-string Citro2D build should be ready for a manual M7 emulator
+  pass without stale sample progress or root session diagnostics.
+Evidence:
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched by this preflight. The next proof step is a manual
+  `make run-emulator-fresh-samples` pass or a hardware pass, followed by
+  `make verify-m7-artifacts` with exact `M7_EXPECT_SETTINGS` and any reset or
+  log-skipped options matching the run.
+
+## 2026-06-06 - Post-Contract M7 Preflight
+
+Build: current dirty Citro2D clean-shell worktree after review/deck/settings/confirm string contract extraction
+Command: `make verify-m7-preflight`
+Gate:
+- `make verify-m7-preflight` passed.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Ran full host/tool/sample/package/local/Azahar preflight for the current app.
+Observed:
+- Host C tests passed, including `app_confirm_contract`,
+  `app_deck_select_contract`, `app_settings_contract`, key mapping, backend,
+  session, review-log, settings, power, status-text coverage, and the
+  integrated clean-shell daily-use workflow test.
+- Converter, text-deck verifier, app-theme verifier, M7 artifact verifier,
+  Azahar smoke-driver planning tests, FE theme asset tests, and Azahar
+  key-profile verification passed.
+- The current `.3dsx`, `.smdh`, FE theme assets, and fresh tracked text sample
+  decks are staged for local/package/Azahar SD roots.
+Expected:
+- Current post-contract build should be ready for a manual M7 emulator pass
+  without stale sample progress or root session diagnostics.
+Evidence:
+- `make verify-m7-preflight`
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched by this preflight. The next proof step is a manual
+  `make run-emulator-fresh-samples` pass or a hardware pass, followed by
+  `make verify-m7-artifacts` with exact `M7_EXPECT_SETTINGS` and any reset or
+  log-skipped options matching the run.
+
+## 2026-06-06 - M7 Preflight And Smoke Automation Check
+
+Build: current dirty Citro2D clean-shell worktree
+Command: `make verify-m7-preflight`, then `make run-emulator-m7-smoke`
+Gate:
+- `make verify-m7-preflight` passed.
+- `make run-emulator-m7-smoke` intentionally stopped at
+  `check-azahar-smoke-automation`.
+Sample prep:
+- Preflight staged fresh tracked `limits-demo` and `sample` decks in local SD,
+  package SD, and Azahar SDMC.
+- Preflight cleared root `session.tsv` / `theme.tsv` artifacts and tracked
+  sample progress files before the Azahar fresh-sample check.
+Decks:
+- `limits-demo`
+- `sample`
+Steps:
+- Ran full host/tool/sample/package/local/Azahar preflight.
+- Attempted deterministic Azahar M7 smoke automation.
+Observed:
+- Preflight passed, including Azahar key-profile validation.
+- macOS denied `System Events` keystrokes for the smoke driver.
+- The smoke target now fails before restaging samples or relaunching Azahar
+  when that Accessibility permission is missing.
+Expected:
+- Preflight should pass before a manual or automated M7 session.
+- Automated smoke requires Accessibility permission for the terminal/Codex host.
+Evidence:
+- `make verify-m7-preflight`
+- `make run-emulator-m7-smoke`
+- `python3 -m unittest tests/test_drive_azahar_m7_smoke.py`
+- `make test-tools`
+Result: preflight pass; automated smoke blocked by macOS Accessibility
+Notes:
+- No post-run `make verify-m7-artifacts` acceptance was run because no
+  automated study actions were sent.
+- Next M7 acceptance path is either grant Accessibility permission and rerun
+  `make run-emulator-m7-smoke`, which now runs the multi-deck smoke artifact
+  verifier after a successful driver pass, or run the manual checklist and
+  verify the tested SD root afterward.
+
 ## 2026-06-04 - FE Background Viewer Visual Pass
 
 Build: `5d941d1`
@@ -1486,6 +2076,121 @@ Result: pass for automated target wiring only
 Notes:
 - Manual M7 interaction acceptance remains pending.
 
+## 2026-06-04 - Plain Theme Fallback Verifier
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `python3 tools/verify_app_theme.py`
+- `make test-tools`
+- `make verify-local`
+Steps:
+- Added a source verifier for the theme fallback invariant used by manual M7
+  testing.
+- The verifier checks that `Plain` is first/default, invalid theme values
+  sanitize to `Plain`, and the `Plain` background entry has null framebuffer
+  paths so it cannot load FE assets.
+- Wired the verifier into `make test-tools`.
+- Updated the CTR-001 M7 checklist to expect startup in `Plain` and a
+  five-theme help-screen cycle.
+Observed:
+- Focused theme-verifier tests passed.
+- The verifier accepted the current `app-3ds/source/main.c`.
+- `make verify-local` passed with the new verifier included.
+Expected:
+- Future changes should fail the local gate if they accidentally remove the
+  high-contrast Plain startup path needed for reliable daily-use testing.
+Result: pass for automated verifier guard only
+Notes:
+- Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - Plain Theme Default Escape Hatch
+
+Build: local working tree
+Commands:
+- `make -C app-3ds`
+- `make verify-local`
+- `make run-emulator-fresh-samples`
+Steps:
+- Added a `Plain` session theme as the startup default.
+- Kept FE themes available in the help-screen `X` cycle after Plain.
+- Made Plain skip FE framebuffer loading entirely, preserving the original
+  black console background for high-contrast manual M7 testing.
+- Updated theme docs to describe the five-theme cycle and default behavior.
+Observed:
+- The 3DS app rebuilt successfully.
+- `make verify-local` passed.
+- The fresh-sample Azahar target cleared tracked sample progress/session,
+  installed current FE framebuffers, and opened the current `.3dsx`.
+Expected:
+- Manual study testing can start from the non-FE high-contrast UI, while FE
+  backdrops remain available for optional visual checks.
+Result: pass for automated build/staging gates; pending user visual check
+Notes:
+- Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - Subdued FE Theme Chrome Pass
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_fe_theme_assets.py`
+- `make verify-fe-theme-assets`
+- `make run-emulator-fresh-samples`
+- `make verify-local`
+Steps:
+- Replaced the full-screen battle-frame overlay with quieter generated
+  top/bottom banner bands.
+- Kept the FE battle-frame source as a trim-palette input only, instead of
+  pasting the whole frame over the app background.
+- Darkened only the screen-sized app backdrops more strongly while preserving
+  the tracked low-resolution raw background darkening.
+- Kept the small pixel-font title mark and constrained the icon-strip legend to
+  the bottom-sized screen assets.
+Observed:
+- Desktop contact sheets show darkened FE backgrounds with subdued trim and no
+  large competing battle-frame panels.
+- The fresh-sample Azahar target cleared tracked sample progress/session,
+  installed the regenerated FE framebuffer assets, and opened the current
+  `.3dsx`.
+- `make verify-local` passed after the compositor change.
+Expected:
+- The FE layer should read as a background skin instead of fighting the console
+  study UI.
+Result: pass for automated generation/build gates; pending user visual check
+Notes:
+- Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - M7 Session Deck Evidence Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+- `make run-emulator-fresh-samples`
+Steps:
+- Hardened the M7 artifact verifier so root `session.tsv` evidence must end
+  with `last_deck_id` inside the set of study or reset decks being checked.
+- Added a regression test for stale or mismatched session evidence from an
+  unchecked deck.
+Observed:
+- The focused verifier suite passed with 20 tests.
+- `make test-tools` passed, including text-deck, Azahar-control, M7-artifact,
+  and FE-theme asset verifier tests.
+- `make verify-m7-preflight` passed, including host tests, converter tests,
+  FE theme generation, package/local SD verification, fresh Azahar sample
+  staging, and Azahar control-profile verification.
+- `make run-emulator-fresh-samples` cleared tracked Azahar sample progress and
+  root session diagnostics, installed the current FE framebuffer assets, and
+  opened the current `.3dsx` in Azahar.
+Expected:
+- Post-run M7 verification should now fail if deck artifacts and root session
+  evidence clearly come from different manual passes.
+Result: pass for automated verifier guard only
+Notes:
+- Manual M7 interaction acceptance remains pending.
+
 ## 2026-06-04 - M7 Artifact Log-Skipped Parameters
 
 Build: local working tree
@@ -1554,3 +2259,1071 @@ Expected:
 Result: pass for automated verifier guard only
 Notes:
 - Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - M7 Plain Default Fresh Relaunch
+
+Build: local working tree
+Commands:
+- `make verify-m7-preflight`
+- `make run-emulator-fresh-samples`
+Steps:
+- Ran the full M7 preflight after making the startup theme `Plain` and leaving
+  the Fire Emblem framebuffers opt-in from the help-screen theme cycle.
+- Relaunched Azahar with fresh `limits-demo` and `sample` decks.
+Observed:
+- Preflight passed host C tests, converter tests, tool tests, sample deck
+  verification, app build/package checks, Azahar sample staging cleanup, and
+  Azahar control-profile verification.
+- The fresh-sample launcher cleared root session files and tracked sample deck
+  state/log artifacts before opening the current `.3dsx`.
+Expected:
+- Manual testing should start from the plain console-style UI, with FE themes
+  available only after cycling the theme.
+Result: ready for manual M7 interaction testing
+Notes:
+- Manual M7 interaction acceptance remains pending.
+
+## 2026-06-04 - FE Layer Viewer Relaunch
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_fe_theme_assets.py`
+- `make verify-fe-theme-assets`
+- `make fe-bg-viewer-3ds`
+- `make test-tools`
+- `make run-emulator-fe-bg-viewer`
+Steps:
+- Added generated 3DS framebuffer binaries for the FE layer pipeline:
+  background, legend, and font.
+- Updated the isolated FE background viewer so Left/Right cycles themes and
+  Up/Down cycles layers.
+- Installed the viewer and layer assets into Azahar SDMC and opened the viewer.
+Observed:
+- FE asset tests passed with direct coverage for layer framebuffer output.
+- `make verify-fe-theme-assets` regenerated final and layer framebuffers.
+- `make fe-bg-viewer-3ds` rebuilt after clearing stale pre-move dependencies.
+- Azahar SDMC contains 24 layer framebuffer files.
+Expected:
+- Manual viewer testing can now inspect each theme as background-only, then
+  legend/chrome, then font.
+Result: launch only; pending manual layer visual acceptance
+Notes:
+- Main app FE themes still use the final framebuffer filenames; layer files are
+  for the isolated viewer.
+
+## 2026-06-05 - FE Card Layer Viewer Relaunch
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_fe_theme_assets.py`
+- `make test-tools`
+- `make verify-fe-theme-assets`
+- `make test-host`
+- `make -C app-3ds`
+- `make fe-bg-viewer-3ds`
+- `make run-emulator-fe-bg-viewer`
+Steps:
+- Replaced the subdued legend/chrome layer with a generated FE-style
+  red/orange flashcard card layer.
+- Used Sokaballa's battle-screen art as the card palette source and the local
+  FE7-FE8 Checkmate OTF for baked card labels/title when `hb-view` is
+  available.
+- Let FE themes draw bright review text over the baked card while Plain keeps
+  the original protected black-on-white paper card.
+- Installed the regenerated viewer/app theme assets into Azahar SDMC and opened
+  the layer viewer.
+Observed:
+- Tool and host tests passed after the card/font changes.
+- App and viewer 3DSX builds passed.
+- Regenerated framebuffers passed exact-size checks with no all-black outer
+  edges.
+- Azahar SDMC contains 8 `card` layer framebuffer files, one per theme/screen.
+Expected:
+- Manual viewer testing can now inspect each theme as background-only, then
+  card, then font.
+Result: launch only; pending manual card visual acceptance
+Notes:
+- The baked FE font currently covers fixed labels/title only; full flashcard
+  body text still uses console rendering.
+
+## 2026-06-05 - M7 Readiness Docs And Preflight
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_app_theme.py tests/test_verify_m7_artifacts.py tests/test_verify_text_deck.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Updated top-level README current-status wording to match the current
+  Plain-first five-theme cycle and FE red/orange card-panel behavior.
+- Added the FE background viewer targets to the testing command list and
+  documented their Background/Card/Font render-check role.
+- Removed stale architecture wording that described only paper-card trim and
+  black card text.
+- Ran the full non-launching M7 preflight after the docs sync.
+Observed:
+- Focused verifier tests passed.
+- `make test-tools` passed.
+- `make verify-m7-preflight` passed, including host C tests, converter tests,
+  verifier-tool tests, sample-deck verification, app build/package checks,
+  FE theme generation, local SD staging, package SD verification, fresh Azahar
+  sample staging, and Azahar control-profile verification.
+Expected:
+- The next manual emulator or hardware pass can follow current docs without
+  conflicting theme/card instructions.
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- Azahar fresh samples were staged by the preflight; the emulator was not
+  launched by this target.
+
+## 2026-06-05 - M7 Exact Settings Verifier Requirement
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so it fails unless exact
+  `--expect-settings deck_id:new_limit:review_limit` values are supplied.
+- Added focused coverage for the missing-expectations failure.
+- Updated the M7 checkpoint, testing, and device-test docs to call out that
+  `M7_EXPECT_SETTINGS` is required for post-run acceptance.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks can no longer pass daily-limit acceptance with only
+  a generic `settings_saved_count`; they must prove the exact saved limits.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens the post-run proof gate. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - M7 Expanded Physical-Key Safety Coverage
+
+Build: local working tree
+Commands:
+- `cc -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3ds/include -D__3DS__ -Itests/stubs tests/test_app_controls_3ds_keys.c app-3ds/source/app_controls.c -o /tmp/anki3ds-test-app-controls-3ds-keys`
+- `/tmp/anki3ds-test-app-controls-3ds-keys`
+- `make test-host`
+Steps:
+- Extended the direct 3DS-key regression test beyond ratings, exit, and reset.
+- Added translated-key coverage for `KEY_SELECT` opening review actions,
+  `KEY_L` undo gating, `KEY_R` suspend confirmation opening, action choose and
+  cancel keys, daily-limit save and cancel keys, and suspend/restore
+  confirmation keys.
+- Added mixed-command/navigation/face-button chord checks for those flows so
+  noisy physical input maps to `APP_CONTROL_ACTION_NONE`.
+Observed:
+- The direct 3DS-key test compiled and passed.
+- `make test-host` passed, including deck/scheduler, diagnostics, and the
+  expanded 3DS-key input suite.
+Expected:
+- Future key-map changes should fail host tests if actions, settings, undo,
+  suspend, or restore start accepting noisy multi-button input.
+Result: pass for automated key-safety coverage only; pending manual M7 interaction acceptance
+Notes:
+- This remains automated coverage of the classifier and translated 3DS key
+  path. Manual emulator or hardware testing is still required for the full M7
+  study session.
+
+## 2026-06-05 - M7 Post-Key-Coverage Preflight
+
+Build: local working tree
+Commands:
+- `make verify-m7-preflight`
+Steps:
+- Ran the full M7 preflight after expanding the translated 3DS physical-key
+  safety tests for actions, settings, undo, suspend, and restore.
+Observed:
+- Host C tests passed, including deck/scheduler, diagnostics, and the expanded
+  3DS-key input suite.
+- Converter, text-deck verifier, Azahar-control verifier, app-theme verifier,
+  M7 artifact verifier, and FE theme asset tests passed.
+- Tracked sample decks verified from source, local SD, packaged SD, and Azahar
+  SDMC.
+- The app package was current, FE theme framebuffers regenerated, and Azahar
+  controls matched the documented anki3ds keyboard profile.
+Expected:
+- Azahar SDMC is freshly staged for the manual M7 interaction pass with
+  `limits-demo` and `sample`, tracked sample progress cleared, and root
+  `session.tsv` diagnostics cleared.
+Result: pass for automated preflight only; pending manual M7 interaction acceptance
+Notes:
+- This does not prove the full M7 acceptance checklist. The next proof step is
+  manual emulator or hardware study, followed by `make verify-m7-artifacts`
+  with exact `M7_EXPECT_SETTINGS` and any reset/log-skipped allowances matching
+  the pass.
+
+## 2026-06-05 - M7 Fresh Azahar Manual-Pass Launch
+
+Build: local working tree
+Commands:
+- `make run-emulator-fresh-samples`
+- `osascript -e 'application "Azahar" is running'`
+- `pgrep -fl Azahar`
+- `sed -n '1,120p' "/Users/eric/Library/Application Support/Azahar/sdmc/3ds/anki3ds/session.tsv"`
+- `find "/Users/eric/Library/Application Support/Azahar/sdmc/3ds/anki3ds/decks" -maxdepth 2 -type f \( -name 'state.tsv' -o -name 'review-log.tsv' -o -name 'settings.tsv' \) | sort`
+Steps:
+- Staged fresh tracked `limits-demo` and `sample` decks into Azahar SDMC.
+- Cleared tracked sample progress files and root session diagnostics before
+  launch.
+- Regenerated and installed FE theme framebuffers.
+- Opened the current `app-3ds/anki3ds.3dsx` in Azahar.
+Observed:
+- Azahar was running after launch.
+- Root `session.tsv` was freshly created with `launch_count=1`,
+  `scan_completed=1`, `deck_count=2`, `deck_open_count=0`, and
+  `last_event=scan`.
+- Only `settings.tsv` files existed under the tested sample deck directories;
+  no `state.tsv` or `review-log.tsv` progress files were present yet.
+- System Events window inspection was blocked by macOS assistive-access
+  permissions, so process state and SDMC diagnostics are the launch evidence.
+Expected:
+- The emulator is ready for the manual M7 study-session pass from a clean
+  sample state.
+Result: launch ready for manual M7 interaction acceptance
+Notes:
+- This is launch evidence only. The full M7 gate still requires completing the
+  manual study flow, exiting through confirmation, and running
+  `make verify-m7-artifacts` with exact settings expectations and any reset or
+  log-skipped allowances from the actual pass.
+
+## 2026-06-05 - FE Viewer Legend Layer Checkpoint
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_fe_theme_assets.py`
+- `make verify-fe-theme-assets`
+- `make -C tools/fe-bg-viewer-3ds`
+- `make run-emulator-fe-bg-viewer`
+Steps:
+- Split the generated FE viewer composition into four layers: background,
+  legend, card, and font.
+- Added `legend` layer framebuffers for top and bottom screens before any
+  Anki-specific integration work.
+- Moved the bottom-screen icon strip into the legend layer; the final font
+  layer now only adds baked labels/title.
+Observed:
+- FE asset tests passed.
+- FE asset generation produced eight `*_layer_legend_*_bgr888_fb.bin` files.
+- Azahar launched the standalone FE background viewer with refreshed layer
+  assets installed to SDMC.
+Expected:
+- In the viewer, first screen is background; pressing Down once shows the
+  legend layer, Down again shows card, Down again shows font.
+Result: pass for isolated legend layer; user confirmed the legend is visible in Azahar
+
+## 2026-06-05 - M7 Review Screen Evidence Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so rating-required passes must
+  have root `session.tsv` review-screen evidence.
+- Added focused verifier coverage for `rating` evidence with
+  `review_screen_count=0`.
+- Updated checkpoint/device-test docs to make review-screen diagnostics part
+  of the expected root session proof.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed, including the expanded M7 artifact suite.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks can no longer pass a rating-required session whose
+  root diagnostics never prove that the app entered a review screen.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens post-run workflow proof. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - M7 Session And Review-Log Action Consistency Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so positive saved-action session
+  counters must have matching review-log events in non-reset, non-log-skipped
+  study passes.
+- Preserved the explicit `log skipped` allowance and reset-deck exception,
+  because those flows can intentionally leave saved-action counters without
+  retained review-log rows.
+- Added focused verifier coverage for `rating_saved_count` without a matching
+  review-log `rating` event.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed, including the expanded M7 artifact suite and the
+  existing reset/log-skipped acceptance cases.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks can no longer pass a normal study run where root
+  session diagnostics claim saved actions that are absent from retained
+  review logs.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens post-run workflow proof. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - M7 Session Chronology Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so root `session.tsv` rejects
+  backward session chronology: `updated_at < started_at` or
+  `current_day < started_day`.
+- Added focused verifier coverage for both backward timestamp and backward day
+  diagnostics.
+- Updated checkpoint/device-test docs to require monotonic session time/day
+  fields in root session diagnostics.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed, including the expanded M7 artifact suite.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks can no longer pass root session diagnostics whose
+  time/day fields contradict a forward-moving daily-use pass.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens post-run workflow proof. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - M7 Deck-Open Counter Consistency Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so root `session.tsv` rejects
+  impossible deck-open outcome counters.
+- Added focused verifier coverage for a session where review/summary/load-error
+  outcome counters exceed `deck_open_count`.
+- Updated checkpoint/device-test docs to require internally consistent
+  deck-open outcome counters in root session diagnostics.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed, including the expanded M7 artifact suite.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks can no longer pass a root session whose deck-open
+  outcome counters could not have been produced by the app's one-outcome-per-open
+  diagnostics path.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens post-run workflow proof. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - M7 PTMU Init Retry Policy
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `make test`
+- `make verify-m7-preflight`
+- `make test-tools`
+- `make -C app-3ds`
+- `make verify-m7-preflight`
+Steps:
+- Changed battery-poll scheduling so `APP_POWER_BATTERY_SAMPLE_UNAVAILABLE`
+  uses the short retry interval, matching transient PTMU read failures.
+- Added host coverage proving unavailable PTMU service retries on the short
+  interval and retries as soon as the system clock becomes available.
+- Updated architecture docs so startup PTMU initialization failures no longer
+  describe the old ten-minute retry cadence.
+Observed:
+- `make test-host` passed, including the updated battery retry policy.
+- `make test-tools` passed.
+- `make -C app-3ds` rebuilt `anki3ds.3dsx`.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- A transient PTMU initialization failure should leave the UI battery line as
+  unavailable briefly, then retry after the short battery retry interval instead
+  of waiting for the full ten-minute poll.
+Result: pass for automated power/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- Battery sampling remains coarse and scheduled; this does not add battery
+  service calls to per-button input handling.
+
+## 2026-06-05 - M7 3DS Key Chord Safety Coverage
+
+Build: local working tree
+Commands:
+- `cc -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Iapp-3ds/include -D__3DS__ -Itests/stubs tests/test_app_controls_3ds_keys.c app-3ds/source/app_controls.c -o /tmp/anki3ds-test-app-controls-3ds-keys`
+- `/tmp/anki3ds-test-app-controls-3ds-keys`
+- `make test-host`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Added 3DS-key regression coverage for `KEY_START` opening the exit
+  confirmation only when pressed alone.
+- Added 3DS-key regression coverage for exit and reset confirmation chords, so
+  `KEY_A` or `KEY_X` combined with cancel/navigation/START inputs does not
+  confirm a modal action.
+Observed:
+- The direct 3DS-key test compiled and passed.
+- `make test-host` passed, including deck/scheduler, diagnostics, and 3DS-key
+  input tests.
+- `make test-tools` passed.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Future key-map changes should fail host tests if START, reset, or exit
+  confirmation starts accepting noisy multi-button input.
+Result: pass for automated key/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- Runtime input behavior was already chord-gated; this pass added
+  physical-key regression coverage for the M7 safety path.
+
+## 2026-06-05 - M7 Confirmed Exit Terminal Event Guard
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_m7_artifacts.py tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `make test-tools`
+- `make verify-m7-preflight`
+Steps:
+- Tightened the post-run M7 artifact verifier so root `session.tsv` must end
+  with `last_event=exit_confirmed`, not merely contain a historical
+  `exit_confirmed=1` flag.
+- Added focused verifier coverage for sessions that save daily-use evidence
+  but are last updated by another event such as `rating_saved`.
+- Updated the M7 checklist docs to tell manual testers to use the confirm-exit
+  flow after the final checked action.
+Observed:
+- Focused verifier compile and unit tests passed.
+- `make test-tools` passed, including text-deck, Azahar-control, app-theme,
+  M7-artifact, and FE-theme asset verifier suites.
+- `make verify-m7-preflight` passed and staged fresh tracked samples into
+  Azahar SDMC.
+Expected:
+- Manual M7 artifact checks now fail if a run has save evidence but does not
+  finish through the confirmed-exit path.
+Result: pass for automated verifier/preflight only; pending manual M7 interaction acceptance
+Notes:
+- This strengthens the post-run proof gate. It does not replace the manual
+  study-session pass.
+
+## 2026-06-05 - Plain Startup Restored After FE Color Regression
+
+Build: local working tree
+Commands:
+- `make test-tools`
+- `make -C app-3ds`
+- `make run-emulator-fresh-samples`
+- `make verify-m7-preflight`
+Steps:
+- Restored startup to the `Plain` theme so the app no longer boots directly
+  into the experimental FE framebuffer compositor when FE assets are installed.
+- Kept FE themes available through the Help-screen `X` cycle.
+- Updated the app-theme verifier to reject future FE-first startup behavior.
+- Relaunched Azahar with fresh tracked sample decks and a cleared root
+  `session.tsv`.
+Observed:
+- Azahar relaunched and wrote a fresh session with `launch_count=1`,
+  `scan_completed=1`, `deck_count=2`, `deck_open_count=0`, and
+  `last_event=scan`.
+- The fresh SDMC sample decks contained only `settings.tsv`, with no
+  `state.tsv` or `review-log.tsv` yet.
+- Manual visual check from the emulator confirmed the deck selector had no FE
+  colors after relaunch.
+Expected:
+- Daily-use startup remains the stable black-console Plain UI.
+- FE backgrounds/card/legend/font work should stay opt-in or isolated until the
+  color/composition path is fixed.
+Result: pass for Plain startup regression coverage; pending manual M7 interaction acceptance
+Notes:
+- This intentionally pauses automatic FE-theme startup. It does not remove the
+  FE asset pipeline or Help-screen theme cycle.
+
+## 2026-06-06 - Opaque Citro2D Renderer Boundary Preflight
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `python3 tools/verify_app_theme.py`
+- `make test`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Steps:
+- Moved the active Citro2D FE renderer into `app_renderer_c2d.{h,c}` behind an
+  opaque stack-allocatable public handle.
+- Kept `main.c` on app state/input/persistence/screen-model construction and
+  removed direct Citro2D types, calls, and renderer geometry constants from it.
+- Hardened `tools/verify_app_theme.py` so the renderer can own Citro2D while
+  rejecting direct Citro2D in `main.c`, Citro2D leakage from the renderer
+  public header, renderer/backend reach-through, and missing display/status
+  text draws.
+Observed:
+- The app-theme verifier suite passed with 46 tests.
+- The direct app build passed.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- Fresh sessions should render through the clean FE shell path:
+  `main.c -> app_screen_model_build() -> app_renderer_c2d_draw()`.
+Result: pass for automated renderer-boundary/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not launch Azahar or verify live readability/layout in the emulator.
+
+## 2026-06-06 - M7 Smoke Blocked By Accessibility; Exit Confirm Aligned
+
+Build: local working tree
+Commands:
+- `make run-emulator-m7-smoke`
+- `make test-host`
+- `make -C app-3ds`
+- `git diff --check`
+- `make verify-m7-preflight`
+Steps:
+- Tried the deterministic Azahar M7 smoke driver after the renderer-boundary
+  preflight.
+- The driver stopped at its macOS Automation/Accessibility precheck before
+  launching Azahar because `osascript` could not send keystrokes.
+- Audited the smoke key sequence against current confirmation handling and
+  found the driver/checkpoints use `A` to confirm exit while the clean-shell
+  reducer and prompt still required `X`.
+- Changed exit confirmation to accept `A`, kept `X` as the confirm key for
+  suspend/restore/reset, and updated focused reducer/prompt tests plus control
+  docs.
+Observed:
+- `make run-emulator-m7-smoke` failed before app launch with:
+  `macOS denied osascript keystrokes`.
+- `make test-host` passed after the exit-confirm correction.
+- The direct app build passed.
+- `make verify-m7-preflight` passed and restaged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- Once Accessibility permission is granted to the terminal/Codex host, the
+  smoke driver should be able to press `A` on exit confirmation and continue to
+  the artifact verifier instead of hanging on the exit prompt.
+Result: pass for automated build/preflight coverage; emulator smoke blocked by local Accessibility permission before launch
+Notes:
+- This was not a manual M7 acceptance pass.
+
+## 2026-06-06 - Warning Context Status Preflight
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `make -C app-3ds`
+- `make test`
+- `python3 tools/verify_app_theme.py`
+- `git diff --check`
+- `make verify-m7-preflight`
+Steps:
+- Added `app_status_text_copy_with_warning_context()` for preserving warning
+  status segments such as `Settings ignored`, daily-limit exhaustion, and
+  `; batt low` across successful workflow feedback.
+- Wired the helper into the clean-shell app paths for review reveal/rating/undo,
+  suspend/restore/reset, daily-limit open/update/cancel/save, confirmation
+  cancel, and daily-limit-blocked feedback.
+- Kept save/session failure statuses as priority messages instead of appending
+  older warning context over them.
+Observed:
+- Focused host coverage for status text and workflow reducers passed.
+- `make test` passed.
+- The app-theme verifier passed.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- Manual/emulator review flows should keep active warning context visible after
+  benign feedback, while still surfacing save or session write failures plainly.
+Result: pass for automated status-context/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not launch Azahar because the smoke driver remains blocked by local
+  Accessibility permission until the terminal/Codex host can send keystrokes.
+
+## 2026-06-06 - Parallel Renderer Readability And Contract Preflight
+
+Build: local working tree
+Commands:
+- `python3 -m py_compile tools/verify_app_theme.py`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Dispatched two parallel agents with disjoint scopes: one audited the
+  renderer/backend contract and verifier coverage, and one worked only on FE
+  renderer readability.
+- Kept backend/deck/learning code out of the renderer pass.
+- Added a thin Citro2D inset trim over the parchment, darker/thicker ink text,
+  larger text scales, and tighter 31x4 review body wrapping.
+- Expanded the app-theme verifier coverage to guard public-header Citro2D
+  leaks, non-renderer draw APIs, backend display-contract/geometry coupling,
+  and renderer backend forward declarations.
+Observed:
+- `python3 tools/verify_app_theme.py` passed in the main workspace.
+- `make test` passed, including 50 app-theme verifier tests.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- The active FE shell should now be more readable in Azahar while preserving
+  the clean contract: renderer consumes strings/screen model only; backend does
+  not draw.
+Result: pass for automated renderer-readability/contract/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- Azahar was not launched here. The deterministic smoke run still requires
+  macOS Accessibility permission for the terminal/Codex host.
+
+## 2026-06-06 - Fresh Samples Launched For Manual FE Readability Check
+
+Build: local working tree after renderer readability and contract-verifier pass
+Commands:
+- `make run-emulator-fresh-samples`
+- `osascript -e 'application "Azahar" is running'`
+Steps:
+- Staged fresh tracked `limits-demo` and `sample` decks into Azahar SDMC.
+- Reinstalled current FE theme assets.
+- Launched Azahar with `app-3ds/anki3ds.3dsx`.
+Observed:
+- `make run-emulator-fresh-samples` completed with exit code 0.
+- Azahar was running after launch.
+Expected:
+- The emulator is ready for manual inspection of the current Forest FE
+  background, parchment inset trim, and thicker readable Citro2D text.
+Result: launched for manual visual acceptance; automated preflight already passed
+Notes:
+- This is not a completed M7 smoke or artifact acceptance pass.
+
+## 2026-06-06 - Deck Selector Geometry Contract Cleanup
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Removed `APP_DECK_SELECT_VISIBLE_ROWS` from the public deck-selector display
+  contract header.
+- Kept deck-selector list windowing private to `app_deck_select_contract.c`.
+- Kept deck-selector paging private to `app_deck_select_action.c`, so `main.c`
+  no longer passes a view row count into the action reducer.
+- Added an app-theme verifier regression that rejects public non-renderer
+  `APP_*VISIBLE_ROWS`-style display geometry constants.
+Observed:
+- Focused host tests and the direct app build passed.
+- The app-theme verifier suite passed with 51 tests.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- The display/backend boundary is tighter: public app display contracts expose
+  strings/state, not renderer/list geometry.
+Result: pass for automated contract/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not perform a new manual emulator acceptance pass.
+
+## 2026-06-06 - Suspend Restore No-Op Feedback Preflight
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Added `app_review_action_suspend_restore_target()` so the direct `R`
+  suspend/restore command is classified in a host-tested app-shell helper.
+- Kept active-card `R` opening suspend confirmation and completed-with-
+  suspended `R` opening restore confirmation.
+- Added visible no-op feedback for completed decks with no suspended cards:
+  `Nothing suspended`, preserving any active warning context through the
+  existing status helper.
+- Updated current controls and M7 checklist docs away from the stale actions-
+  screen wording for suspend/restore and daily-limit edits.
+Observed:
+- Focused host tests passed.
+- The direct app build passed.
+- The app-theme verifier and full test suite passed.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- During manual M7, pressing `R` on a completed deck with no suspended cards
+  should visibly report `Nothing suspended` instead of silently doing nothing.
+Result: pass for automated workflow/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not launch or drive Azahar.
+
+## 2026-06-06 - Undo No-Op Feedback Preflight
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `python3 tools/verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Added `app_review_action_undo_target()` so the direct `L` undo command has a
+  host-tested app-shell target classifier.
+- Kept real undo behavior unchanged when `undo_available` is true.
+- Added visible no-op feedback when a deck has no undo history:
+  `Nothing to undo`, preserving any active warning context through the existing
+  status helper.
+- Documented the no-op `L` behavior in the control map.
+Observed:
+- Focused host tests passed.
+- The direct app build passed.
+- The app-theme verifier and full test suite passed.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- During manual M7, pressing `L` when no undo is available should visibly
+  report `Nothing to undo` instead of silently doing nothing.
+Result: pass for automated workflow/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not launch or drive Azahar.
+
+## 2026-06-06 - Held Input Safety And Repeat Preflight
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `python3 tools/verify_app_theme.py`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make -C app-3ds`
+- `git diff --check`
+- `make test`
+- `make verify-m7-preflight`
+Steps:
+- Split clean-shell input handling into key-down and key-held logical button
+  snapshots in `main.c`.
+- Added chord-safe held context so a command pressed while another button is
+  held, such as `A` while holding Down, reaches reducers as a mixed chord and
+  is ignored.
+- Added pure frame-counted navigation repeat in `study_controls`: deck select
+  repeats Up/Down/Left/Right, review repeats Up/Down scroll, settings repeats
+  Left/Right value changes, and confirmation screens do not repeat.
+- Kept held navigation on one-VBlank waits so repeat input does not sit behind
+  the adaptive idle backoff.
+Observed:
+- Focused host controls and full host/tool/converter tests passed.
+- The app-theme verifier suite passed with 51 tests.
+- The direct app build passed.
+- `make verify-m7-preflight` passed and staged fresh tracked
+  `limits-demo`/`sample` decks, the current app, and FE assets into local,
+  package, and Azahar SDMC roots.
+Expected:
+- During manual M7, holding a pure navigation direction should repeat only on
+  the documented axes, while command/navigation/face-button chords should
+  remain inert even when the command is pressed after the navigation hold.
+Result: pass for automated workflow/preflight coverage only; pending manual M7 interaction acceptance
+Notes:
+- This did not launch or drive Azahar.
+
+## 2026-06-06 - Fresh Samples Launched After Manual-Checklist Cleanup
+
+Build: local working tree
+Commands:
+- `git diff --check`
+- `python3 tools/verify_app_theme.py`
+- `make verify-m7-preflight`
+- `make run-emulator-fresh-samples`
+- `osascript -e 'application "Azahar" is running'`
+- `pgrep -fl Azahar`
+Steps:
+- Updated README, checkpoint, emulator checklist, hardware checklist, and
+  handoff wording away from the removed actions/help/theme-cycle surfaces.
+- Restaged fresh tracked `limits-demo` and `sample` decks into Azahar SDMC.
+- Reinstalled current FE theme assets.
+- Launched Azahar with the current `app-3ds/anki3ds.3dsx`.
+Observed:
+- `git diff --check` passed.
+- `python3 tools/verify_app_theme.py` passed.
+- `make verify-m7-preflight` passed and restaged local/package/Azahar payloads.
+- `make run-emulator-fresh-samples` completed with exit code 0.
+- `osascript` reported Azahar is running, and `pgrep` showed an Azahar process.
+- Immediately after launch, root `session.tsv` was not yet present in Azahar
+  SDMC, so this proves staging plus emulator launch only, not a completed app
+  scan or manual M7 acceptance pass.
+Expected:
+- The emulator window is ready for manual FE readability and M7 daily-use
+  inspection with current direct controls.
+Result: launched for manual visual/workflow acceptance; automated preflight passed
+Notes:
+- Manual interaction and post-run `make verify-m7-artifacts` remain pending.
+
+## 2026-06-06 - Fresh Samples First-Scan Session Save Fixed
+
+Build: local working tree
+Commands:
+- `make test-host`
+- `python3 tools/verify_app_theme.py`
+- `git diff --check`
+- `make -C app-3ds`
+- `make run-emulator-fresh-samples`
+- `sed -n '1,120p' "/Users/eric/Library/Application Support/Azahar/sdmc/3ds/anki3ds/session.tsv"`
+- `tail -n 35 "/Users/eric/Library/Application Support/Azahar/log/azahar_log.txt"`
+Steps:
+- Removed the implicit review title/header draw from the FE top-screen card
+  surface and moved review body text up into the freed parchment area.
+- Kept the expanded parchment panels but pulled the visible inner readability
+  frame safely inside the parchment edge.
+- Hardened first-save persistence for `session.tsv`, deck `state.tsv`,
+  `settings.tsv`, and `review-log.tsv` so missing primary files are not renamed
+  to `.bak` on a clean first write.
+- Skipped missing-backup cleanup before `remove()` to avoid noisy Azahar SDMC
+  log lines on clean launches.
+- Restaged fresh tracked `limits-demo` and `sample` decks, FE assets, and the
+  rebuilt 3DSX into Azahar SDMC, then launched Azahar.
+Observed:
+- `make test-host` passed after the persistence changes.
+- `python3 tools/verify_app_theme.py` passed after the renderer spacing/header
+  update.
+- `git diff --check` passed.
+- `make -C app-3ds` rebuilt `anki3ds.3dsx`.
+- Fresh Azahar launch wrote root `session.tsv` immediately after scan:
+  `launch_count=1`, `scan_completed=1`, `deck_count=2`, `ignored_count=0`,
+  `deck_open_count=0`, `last_deck_id=-`, and `last_event=scan`.
+- The fresh Azahar log tail no longer included the previous missing
+  `session.tsv.bak` cleanup error.
+Expected:
+- Manual FE readability and M7 daily-use testing can now start from a clean
+  sample launch with root session evidence already persisted.
+Result: pass for first-scan persistence and emulator launch evidence; pending manual M7 interaction acceptance
+Notes:
+- Manual interaction and post-run `make verify-m7-artifacts` remain pending.
+
+## 2026-06-06 - Legend Toggle And Font Contract Docs
+
+Build: local working tree
+Commands:
+- `git diff --check`
+- `python3 tools/verify_app_theme.py`
+- `python3 -m unittest tests/test_verify_app_theme.py`
+- `make test-host`
+- `make -C app-3ds`
+- `make test`
+Steps:
+- Documented the current `B` behavior: compact/detailed help toggle on deck
+  select and unrevealed/no-active review screens, Easy rating after reveal,
+  and cancel on settings/confirmation screens.
+- Documented that all live app text is currently drawn by the Citro2D renderer
+  at one shared scale, using the shared/system font path.
+- Clarified that Hack Nerd Font Mono, Checkmate, Emporio, and the FE8 glyph
+  map are available font sources but require a renderer-side bitmap/sprite
+  font path before they can replace live Citro2D text in the 3DS app.
+- Updated testing docs for compact/expanded legend contract coverage and the
+  current renderer/backend split invariant.
+Observed:
+- `git diff --check` passed.
+- `python3 tools/verify_app_theme.py` passed.
+- `python3 -m unittest tests/test_verify_app_theme.py` ran 51 tests and passed.
+- `make test-host` passed all host C tests, including flashcard/deck selector
+  contracts, screen-model handoff, key mapping, battery status, session
+  persistence, and clean-shell daily-use coverage.
+- `make -C app-3ds` reported the current `anki3ds.3dsx` target up to date.
+- `make test` passed host C, converter, text-deck verifier, Azahar controls,
+  app-theme verifier, M7 artifact verifier, smoke-driver, and FE-theme asset
+  tests.
+Expected:
+- The current checkpoint should have one live text style and a documented,
+  test-covered legend toggle without reintroducing backend drawing.
+Result: pass for automated contract/build coverage; pending manual Azahar
+readability and M7 interaction acceptance
+Notes:
+- This did not relaunch Azahar or reset the existing emulator SDMC state.
+
+## 2026-06-06 - Direct-Control M7 Smoke Driver Updated
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_drive_azahar_m7_smoke.py`
+- `make drive-azahar-m7-smoke-dry-run`
+- `python3 tools/verify_text_deck.py sample-decks/limits-demo`
+- `make run-emulator-m7-smoke`
+- `make test-tools`
+- `make verify-sample-decks`
+- `git diff --check`
+- `make verify-m7-preflight`
+- `osascript -e 'tell application "Azahar" to quit'`
+- `kill 67569`
+- `kill 60875`
+- `kill -9 60875`
+- `make run-emulator-fresh-samples`
+- `sed -n '1,120p' "/Users/eric/Library/Application Support/Azahar/sdmc/3ds/anki3ds/session.tsv"`
+Steps:
+- Updated the deterministic M7 smoke driver away from the removed actions
+  screen. It now uses direct controls: `X` opens/saves daily limits, `A`
+  reveals and rates Good, `L` undoes, `R` then `X` suspends each active card,
+  `R` then `X` restores from the no-active suspended summary, and `START` then
+  `A` confirms exit.
+- Reopened `limits-demo` after the relaunch before final exit so
+  `session.tsv` can end with `last_event=exit_confirmed` and
+  `last_deck_id=limits-demo`, matching the M7 artifact verifier contract.
+- Added regression coverage that the smoke driver no longer uses `SELECT` for
+  deleted deck actions and saves daily limits with `X`.
+- Corrected the `limits-demo` sample card that still taught `SELECT` as
+  opening deck actions; it now describes returning to the deck list.
+- Tried the full smoke target after the driver fix.
+- Restaged a fresh Azahar sample launch after the smoke automation precheck
+  failed, so manual testing can start from the current build and current sample
+  decks.
+Observed:
+- Focused smoke-driver tests passed.
+- The dry run now prints a 32-step direct-control sequence ending with reopen
+  of `limits-demo`, final exit confirmation, and
+  `make verify-azahar-m7-smoke-artifacts`.
+- `sample-decks/limits-demo` and both tracked sample decks verified.
+- `make run-emulator-m7-smoke` stopped before launch/input at the macOS
+  Accessibility precheck:
+  `macOS denied osascript keystrokes`.
+- `make test-tools`, `git diff --check`, and `make verify-m7-preflight`
+  passed after the driver/sample update.
+- A graceful AppleScript quit of the already-running Azahar process hung; the
+  helper `osascript` was killed, then the old Azahar process was terminated
+  and finally SIGKILLed before relaunch.
+- `make run-emulator-fresh-samples` completed and launched Azahar process
+  `68581`.
+- Fresh root `session.tsv` after relaunch showed `launch_count=1`,
+  `scan_completed=1`, `deck_count=2`, `ignored_count=0`,
+  `deck_open_count=0`, `exit_confirmed=0`, `last_deck_id=-`, and
+  `last_event=scan`.
+Expected:
+- Once macOS Accessibility permission is available to the terminal/Codex host,
+  `make run-emulator-m7-smoke` should drive the current direct-control app
+  instead of following the deleted actions UI.
+Result: pass for updated driver/preflight/fresh-launch evidence; automated
+smoke execution remains blocked by local macOS Accessibility permission before
+input
+Notes:
+- Visual screenshot capture still needs manual help or working window
+  inspection permissions; activating Azahar showed the menu bar active, but
+  screen capture did not include a visible emulator window in this run.
+- After continuing from the interrupted turn, `pgrep -fl Azahar` and
+  `pgrep -fl osascript` returned no processes. The fresh `session.tsv` scan
+  evidence remains on disk, but no emulator window should be assumed open.
+
+## 2026-06-06 - Review UI Layout Fresh Azahar Launch
+
+Build: local working tree
+Commands:
+- `make run-emulator-fresh-samples`
+- `sed -n '1,80p' "$AZAHAR_SDMC/3ds/anki3ds/renderer.tsv"`
+- `sed -n '1,120p' "$AZAHAR_SDMC/3ds/anki3ds/session.tsv"`
+Steps:
+- Restaged fresh sample decks, rebuilt/installed current FE assets as needed,
+  and launched the rebuilt `app-3ds/anki3ds.3dsx` in Azahar.
+- Checked the runtime renderer fingerprint and root session diagnostics from
+  Azahar SDMC.
+Observed:
+- Azahar process was running after launch.
+- `renderer.tsv` was written at 2026-06-06 23:03 EDT.
+- Runtime renderer fingerprint showed `renderer=citro2d`,
+  `assets_loaded=1`, `review_front_window=40 7`,
+  `review_answer_window=31 6`, and
+  `review_bottom_answer x=34 y=72 scale=0.50 wrap=0`.
+- Fresh root `session.tsv` showed `launch_count=1`, `scan_completed=1`,
+  `deck_count=2`, `ignored_count=0`, `deck_open_count=0`, and
+  `last_event=scan`.
+Expected:
+- The running Azahar build is the current Citro2D renderer with the new
+  top-front/bottom-answer review layout and hidden default deck controls.
+Result: pass for rebuilt-runtime fingerprint evidence; manual visual
+acceptance of the new review layout remains pending
+Notes:
+- This does not prove final readability or physical 3DS behavior. It proves
+  Azahar executed the rebuilt renderer and not a stale binary.
+
+## 2026-06-06 - Direct-Control Smoke Artifact Shape Test
+
+Build: local working tree
+Commands:
+- `python3 -m unittest tests/test_verify_m7_artifacts.py`
+- `python3 -m unittest tests/test_drive_azahar_m7_smoke.py`
+- `git diff --check`
+Steps:
+- Added a verifier-side compact artifact test for the updated direct-control
+  `limits-demo` smoke shape.
+- The synthetic artifact set uses the expected saved settings
+  `limits-demo:5:10`, required `rating`, `undo`, `suspend`, and `restore`
+  events, relaunch evidence, and final confirmed-exit evidence with
+  `last_deck_id=limits-demo`.
+Observed:
+- `tests/test_verify_m7_artifacts.py` now runs 36 tests and passed.
+- The smoke-driver planning tests still passed.
+- Whitespace check passed.
+Expected:
+- While macOS Accessibility blocks actual Azahar key driving, the post-run
+  artifact verifier still has a regression fixture for the exact direct-control
+  smoke evidence shape it should accept after a successful run.
+Result: pass for host artifact-verifier coverage; automated Azahar smoke input
+remains blocked by local Accessibility permission
+Notes:
+- This is not a substitute for manual/emulator interaction evidence; it only
+  tightens the artifact proof gate around the planned direct-control flow.
+
+## 2026-06-06 - Direct-Control Smoke Real-Module Host Test
+
+Build: local working tree
+Commands:
+- `make test-host`
+Steps:
+- Added `tests/test_m7_direct_smoke_flow.c` to the host C suite.
+- The test builds a temporary SDMC-shaped `limits-demo` deck, then drives the
+  planned direct-control smoke flow through real study modules:
+  save settings as `5` new and `10` review, reveal/rate Good, undo, reveal
+  again, suspend all six cards, restore them, save state/session/log artifacts,
+  relaunch from saved session/state, reopen `limits-demo`, and confirm exit.
+Observed:
+- `make test-host` passed with the new direct smoke integration executable.
+- `make test` passed, including host C, converter, app-theme, M7 artifact,
+  smoke-driver, and FE-theme asset tests.
+- `make verify-m7-preflight` passed and restaged fresh local/package/Azahar
+  sample decks, current app artifacts, FE assets, and Azahar controls.
+- The resulting assertions cover launch count, deck-open/review counters,
+  answer/rating/undo/suspend/restore/settings counters, final
+  `exit_confirmed`, final `last_deck_id=limits-demo`, saved settings,
+  compact state presence, and nine review-log rows.
+Expected:
+- The planned M7 smoke evidence is now covered at two host levels: a real C
+  module flow that writes artifacts, and a verifier-side compact artifact shape
+  accepted by `tools/verify_m7_artifacts.py`.
+Result: pass for host module integration coverage; automated Azahar smoke input
+remains blocked by local Accessibility permission
+Notes:
+- This still does not prove real emulator rendering/input; it narrows the gap
+  to the platform interaction layer and manual visual acceptance.

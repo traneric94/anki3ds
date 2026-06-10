@@ -12,5 +12,19 @@ size_t app_text_max_scroll_offset(
 	size_t max_columns,
 	size_t visible_rows
 );
+size_t app_text_copy_truncated_line(
+	const char *text,
+	size_t max_columns,
+	char *destination,
+	size_t destination_size
+);
+size_t app_text_copy_wrapped_window(
+	const char *text,
+	size_t max_columns,
+	size_t scroll_offset,
+	size_t visible_rows,
+	char *destination,
+	size_t destination_size
+);
 
 #endif

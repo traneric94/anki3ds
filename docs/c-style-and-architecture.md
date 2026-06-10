@@ -2,6 +2,8 @@
 
 This project should stay boring, explicit, and easy to debug on hardware.
 The 3DS app is a small utility, not a framework.
+For platform-loop, renderer, input, asset, and save fundamentals, read
+`docs/3ds-coding-fundamentals.md` first.
 
 ## Priorities
 

@@ -38,13 +38,21 @@ void app_power_schedule_next_battery_poll_after_sample(
 	enum app_power_battery_sample_result result
 );
 bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now);
-bool app_power_battery_sample_changes_display(enum app_power_battery_sample_result result);
+bool app_power_battery_sample_changes_display(
+	enum app_power_battery_sample_result result
+);
 enum app_power_battery_display_state app_power_battery_display_state(
 	bool status_available,
 	bool charging,
 	unsigned int level
 );
 bool app_power_battery_save_warning_needed(
+	bool status_available,
+	bool charging,
+	unsigned int level
+);
+bool app_power_battery_low_warning_due(
+	bool *announced,
 	bool status_available,
 	bool charging,
 	unsigned int level

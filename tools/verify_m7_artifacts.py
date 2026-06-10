@@ -21,7 +21,9 @@ DEFAULT_SDMC = Path(
 ).expanduser()
 DEFAULT_DECKS = ("limits-demo", "sample")
 DEFAULT_REQUIRED_EVENTS = ("rating", "undo", "suspend", "restore")
-SETTING_KEYS = frozenset(("new_limit", "review_limit"))
+REQUIRED_SETTING_KEYS = frozenset(("new_limit", "review_limit"))
+OPTIONAL_SETTING_KEYS = frozenset(("learning_mode",))
+SETTING_KEYS = REQUIRED_SETTING_KEYS | OPTIONAL_SETTING_KEYS
 VALID_STATE_RATINGS = frozenset(("0", "1", "2", "3"))
 VALID_REVIEW_LOG_EVENTS = frozenset(("rating", "suspend", "undo", "restore"))
 VALID_REVIEW_LOG_RATINGS = frozenset(("again", "hard", "good", "easy", "-"))
@@ -36,7 +38,34 @@ MAX_TIMESTAMP = 9223372036854775807
 STATE_HEADER = "#anki3ds-state-v1"
 STATE_FOOTER = "#anki3ds-state-complete"
 STATE_FIELD_COUNT = 10
+COMPACT_STATE_REQUIRED_KEYS = (
+    "version",
+    "card_count",
+    "current_index",
+    "reviewed_count",
+    "again_count",
+    "hard_count",
+    "good_count",
+    "easy_count",
+)
+COMPACT_STATE_OPTIONAL_KEYS = (
+    "progress_day",
+    "reviewed_today_count",
+    "introduced_count",
+    "introduced_today_count",
+    "completed_today_count",
+    "suspended_count",
+)
+COMPACT_STATE_REPEATED_KEYS = (
+    "introduced_index",
+    "schedule_index",
+    "schedule_due_day",
+    "schedule_interval_days",
+    "completed_today_index",
+    "suspended_index",
+)
 REVIEW_LOG_FIELD_COUNT = 21
+COMPACT_REVIEW_LOG_FIELD_COUNT = 6
 SESSION_HEADER = "#anki3ds-session-v1"
 SESSION_FOOTER = "#anki3ds-session-complete"
 VALID_SESSION_EVENTS = frozenset(
@@ -117,6 +146,7 @@ RESET_PROGRESS_FILES = (
     "review-log.tsv.tmp",
     "review-log.tsv.bak",
 )
+ExpectedSettings = tuple[str, int, int] | tuple[str, int, int, int | None]
 
 
 class DeckArtifacts:
@@ -126,13 +156,15 @@ class DeckArtifacts:
         card_ids: set[str],
         settings: dict[str, int],
         reviewed_or_suspended_count: int,
-        review_log_events: set[str],
+        state_progress_day: int | None,
+        review_log_event_counts: dict[str, int],
     ) -> None:
         self.deck_id = deck_id
         self.card_ids = card_ids
         self.settings = settings
         self.reviewed_or_suspended_count = reviewed_or_suspended_count
-        self.review_log_events = review_log_events
+        self.state_progress_day = state_progress_day
+        self.review_log_event_counts = review_log_event_counts
 
 
 def append_error(errors: list[str], path: Path, message: str) -> None:
@@ -294,10 +326,12 @@ def load_settings(deck_dir: Path, errors: list[str]) -> dict[str, int]:
             append_error(errors, path, f"line {line_number}: duplicate setting")
         elif value is None:
             append_error(errors, path, f"line {line_number}: bad setting value")
+        elif key == "learning_mode" and value > 1:
+            append_error(errors, path, f"line {line_number}: bad learning_mode")
         else:
             settings[key] = value
 
-    for key in sorted(SETTING_KEYS):
+    for key in sorted(REQUIRED_SETTING_KEYS):
         if key not in settings:
             append_error(errors, path, f"missing {key}")
 
@@ -311,21 +345,18 @@ def state_row_is_reviewed_or_suspended(fields: list[str]) -> bool:
     return (review_count is not None and review_count > 0) or suspended == "1"
 
 
-def load_state(
-    deck_dir: Path,
+def load_scheduler_state_rows(
+    path: Path,
+    rows: list[str],
     card_ids: set[str],
     errors: list[str],
-) -> int:
-    path = deck_dir / "state.tsv"
-    rows = read_required_rows(path, errors)
-    if rows is None:
-        return 0
+) -> tuple[int, int | None]:
     seen: set[str] = set()
     reviewed_or_suspended_count = 0
 
     if len(rows) < 2:
         append_error(errors, path, "must include header, rows, and footer")
-        return 0
+        return 0, None
 
     header = rows[0].split("\t")
     footer = rows[-1].split("\t")
@@ -382,7 +413,302 @@ def load_state(
     if reviewed_or_suspended_count == 0:
         append_error(errors, path, "no reviewed or suspended cards found")
 
-    return reviewed_or_suspended_count
+    return reviewed_or_suspended_count, None
+
+
+def load_compact_state_rows(
+    path: Path,
+    rows: list[str],
+    card_ids: set[str],
+    errors: list[str],
+) -> tuple[int, int | None]:
+    values: dict[str, int] = {}
+    introduced_indices: list[int] = []
+    schedule_indices: list[int] = []
+    schedule_due_days: list[int] = []
+    schedule_interval_days: list[int] = []
+    completed_today_indices: list[int] = []
+    suspended_indices: list[int] = []
+    allowed_single_keys = set(COMPACT_STATE_REQUIRED_KEYS) | set(
+        COMPACT_STATE_OPTIONAL_KEYS
+    )
+    allowed_repeated_keys = set(COMPACT_STATE_REPEATED_KEYS)
+
+    for line_number, row in enumerate(rows, start=1):
+        if row == "" or row.startswith("#"):
+            continue
+
+        fields = row.split("\t")
+        if len(fields) != 2:
+            append_error(errors, path, f"line {line_number}: expected 2 fields")
+            continue
+
+        key, value_text = fields
+        value = parse_unsigned(value_text, None)
+        if key in allowed_single_keys:
+            if key in values:
+                append_error(errors, path, f"line {line_number}: duplicate {key}")
+            elif value is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+            else:
+                values[key] = value
+        elif key in allowed_repeated_keys:
+            if value is None:
+                append_error(errors, path, f"line {line_number}: bad {key}")
+            elif key == "introduced_index":
+                introduced_indices.append(value)
+            elif key == "schedule_index":
+                schedule_indices.append(value)
+            elif key == "schedule_due_day":
+                schedule_due_days.append(value)
+            elif key == "schedule_interval_days":
+                schedule_interval_days.append(value)
+            elif key == "completed_today_index":
+                completed_today_indices.append(value)
+            else:
+                suspended_indices.append(value)
+        else:
+            append_error(errors, path, f"line {line_number}: unknown state key")
+
+    for key in COMPACT_STATE_REQUIRED_KEYS:
+        if key not in values:
+            append_error(errors, path, f"missing {key}")
+
+    version = values.get("version")
+    card_count = values.get("card_count")
+    current_index = values.get("current_index")
+    progress_day = values.get("progress_day")
+    reviewed_count = values.get("reviewed_count")
+    reviewed_today_count = values.get("reviewed_today_count")
+    introduced_count = values.get("introduced_count")
+    introduced_today_count = values.get("introduced_today_count")
+    completed_today_count = values.get("completed_today_count")
+    again_count = values.get("again_count")
+    hard_count = values.get("hard_count")
+    good_count = values.get("good_count")
+    easy_count = values.get("easy_count")
+    suspended_count = values.get("suspended_count")
+
+    if version is not None and version not in (1, 2):
+        append_error(errors, path, "bad compact state version")
+    if version == 1 and (
+        schedule_indices or schedule_due_days or schedule_interval_days
+    ):
+        append_error(errors, path, "compact state schedule requires version 2")
+    if card_count is not None and card_count != len(card_ids):
+        append_error(errors, path, "compact state card_count mismatch")
+    if (
+        card_count is not None
+        and current_index is not None
+        and current_index > card_count
+    ):
+        append_error(errors, path, "compact state current_index outside deck")
+    if progress_day is not None and progress_day > MAX_DAY:
+        append_error(errors, path, "compact state progress_day too high")
+    if reviewed_count is not None and reviewed_count > MAX_REVIEW_COUNT:
+        append_error(errors, path, "compact state reviewed_count too high")
+    if reviewed_today_count is not None:
+        if reviewed_today_count > MAX_REVIEW_COUNT:
+            append_error(errors, path, "compact state reviewed_today_count too high")
+        if reviewed_count is not None and reviewed_today_count > reviewed_count:
+            append_error(errors, path, "compact state reviewed_today_count above total")
+    if introduced_count is not None:
+        if card_count is not None and introduced_count > card_count:
+            append_error(errors, path, "compact state introduced_count outside deck")
+        if introduced_count != len(introduced_indices):
+            append_error(errors, path, "compact state introduced_count mismatch")
+    elif introduced_indices:
+        append_error(errors, path, "compact state introduced_index without count")
+
+    has_schedule_rows = (
+        bool(schedule_indices)
+        or bool(schedule_due_days)
+        or bool(schedule_interval_days)
+    )
+    if has_schedule_rows:
+        if introduced_count is None:
+            append_error(errors, path, "compact state schedule without introduced_count")
+        if not (
+            len(schedule_indices)
+            == len(schedule_due_days)
+            == len(schedule_interval_days)
+        ):
+            append_error(errors, path, "compact state schedule count mismatch")
+
+    if introduced_today_count is not None:
+        if card_count is not None and introduced_today_count > card_count:
+            append_error(
+                errors,
+                path,
+                "compact state introduced_today_count outside deck",
+            )
+        if introduced_count is not None and introduced_today_count > introduced_count:
+            append_error(
+                errors,
+                path,
+                "compact state introduced_today_count above total",
+            )
+
+    if completed_today_count is not None:
+        if introduced_count is None:
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_count without introduced_count",
+            )
+        if card_count is not None and completed_today_count > card_count:
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_count outside deck",
+            )
+        if completed_today_count != len(completed_today_indices):
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_count mismatch",
+            )
+        if introduced_count is not None and completed_today_count > introduced_count:
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_count above introduced",
+            )
+        if (
+            reviewed_today_count is not None
+            and completed_today_count > reviewed_today_count
+        ):
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_count above reviewed today",
+            )
+    elif completed_today_indices:
+        append_error(errors, path, "compact state completed_today_index without count")
+
+    if suspended_count is not None:
+        if card_count is not None and suspended_count > card_count:
+            append_error(errors, path, "compact state suspended_count outside deck")
+        if suspended_count != len(suspended_indices):
+            append_error(errors, path, "compact state suspended_count mismatch")
+    elif suspended_indices:
+        append_error(errors, path, "compact state suspended_index without count")
+
+    if reviewed_count is not None and None not in (
+        again_count,
+        hard_count,
+        good_count,
+        easy_count,
+    ):
+        rating_total = (
+            int(again_count)
+            + int(hard_count)
+            + int(good_count)
+            + int(easy_count)
+        )
+        if rating_total != reviewed_count:
+            append_error(errors, path, "compact state rating counts mismatch")
+
+    seen_introduced_indices: set[int] = set()
+    for card_index in introduced_indices:
+        if card_count is not None and card_index >= card_count:
+            append_error(errors, path, "compact state introduced_index outside deck")
+        elif card_index in seen_introduced_indices:
+            append_error(errors, path, "compact state duplicate introduced_index")
+        else:
+            seen_introduced_indices.add(card_index)
+
+    seen_schedule_indices: set[int] = set()
+    for card_index in schedule_indices:
+        if card_count is not None and card_index >= card_count:
+            append_error(errors, path, "compact state schedule_index outside deck")
+        elif card_index in seen_schedule_indices:
+            append_error(errors, path, "compact state duplicate schedule_index")
+        else:
+            seen_schedule_indices.add(card_index)
+
+        if introduced_count is not None and card_index not in seen_introduced_indices:
+            append_error(errors, path, "compact state schedule_index not introduced")
+
+    for due_day in schedule_due_days:
+        if due_day > MAX_DAY:
+            append_error(errors, path, "compact state schedule_due_day too high")
+
+    for interval_days in schedule_interval_days:
+        if interval_days > MAX_INTERVAL_DAYS:
+            append_error(errors, path, "compact state schedule_interval_days too high")
+
+    seen_completed_today_indices: set[int] = set()
+    for card_index in completed_today_indices:
+        if card_count is not None and card_index >= card_count:
+            append_error(errors, path, "compact state completed_today_index outside deck")
+        elif card_index in seen_completed_today_indices:
+            append_error(errors, path, "compact state duplicate completed_today_index")
+        elif introduced_count is not None and card_index not in seen_introduced_indices:
+            append_error(
+                errors,
+                path,
+                "compact state completed_today_index not introduced",
+            )
+        else:
+            seen_completed_today_indices.add(card_index)
+
+    seen_suspended_indices: set[int] = set()
+    for card_index in suspended_indices:
+        if card_count is not None and card_index >= card_count:
+            append_error(errors, path, "compact state suspended_index outside deck")
+        elif card_index in seen_suspended_indices:
+            append_error(errors, path, "compact state duplicate suspended_index")
+        else:
+            seen_suspended_indices.add(card_index)
+
+    reviewed_or_suspended_count = (
+        (reviewed_count or 0)
+        + len(introduced_indices)
+        + len(suspended_indices)
+    )
+    if reviewed_or_suspended_count == 0:
+        append_error(
+            errors,
+            path,
+            "no reviewed, introduced, or suspended cards found",
+        )
+
+    return reviewed_or_suspended_count, progress_day
+
+
+def load_state(
+    deck_dir: Path,
+    card_ids: set[str],
+    errors: list[str],
+) -> tuple[int, int | None]:
+    path = deck_dir / "state.tsv"
+    rows = read_required_rows(path, errors)
+    if rows is None:
+        return 0, None
+    if rows and rows[0].split("\t")[0] == STATE_HEADER:
+        return load_scheduler_state_rows(path, rows, card_ids, errors)
+
+    return load_compact_state_rows(path, rows, card_ids, errors)
+
+
+def validate_review_log_common_fields(
+    path: Path,
+    line_number: int,
+    event: str,
+    rating: str,
+    errors: list[str],
+) -> None:
+    if event not in VALID_REVIEW_LOG_EVENTS:
+        append_error(errors, path, f"line {line_number}: bad event")
+        return
+
+    if rating not in VALID_REVIEW_LOG_RATINGS:
+        append_error(errors, path, f"line {line_number}: bad rating")
+    if event == "rating" and rating == "-":
+        append_error(errors, path, f"line {line_number}: rating event needs rating")
+    if event != "rating" and rating != "-":
+        append_error(errors, path, f"line {line_number}: non-rating event needs -")
 
 
 def load_review_log(
@@ -390,50 +716,82 @@ def load_review_log(
     card_ids: set[str],
     errors: list[str],
     allow_missing: bool,
-) -> set[str]:
+) -> dict[str, int]:
     path = deck_dir / "review-log.tsv"
     if allow_missing and not path.exists():
-        return set()
+        return {}
 
     rows = read_required_rows(path, errors)
     if rows is None:
-        return set()
-    events: set[str] = set()
+        return {}
+    event_counts: dict[str, int] = {}
 
     if len(rows) == 0:
         append_error(errors, path, "must contain at least one complete row")
-        return events
+        return event_counts
 
     for line_number, row in enumerate(rows, start=1):
         fields = row.split("\t")
-        if len(fields) != REVIEW_LOG_FIELD_COUNT:
-            append_error(errors, path, f"line {line_number}: expected 21 fields")
+        if len(fields) == REVIEW_LOG_FIELD_COUNT:
+            event = fields[2]
+            card_id = fields[3]
+            rating = fields[4]
+            validate_review_log_common_fields(
+                path,
+                line_number,
+                event,
+                rating,
+                errors,
+            )
+            if event in VALID_REVIEW_LOG_EVENTS:
+                event_counts[event] = event_counts.get(event, 0) + 1
+            if card_id not in card_ids:
+                append_error(errors, path, f"line {line_number}: unknown card id")
+
+            if parse_unsigned(fields[0], MAX_TIMESTAMP) is None:
+                append_error(errors, path, f"line {line_number}: bad timestamp")
+            if parse_unsigned(fields[1], MAX_DAY) is None:
+                append_error(errors, path, f"line {line_number}: bad day")
+            validate_scheduler_snapshot(fields, 5, path, line_number, errors)
+            validate_scheduler_snapshot(fields, 13, path, line_number, errors)
             continue
 
-        event = fields[2]
-        card_id = fields[3]
-        rating = fields[4]
-        if event not in VALID_REVIEW_LOG_EVENTS:
-            append_error(errors, path, f"line {line_number}: bad event")
-        else:
-            events.add(event)
-        if card_id not in card_ids:
-            append_error(errors, path, f"line {line_number}: unknown card id")
-        if rating not in VALID_REVIEW_LOG_RATINGS:
-            append_error(errors, path, f"line {line_number}: bad rating")
-        if event == "rating" and rating == "-":
-            append_error(errors, path, f"line {line_number}: rating event needs rating")
-        if event != "rating" and rating != "-":
-            append_error(errors, path, f"line {line_number}: non-rating event needs -")
+        if len(fields) == COMPACT_REVIEW_LOG_FIELD_COUNT:
+            event = fields[1]
+            rating = fields[2]
+            validate_review_log_common_fields(
+                path,
+                line_number,
+                event,
+                rating,
+                errors,
+            )
+            if event in VALID_REVIEW_LOG_EVENTS:
+                event_counts[event] = event_counts.get(event, 0) + 1
 
-        if parse_unsigned(fields[0], MAX_TIMESTAMP) is None:
-            append_error(errors, path, f"line {line_number}: bad timestamp")
-        if parse_unsigned(fields[1], MAX_DAY) is None:
-            append_error(errors, path, f"line {line_number}: bad day")
-        validate_scheduler_snapshot(fields, 5, path, line_number, errors)
-        validate_scheduler_snapshot(fields, 13, path, line_number, errors)
+            if parse_unsigned(fields[0], MAX_TIMESTAMP) is None:
+                append_error(errors, path, f"line {line_number}: bad timestamp")
+            card_index = parse_unsigned(fields[3])
+            if (
+                card_index is None
+                or card_index >= len(card_ids)
+                or len(card_ids) == 0
+            ):
+                append_error(errors, path, f"line {line_number}: bad card_index")
+            if parse_unsigned(fields[4], MAX_REVIEW_COUNT) is None:
+                append_error(errors, path, f"line {line_number}: bad reviewed_count")
+            suspended_count = parse_unsigned(fields[5])
+            if suspended_count is None or suspended_count > len(card_ids):
+                append_error(errors, path, f"line {line_number}: bad suspended_count")
+            continue
 
-    return events
+        append_error(
+            errors,
+            path,
+            f"line {line_number}: expected 21 or 6 fields",
+        )
+
+    return event_counts
 
 
 def load_session(sdmc: Path, errors: list[str]) -> dict[str, str]:
@@ -505,27 +863,64 @@ def session_unsigned(session: dict[str, str], key: str) -> int:
     return 0 if parsed is None else parsed
 
 
+def session_parsed_unsigned(
+    session: dict[str, str],
+    key: str,
+    maximum: int,
+) -> int | None:
+    value = session.get(key)
+    if value is None:
+        return None
+
+    return parse_unsigned(value, maximum)
+
+
 def verify_session(
     session: dict[str, str],
     checked_deck_ids: set[str],
     required_events: list[str],
-    expected_settings: list[tuple[str, int, int]],
+    review_log_event_counts: dict[str, int],
+    allow_missing_log: bool,
+    expected_settings: list[ExpectedSettings],
     reset_deck_ids: list[str],
     errors: list[str],
 ) -> None:
     if not session:
         return
 
+    started_at = session_parsed_unsigned(session, "started_at", MAX_TIMESTAMP)
+    updated_at = session_parsed_unsigned(session, "updated_at", MAX_TIMESTAMP)
+    if started_at is not None and updated_at is not None and updated_at < started_at:
+        errors.append("session.tsv: updated_at before started_at")
+
+    started_day = session_parsed_unsigned(session, "started_day", MAX_DAY)
+    current_day = session_parsed_unsigned(session, "current_day", MAX_DAY)
+    if started_day is not None and current_day is not None and current_day < started_day:
+        errors.append("session.tsv: current_day before started_day")
+
     if session.get("scan_completed") != "1":
         errors.append("session.tsv: scan_completed must be 1")
     if session.get("exit_confirmed") != "1":
         errors.append("session.tsv: exit_confirmed must be 1")
+    if session.get("last_event") != "exit_confirmed":
+        errors.append("session.tsv: last_event must prove confirmed exit")
     if session_unsigned(session, "launch_count") < 2:
         errors.append("session.tsv: launch_count must prove relaunch")
     if session_unsigned(session, "deck_open_count") < len(checked_deck_ids):
         errors.append("session.tsv: deck_open_count below checked deck count")
     if session_unsigned(session, "deck_count") < len(checked_deck_ids):
         errors.append("session.tsv: deck_count below checked deck count")
+    deck_open_count = session_unsigned(session, "deck_open_count")
+    deck_open_outcome_count = (
+        session_unsigned(session, "review_screen_count")
+        + session_unsigned(session, "summary_screen_count")
+        + session_unsigned(session, "load_error_count")
+    )
+    if deck_open_outcome_count > deck_open_count:
+        errors.append("session.tsv: deck-open outcome counters exceed deck_open_count")
+    last_deck_id = session.get("last_deck_id")
+    if last_deck_id is not None and last_deck_id not in checked_deck_ids:
+        errors.append("session.tsv: last_deck_id outside checked decks")
 
     for required_event in required_events:
         counter_key = SESSION_EVENT_COUNTER_KEYS.get(required_event)
@@ -534,7 +929,18 @@ def verify_session(
         if session_unsigned(session, counter_key) == 0:
             errors.append(f"session.tsv: missing {counter_key}")
 
+    if not allow_missing_log and not reset_deck_ids:
+        for event, counter_key in SESSION_EVENT_COUNTER_KEYS.items():
+            session_count = session_unsigned(session, counter_key)
+            log_count = review_log_event_counts.get(event, 0)
+            if session_count > log_count:
+                errors.append(
+                    f"session.tsv: {counter_key} exceeds review-log {event} events"
+                )
+
     if "rating" in required_events:
+        if session_unsigned(session, "review_screen_count") == 0:
+            errors.append("session.tsv: missing review_screen_count")
         if session_unsigned(session, "answer_shown_count") == 0:
             errors.append("session.tsv: missing answer_shown_count")
         if (
@@ -552,10 +958,12 @@ def verify_session(
         errors.append("session.tsv: reset_progress_count below reset deck count")
 
 
-def parse_expected_settings(value: str) -> tuple[str, int, int]:
+def parse_expected_settings(value: str) -> ExpectedSettings:
     parts = value.split(":")
-    if len(parts) != 3:
-        raise argparse.ArgumentTypeError("use deck_id:new_limit:review_limit")
+    if len(parts) not in (3, 4):
+        raise argparse.ArgumentTypeError(
+            "use deck_id:new_limit:review_limit[:learning_mode]"
+        )
     if parts[0] == "":
         raise argparse.ArgumentTypeError("deck_id must not be empty")
 
@@ -564,7 +972,14 @@ def parse_expected_settings(value: str) -> tuple[str, int, int]:
     if new_limit is None or review_limit is None:
         raise argparse.ArgumentTypeError("settings values must be unsigned")
 
-    return parts[0], new_limit, review_limit
+    if len(parts) == 3:
+        return parts[0], new_limit, review_limit, None
+
+    learning_mode = parse_unsigned(parts[3], 1)
+    if learning_mode is None:
+        raise argparse.ArgumentTypeError("learning_mode must be 0 or 1")
+
+    return parts[0], new_limit, review_limit, learning_mode
 
 
 def verify_deck_artifacts(
@@ -580,7 +995,11 @@ def verify_deck_artifacts(
 
     card_ids = load_card_ids(deck_dir, errors)
     settings = load_settings(deck_dir, errors)
-    reviewed_or_suspended_count = load_state(deck_dir, card_ids, errors)
+    reviewed_or_suspended_count, state_progress_day = load_state(
+        deck_dir,
+        card_ids,
+        errors,
+    )
     events = load_review_log(deck_dir, card_ids, errors, allow_missing_log)
 
     return DeckArtifacts(
@@ -588,6 +1007,7 @@ def verify_deck_artifacts(
         card_ids,
         settings,
         reviewed_or_suspended_count,
+        state_progress_day,
         events,
     )
 
@@ -615,22 +1035,42 @@ def verify_reset_deck_artifacts(
         card_ids,
         settings,
         0,
-        set(),
+        None,
+        {},
     )
+
+
+def verify_compact_state_days(
+    session: dict[str, str],
+    decks: dict[str, DeckArtifacts],
+    errors: list[str],
+) -> None:
+    current_day = session_parsed_unsigned(session, "current_day", MAX_DAY)
+    if current_day is None:
+        return
+
+    for deck_id, artifacts in sorted(decks.items()):
+        if artifacts.state_progress_day is None:
+            continue
+        if artifacts.state_progress_day != current_day:
+            errors.append(
+                f"{deck_id}/state.tsv: compact state progress_day "
+                "does not match session current_day"
+            )
 
 
 def verify_m7_artifacts(
     sdmc: Path,
     deck_ids: list[str],
     required_events: list[str],
-    expected_settings: list[tuple[str, int, int]],
+    expected_settings: list[ExpectedSettings],
     allow_missing_log: bool = False,
     reset_deck_ids: list[str] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     deck_root = sdmc / APP_SD_DIR / "decks"
     decks: dict[str, DeckArtifacts] = {}
-    all_events: set[str] = set()
+    review_log_event_counts: dict[str, int] = {}
     reset_deck_ids = reset_deck_ids or []
     checked_deck_ids = set(deck_ids) | set(reset_deck_ids)
     session = load_session(sdmc, errors)
@@ -651,7 +1091,10 @@ def verify_m7_artifacts(
             continue
 
         decks[deck_id] = artifacts
-        all_events.update(artifacts.review_log_events)
+        for event, count in artifacts.review_log_event_counts.items():
+            review_log_event_counts[event] = (
+                review_log_event_counts.get(event, 0) + count
+            )
 
     for deck_id in reset_deck_ids:
         artifacts = verify_reset_deck_artifacts(deck_root, deck_id, errors)
@@ -661,10 +1104,19 @@ def verify_m7_artifacts(
     for required_event in required_events:
         if required_event not in VALID_REVIEW_LOG_EVENTS:
             errors.append(f"{required_event}: unknown required event")
-        elif required_event not in all_events:
+        elif review_log_event_counts.get(required_event, 0) == 0:
             errors.append(f"review-log.tsv: missing required {required_event} event")
 
-    for deck_id, new_limit, review_limit in expected_settings:
+    if checked_deck_ids and not expected_settings:
+        errors.append(
+            "settings expectations required; pass --expect-settings "
+            "deck_id:new_limit:review_limit[:learning_mode] for the saved "
+            "daily-limit edits"
+        )
+
+    for expected in expected_settings:
+        deck_id, new_limit, review_limit = expected[:3]
+        learning_mode = expected[3] if len(expected) > 3 else None
         if deck_id not in checked_deck_ids:
             errors.append(f"{deck_id}/settings.tsv: expected settings deck not selected")
             continue
@@ -677,15 +1129,24 @@ def verify_m7_artifacts(
             errors.append(
                 f"{deck_id}/settings.tsv: expected review_limit {review_limit}"
             )
+        if learning_mode is not None:
+            actual_learning_mode = artifacts.settings.get("learning_mode", 0)
+            if actual_learning_mode != learning_mode:
+                errors.append(
+                    f"{deck_id}/settings.tsv: expected learning_mode {learning_mode}"
+                )
 
     verify_session(
         session,
         checked_deck_ids,
         required_events,
+        review_log_event_counts,
+        allow_missing_log,
         expected_settings,
         reset_deck_ids,
         errors,
     )
+    verify_compact_state_days(session, decks, errors)
 
     return errors
 
@@ -735,12 +1196,18 @@ def main() -> int:
         action="append",
         default=[],
         type=parse_expected_settings,
-        help="Expected saved settings as deck_id:new_limit:review_limit.",
+        help=(
+            "Expected saved settings as "
+            "deck_id:new_limit:review_limit[:learning_mode]."
+        ),
     )
     parser.add_argument(
         "--allow-missing-review-log",
         action="store_true",
-        help="Do not fail when review-log.tsv is missing.",
+        help=(
+            "Allow incomplete diagnostic review-log evidence, such as missing "
+            "review-log.tsv or in-app 'log skipped' gaps."
+        ),
     )
     parser.add_argument(
         "--quiet",

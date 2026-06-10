@@ -8,8 +8,8 @@ to design a larger framework.
 ## Data Flow
 
 ```text
-desktop export
-  -> converter writes deck.json + cards.tsv
+desktop export or read-only collection.anki2 copy
+  -> converter/importer writes deck.json + cards.tsv
   -> deck_index scans deck folders
   -> deck loads cards.tsv
   -> scheduler starts a session
@@ -17,41 +17,89 @@ desktop export
   -> app reveals, rates, saves state, and appends accepted transitions
 ```
 
-Imported card content is owned by the converter and stored in `cards.tsv`.
-Local review progress is owned by the 3DS app and stored in `state.tsv`.
+Imported card content is owned by the desktop converter/importer and stored in
+`cards.tsv`. Local review progress is owned by the 3DS app and stored in
+`state.tsv`.
 Diagnostic study history is appended to `review-log.tsv`. Those files should
 stay separate so a deck can be re-imported without losing local progress.
 
+## Scheduler Policy Direction
+
+The scheduler should be swappable. Keep card loading, renderer contracts, and
+state persistence independent from the specific learning algorithm so policies
+can be host-tested with the same card events.
+
+Candidate policies:
+
+- Time-based spaced repetition: schedule the next review by absolute local day
+  or timestamp. This is the best default for long-term retention and matches
+  common Anki/SM-2/FSRS-style behavior.
+- Card-count cooldown: schedule the next review after a number of intervening
+  cards, such as "show this again after 20 cards." This is useful inside a
+  single study session because it gives immediate spacing without depending on
+  wall-clock time.
+- Hybrid policy: use card-count cooldowns for learning/relearning steps within
+  a session, then graduate cards to time-based spaced repetition for long-term
+  review. This is the preferred direction unless hardware testing proves it is
+  too complex for the current checkpoint.
+
+The eventual interface should accept a card state plus a rating event and
+return the next state and queue eligibility. The app should not bake scheduling
+math into rendering, deck import, or input handling.
+
+Current clean-shell implementation status:
+
+- `study_backend` exposes `enum study_backend_scheduler_policy` and
+  `study_backend_set_scheduler_policy()` so host tests can swap queue behavior
+  without touching rendering, input, import, or save-file paths.
+- `STUDY_BACKEND_SCHEDULER_DUE_FIRST` is the default because daily-limit
+  blocking still lives in app flow rather than inside scheduler eligibility.
+  Keeping it default avoids selecting a blocked new card while an introduced
+  due card is waiting behind a cooldown.
+- The clean-shell backend now persists simple due-day schedules in compact
+  `state.tsv` version `2`. New and legacy-introduced cards without schedule
+  rows are due now. Again stays due today, Hard uses the previous interval or
+  starts at one day, Good doubles the previous interval or starts at two days,
+  and Easy triples the previous interval or starts at four days.
+- `STUDY_BACKEND_SCHEDULER_CARD_COUNT_COOLDOWN` is implemented as a
+  session-local learning policy. `Again` assigns a card-count cooldown;
+  successful ratings of other cards decrement that cooldown; the queue tries
+  non-cooldown introduced cards first, then new cards, then cooldowned
+  introduced cards as a fallback so a deck cannot get stuck.
+- Cooldowns are intentionally transient in the current checkpoint. They are
+  cleared on state load, day rollover, reset, suspend, and policy changes. A
+  one-step undo restores the cooldown snapshot from before the undone rating.
+
 ## Deck Discovery
 
-Current discovery lives in `app-3ds/source/deck_index.c`; the app owns only the
-selected index and active paths.
+The clean Citro2D shell currently uses `app-3ds/source/study_deck_index.c`, a
+narrow replacement for the old scheduler-era `deck_index.c`. The app owns only
+the selected index and active paths.
 
 Algorithm:
 
 1. Open `sdmc:/3ds/anki3ds/decks`.
 2. Iterate directory entries.
 3. Reject ids outside the portable allowlist: letters, numbers, `_`, and `-`.
-4. Build `deck.json`, `cards.tsv`, `state.tsv`, `review-log.tsv`, and
-   `settings.tsv` paths from the folder name.
+4. Build `deck.json`, `cards.tsv`, and `state.tsv` paths from the folder name.
 5. Reject entries whose folder name or paths exceed fixed limits.
 6. Probe `cards.tsv` with `fopen`; only entries with readable cards are listed.
 7. Optionally read the deck display name from `deck.json`.
 8. Count every valid deck folder.
 9. Count non-hidden ignored entries with invalid ids, overlong paths, or no
    readable `cards.tsv`.
-10. Keep the first `DECK_INDEX_MAX_DECKS` folder ids in sorted order.
+10. Keep the first `STUDY_DECK_INDEX_MAX_DECKS` folder ids in sorted order.
 
-`deck_index_scan` stores a compact `deck_entry` for each deck: folder id,
-display name, cards path, state path, review-log path, settings path, and
-metadata path. The folder id remains the stable runtime id. The display name
-falls back to the folder id when `deck.json` is missing or malformed.
+`study_deck_index_scan` stores a compact `study_deck_entry` for each deck:
+folder id, display name, cards path, state path, and metadata path. The folder
+id remains the stable runtime id. The display name falls back to the folder id
+when `deck.json` is missing or malformed.
 
 Current practical constraints:
 
 - Discovery order is sorted by folder id.
 - The app only reads the `name` string from deck metadata during deck scanning.
-- The selector stores at most `DECK_INDEX_MAX_DECKS` decks, shows a bounded
+- The selector stores at most `STUDY_DECK_INDEX_MAX_DECKS` decks, shows a bounded
   scroll window, and reports overflow as visible/total deck counts.
 - SD rescan is explicit from the deck selector with `SELECT`.
 - Rescan keeps the selected folder id highlighted when that deck still exists.
@@ -71,7 +119,7 @@ This boundary is small enough to host-test without libctru: build one entry,
 reject invalid ids, scan a temporary root, and verify only folders containing
 `cards.tsv` are listed.
 
-After discovery, the app builds a `deck_summary` for each visible deck. The
+In the full scheduler-era app, discovery is followed by `deck_summary` for each visible deck. The
 summary loads the deck, settings, and saved state into a temporary scheduler
 session, then records card count, total due count, new/learning/review due
 counts from scheduler policy, daily-limit-blocked new/review counts,
@@ -121,6 +169,34 @@ large stack frame while loading a deck.
 
 The deck module should stay about deck data and card parsing. It should not know
 about 3DS input, screens, review progress, or SD-card discovery.
+
+## Card State And Learning
+
+Imported card text and local review progress remain separate. `struct card` in
+`deck.h` owns imported content: ids, front text, back text, and tags.
+`struct scheduler_card` owns local progress for the matching card index.
+
+`learning.h` / `learning.c` are the pure spaced-repetition module. They define
+the learning-state shape, rating enum, validation rules, due predicates,
+started-new/review predicates, daily stats helpers, and interval/ease/lapse
+transition math. That module does not know about deck text, queue ordering,
+undo, SD files, or the UI.
+
+`card_state.h` / `card_state.c` are the bridge between the scheduler-facing
+state and the learning algorithm. The adapter owns:
+
+- scheduler rating validation
+- scheduler-rating to learning-rating conversion
+- scheduler-card validation through learning rules
+- per-card due and started-new/review predicates
+- single-card rating application through `learning_card_apply_rating`
+- adding a scheduler card to learning daily stats
+
+`scheduler.c` should use this adapter for single-card behavior. Scheduler
+remains responsible for session policy: current index, due counts, new/review
+daily limits, prioritization, undo snapshots, suspend/unsuspend, and app-facing
+API names. This keeps the algorithm testable while avoiding a large card object
+that copies front/back text into scheduler memory.
 
 ## Review-State Load/Save
 
@@ -207,7 +283,7 @@ The app loop is a small mode machine:
 - `SUMMARY`: show counts when no cards are due today.
 - `ACTIONS`: choose deck-level actions such as restoring suspended cards or
   resetting progress.
-- `SETTINGS`: edit per-deck daily limits.
+- `SETTINGS`: edit per-deck daily limits and learning mode.
 - `CONTROLS`: show the in-app help/key map, then return to the previous mode.
 - `CONFIRM_RESTORE`: require explicit `X` before restoring suspended cards.
 - `CONFIRM_SUSPEND`: require explicit `X` before hiding the current card.
@@ -217,20 +293,20 @@ The app loop is a small mode machine:
 The console UI uses the top screen for deck/card content and the bottom screen
 for compact prompts, answer text after reveal, and a short status line. This
 keeps save feedback out of the review card area without introducing a graphics
-framework yet. Review text is framed as an original light paper flashcard with
-themeable trim and black card text, while the surrounding app chrome remains a
-dark terminal surface. The front card stays on the top screen. After reveal, the
-back card moves to the bottom screen and the bottom rating strip stays directly
-under the answer. Rendering uses a compact amber/chalk/green/red palette: warm
-amber headings, status labels, key prompts, Hard ratings, learning counts,
-cautions, and normal reverse-video selected/focused items; green Good ratings,
-review counts, and successful, restored, or safe state; red reverse-video
-selected destructive actions; red Again ratings, suspended counts, errors, and
-destructive reset prompts; bright white Easy ratings, new counts, and neutral
-values, with dim white separators and version text. The help page can cycle the
-card panel trim through Amber, Forest, Ruby, and Chalk session themes. Blue,
-cyan, and violet are intentionally avoided because they are hard to read on the
-dark 3DS console background. Moving
+framework yet. Startup uses the Plain theme so review text is framed as the
+original light paper flashcard with black card text. If FE framebuffer assets
+are installed, Help-page `X` can opt into Amber, Forest, Ruby, or Chalk so a
+framebuffer asset supplies the backdrop and fixed FE-style labels while console
+review text stays bright over the baked card. The front card stays on the top
+screen. After
+reveal, the back card moves to the bottom screen and the bottom rating strip
+stays directly under the answer.
+Console-rendered chrome now uses mostly neutral bright text so app-side ANSI
+colors do not fight the generated FE background, frame, and labels. Selection
+state is represented by row markers instead of reverse-video fills. The help
+page can cycle the session theme through Plain, Amber, Forest, Ruby, and Chalk;
+Plain keeps the original black console background as the startup and
+fallback/no-FE-assets theme. Moving
 through the deck selector keeps the status line aligned
 with the selected row, including load errors,
 ignored settings, unmatched state, and daily-limit-blocked decks. Help screens
@@ -249,18 +325,18 @@ The review button map and app-level command priority live in the small
 libctru. `main.c` still owns state transitions and side effects, but it asks
 `app_controls` to classify global actions such as exit, help, theme cycling,
 deck-list return, actions, undo, suspend confirmation, reveal, and rating. The stable
-review mapping is: front side `A` reveals; after reveal, `Y/X/B/A` choose
+review mapping is: front side `A` reveals; after reveal, `A/B/X/Y` choose
 Again/Hard/Good/Easy. Ambiguous post-reveal face-button combinations are
 ignored so a fat-fingered rating does not save the wrong answer.
-Actions, daily-limit settings, restore, suspend, reset, and exit confirmations
+Actions, study settings, restore, suspend, reset, and exit confirmations
 use the same centralized confirm-or-cancel classifier: the confirm button must
 be the only active input, and `B`/`SELECT` cancel only as clean single-button
 presses. Mixed confirm/cancel, confirm/navigation, or command chords resolve to
 no action.
 D-pad hold repeat also lives in `app_controls`; repeatable axes are declared per
-mode. Deck select repeats Up/Down movement and Left/Right paging; review
-repeats only Up/Down text scrolling; actions repeat only Up/Down selection; and
-settings repeats only Left/Right daily-limit value changes. Up/Down field
+mode. Deck select repeats Up/Down movement plus Left/Right or shoulder-button
+L/R paging; review repeats only Up/Down text scrolling; actions repeat only
+Up/Down selection; and settings repeats only Left/Right setting changes. Up/Down field
 selection in settings remains single-step so a held button cannot bounce between
 the two fields. In review mode, D-pad Up/Down scrolls the active text pane:
 front before reveal, back after reveal. Ratings and destructive actions stay
@@ -312,14 +388,18 @@ ignored-settings or unmatched-state context appended when present; redundant
 daily-limit and reset-state suffixes are omitted. Unsaved daily-limit and
 exit-loses-unsaved-limits warnings stay visible. A deck with malformed saved
 state stays on the reset-needed summary across day changes instead of moving
-into the review queue.
+into the review queue. If a rollover `state.tsv` save fails after backend daily
+counters were recalculated, the app restores the pre-rollover state and shows
+`Save failed`; this keeps memory from silently advancing to a new study day
+that durable state did not record. The same rule applies when opening a deck
+whose saved state belongs to an older day: deck-open workflow persists the
+load-time rollover before presenting it as the active backend state.
 
 The app samples PTMU battery state at startup, then normally at most once every
 ten minutes. Startup and periodic samples use the same scheduling policy, so a
-transient startup read failure gets the short retry interval instead of waiting
-for a full ten-minute poll. If PTMU service initialization is unavailable at
-startup, the app retries initialization only at the normal battery-poll cadence.
-Periodic checks first ask PTMU whether the shell is open; battery level and
+transient startup read or PTMU initialization failure gets the short retry
+interval instead of waiting for a full ten-minute poll. Periodic checks first
+ask PTMU whether the shell is open; battery level and
 charging state are read only when the shell reports open. The app does not call
 the battery service on every button press. If the system clock is briefly
 unavailable, the periodic poll timer arms itself when a valid clock reading
@@ -329,7 +409,10 @@ schedule a short retry instead of leaving stale status for a full interval. The
 bottom screen shows `Battery: unavailable` until a valid open-shell sample is
 available, then keeps the last valid sample as a compact `level/5` line,
 including charging and low-battery states. Battery status changes redraw the
-screen only when that visible status changes.
+screen only when that visible status changes. When a valid sample enters the
+low and not-charging state, the status line announces `Battery low; charge soon`
+once; the announcement latch resets after the battery is charging, normal, or
+unavailable.
 
 Review algorithm:
 
@@ -362,9 +445,9 @@ state, and daily-limit exhaustion. Moving through action items and canceling
 actions or action confirmation screens preserves the same warning context.
 Selecting reset keeps a warning status even when no active-deck warning is
 present. If a deck opens with malformed saved state, reset is selected by
-default so the recovery path is direct. Daily limits can be edited from the
-same actions screen. Reset remains available by moving the action selection
-first, then confirming on a separate reset screen with `X`.
+default so the recovery path is direct. Study settings can be opened before
+answer reveal with `X`; reset remains on `Y` before reveal or on completion,
+then confirms on a separate reset screen with `X`.
 No-op study actions such as undo without an undo slot, suspend without a
 current card, or restore with no suspended cards preserve active-deck warning
 context in the status line.
@@ -409,21 +492,25 @@ Successful rating, suspend, restore, undo, reset, and daily-limit save feedback
 appends active-deck warning context unless a save-failure or redundant
 daily-limit/reset-state message has priority.
 
-`SELECT` opens an actions screen from review and summary modes. Choosing reset
-opens a confirmation screen. Pressing `X` there removes active state recovery
-files before the primary `state.tsv`, then removes `review-log.tsv` as
-diagnostic cleanup and reloads the selected deck. If state removal and reload
-succeed, the bottom status confirms `Progress reset`; if only the diagnostic
-log cleanup fails, progress still stays reset and the status reports that the
-log was kept. Reset success feedback appends active-deck warning context when
-present, such as ignored settings or daily-limit exhaustion after reload. If
-state removal fails, the app leaves the current session in place and shows
-`reset failed`.
+`Y` opens a reset confirmation before reveal or from a completed deck. Pressing
+`X` there first removes `state.tsv` plus recovery artifacts. Only after that
+primary progress cleanup succeeds does the app reset the in-memory backend
+progress; this keeps a failed state delete from making the visible queue
+disagree with durable SD state. The app then removes `review-log.tsv` as
+diagnostic cleanup. If only diagnostic log cleanup fails, progress still stays
+reset and the status reports `Progress reset; log kept`. Reset success feedback
+appends active-deck warning context when present, such as ignored settings or
+daily-limit exhaustion. If state removal fails, the app leaves the current
+session in place and shows `Reset; state delete failed`.
 
 `START` opens an exit confirmation screen from every normal app mode. Pressing
-`A` there exits the app; `B` or `SELECT` cancels back to the previous mode. This
-keeps the Homebrew-style exit path available while avoiding accidental exits
-during review or settings edits.
+`A` there records the terminal `exit_confirmed` session event and exits only
+after root `session.tsv` has been saved. If that final diagnostics save fails,
+the app stays on exit confirmation with `Session save failed` visible so the
+user can retry or cancel; canceling after such a failure does not preserve the
+failed `exit_confirmed` event. `B` or `SELECT` cancels back to the previous mode.
+This keeps the Homebrew-style exit path available while avoiding accidental
+exits during review or settings edits.
 
 `reviewed_count` and `rating_counts` are live session counters. Restored state
 contributes to per-card `review_count`, but not to the current session's
@@ -439,29 +526,38 @@ limits advance early in western time zones. The date conversion lives in
 ## Settings
 
 Each deck may include `settings.tsv` beside `cards.tsv`. Missing settings use
-defaults of `new_limit=20` and `review_limit=200`. A value of `0` means
-unlimited. A present settings file must include both `new_limit` and
-`review_limit` exactly once; incomplete or duplicate rows are malformed so
-interrupted writes can fall back to temp or backup files. The app can write
-`settings.tsv` from the daily
-limits screen using the same temp/backup save pattern as review state. If
+defaults of `new_limit=20`, `review_limit=200`, and
+`learning_mode=0`. A limit value of `0` means unlimited. The study-settings
+editor cycles daily limits through `5`, `10`, `20`, `50`, `100`, `200`,
+`500`, `1000`, and `0`, snapping off-ladder values loaded from settings files
+to the nearest preset in the pressed direction. It also toggles learning mode
+between due-first scheduling and card-count cooldowns. A present settings file
+must include both `new_limit` and `review_limit` exactly once; `learning_mode`
+is optional and may appear at most once. Incomplete or duplicate rows are
+malformed so interrupted writes can fall back to temp or backup files. The app
+can write `settings.tsv` from the study-settings screen using the same
+temp/backup save pattern as review state. If
 `settings.tsv` is missing on load, settings try `settings.tsv.tmp`, then
 `settings.tsv.bak`. If `settings.tsv` is malformed, backup is tried before temp
 so a stale temp file does not outrank a known previous save. If all available
 settings files are malformed, the app uses defaults.
-Deck selector stats still show default-based counts in that case, but mark the
-settings as ignored and show the first settings parse reason so the fallback is
-visible.
+Deck selector stats are now lightweight deck/state counts rather than full
+scheduler projections. They can still show due/new/suspended work when settings
+fall back to defaults, while the deck-open status marks malformed settings as
+ignored so the fallback is visible.
 Settings save feedback stays in the settings/status messages and does not
 overwrite the review-state status line. Saving settings after a malformed
 review-state load still leaves the deck on the reset-needed summary; settings
-changes do not make an unsafe review queue visible. Limits-save success
+changes do not make an unsafe review queue visible. Settings-save success
 feedback preserves active deck warning context, while omitting redundant
-reset-state or daily-limit suffixes. Opening the daily-limits screen, moving
+reset-state or daily-limit suffixes. Opening the study-settings screen, moving
 between fields before edits, and cycling a value back to its saved value
 preserve active deck warning context; unsaved edit feedback takes
-priority until save or cancel replaces it. Canceling daily-limit edits returns
-to actions with discarded-edit feedback and the active deck warning suffix.
+priority until save or cancel replaces it. Canceling study-setting edits returns
+to review with discarded-edit feedback and the active deck warning suffix. If
+writing `settings.tsv` fails, the app stays in the study-settings editor with the
+draft values intact and shows `Settings save failed`, so the user can retry
+after fixing SD-card state or cancel intentionally.
 
 The scheduler stores `first_review_day` and `last_review_day` in `state.tsv` so
 daily limits survive relaunch. New-card limits apply to unstarted new cards in
@@ -487,10 +583,21 @@ Changing daily limits clears the one-step undo slot. The undo snapshot contains
 queue counters from the previous limit configuration, so keeping it after a
 limit change could restore a stale visible queue.
 
-## Scheduler
+## Learning Core
 
 The first spaced repetition algorithm is day-level and SM-2 inspired, not FSRS.
 It stores enough state to replace the algorithm later without changing card IDs.
+The pure per-card rules live in `app-3ds/source/learning.c`, with public state
+and rating types in `app-3ds/include/learning.h`. That module owns default ease,
+ease/interval/day caps, new-card learning, review interval scaling, relearning,
+rating validation, card-state validation, and per-day card stats. It does not
+know about decks, screen modes, save files, undo, daily limits, or renderers.
+
+`scheduler` adapts its session card representation into the learning core when
+initializing cards, restoring saved rows, recounting daily stats, checking
+calendar due state, and applying a rating. This keeps app-facing names like
+`scheduler_rate_current()` stable while isolating the scheduling math behind a
+smaller surface that can be replaced or tested independently.
 
 New cards start due today with ease `2500` and interval `0`. A card stays in
 the initial learning path while its interval is `0` and it has no lapses, so
@@ -514,6 +621,8 @@ First successful reviews are special-cased so new cards become usable quickly:
 clamped between `1300` and `3500`, and intervals are clamped to 100 years.
 Review and lapse counters are capped at `1000000` so a card at the file-format
 boundary can still be reviewed, saved, and loaded again.
+
+## Scheduler
 
 Due selection prefers cards that are already in progress before introducing new
 cards. The priority order is learning/relearning cards, then review cards by
@@ -587,6 +696,7 @@ Keep the portable logic separate from the libctru shell:
 
 | Boundary | Owns | Should Not Own |
 | --- | --- | --- |
+| `study_deck_index` | clean-shell deck folder scan, deck id validation, `cards.tsv` and `state.tsv` path construction | card parsing, review progress, rendering |
 | `deck_index` | deck folder scan, deck id validation, deck-local path construction | card parsing, review state parsing, rendering |
 | `deck` | `cards.tsv` parsing, card/deck structs, parse/load errors | input handling, review progress, UI |
 | `scheduler` | per-card session state, rating transitions, due counts, current-card selection | file paths, card text parsing, rendering |
@@ -596,7 +706,7 @@ Keep the portable logic separate from the libctru shell:
 | `app_layout` | screen geometry constants and pure fit checks | rendering side effects, text wrapping |
 | `app_power` | battery status thresholds, poll scheduling policy, idle input wait tiers | libctru PTMU calls, rendering |
 | `app_review` | pure review-queue eligibility from state-load result and scheduler due state | rendering, button mapping, file I/O |
-| `app_status` | pure status-message classification for console color semantics | libctru color escapes, rendering |
+| `app_status` | pure status-message classification for UI emphasis | libctru color escapes, rendering |
 | `app_controls` | abstract button bits, repeat timing, app command classification | scheduler mutation, file I/O, rendering |
 | `app_text` | UTF-8 character stepping for wrapping/truncation | font shaping, rich text layout |
 | `app` | top-level mode machine, libctru input/render loop, active deck selection | TSV parsing details, scheduler internals |
@@ -609,6 +719,12 @@ Closed-shell skips keep the ten-minute cadence. Transient PTMU read failures,
 including startup failures, schedule a short retry and keep the last valid
 battery display, or the explicit unavailable display before the first valid
 sample, instead of clearing it.
+
+In the current clean Citro2D shell, `app_power` remains a pure policy module.
+`main.c` owns PTMU calls and only forwards battery results into backend status
+strings. The backend receives no battery geometry or renderer state. A low and
+not-charging sample latches a one-shot `Battery low; charge soon` status, and
+the latch resets after charging, normal, or unavailable samples.
 
 The console renderer still uses a simple one-column-per-character model, but
 `app_text` keeps valid UTF-8 byte sequences together during wrapping and

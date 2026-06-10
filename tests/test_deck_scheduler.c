@@ -354,8 +354,19 @@ static void test_app_power_battery_sample_policy(void)
 		APP_POWER_BATTERY_SAMPLE_UNAVAILABLE
 	);
 	check(
-		next_poll_time == 1600 + APP_POWER_BATTERY_POLL_INTERVAL_SECONDS,
-		"unavailable battery service schedules normal poll interval"
+		next_poll_time == 1600 + APP_POWER_BATTERY_RETRY_INTERVAL_SECONDS,
+		"unavailable battery service schedules short retry interval"
+	);
+
+	next_poll_time = 1600;
+	app_power_schedule_next_battery_poll_after_sample(
+		&next_poll_time,
+		(time_t)-1,
+		APP_POWER_BATTERY_SAMPLE_UNAVAILABLE
+	);
+	check(
+		app_power_battery_poll_is_due(&next_poll_time, 1700),
+		"unavailable battery service retries as soon as clock returns"
 	);
 
 	next_poll_time = 1600;
@@ -414,6 +425,59 @@ static void test_app_power_battery_display_state(void)
 	check(
 		!app_power_battery_save_warning_needed(false, false, 0),
 		"missing battery sample does not claim low battery"
+	);
+}
+
+static void test_app_power_low_battery_warning_latch(void)
+{
+	bool announced = false;
+
+	check(
+		app_power_battery_low_warning_due(
+			&announced,
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"low battery warning announces first low sample"
+	);
+	check(announced, "low battery warning latch records announcement");
+	check(
+		!app_power_battery_low_warning_due(
+			&announced,
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"low battery warning does not repeat during same low episode"
+	);
+	check(
+		!app_power_battery_low_warning_due(
+			&announced,
+			true,
+			true,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"charging battery clears low warning latch without warning"
+	);
+	check(!announced, "charging battery resets low warning latch");
+	check(
+		app_power_battery_low_warning_due(
+			&announced,
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"low battery warning reannounces after recovery"
+	);
+	check(
+		!app_power_battery_low_warning_due(
+			NULL,
+			true,
+			false,
+			APP_POWER_BATTERY_LOW_LEVEL
+		),
+		"low battery warning rejects null latch"
 	);
 }
 
@@ -4435,6 +4499,16 @@ static void test_app_status_classifies_daily_use_feedback(void)
 		"status limit reached is warning"
 	);
 	check(
+		app_status_message_color("Good saved; card 2/3; batt low") ==
+			APP_STATUS_COLOR_WARNING,
+		"status low battery save suffix is warning"
+	);
+	check(
+		app_status_message_color("Battery low; charge soon") ==
+			APP_STATUS_COLOR_WARNING,
+		"status low battery proactive message is warning"
+	);
+	check(
 		app_status_message_color("Deck 2/3; limit reached") ==
 			APP_STATUS_COLOR_WARNING,
 		"status deck limit reached is warning"
@@ -4623,6 +4697,17 @@ static void test_app_status_classifies_daily_use_feedback(void)
 	check(
 		strcmp(visible, "Progress rese...; limit reached") == 0,
 		"status width keeps limit suffix"
+	);
+
+	app_status_format_for_width(
+		visible,
+		sizeof(visible),
+		"Good saved; card 2/3; batt low",
+		24
+	);
+	check(
+		strcmp(visible, "Good saved;...; batt low") == 0,
+		"status width keeps low battery suffix"
 	);
 
 	app_status_format_for_width(
@@ -4949,6 +5034,60 @@ static void test_app_settings_empty_file_uses_defaults(void)
 	);
 
 	remove(TEST_SETTINGS_PATH);
+}
+
+static void test_app_settings_daily_limit_helpers(void)
+{
+	char text[8];
+	const unsigned int presets[] = {5, 10, 20, 50, 100, 200, 500, 1000, 0};
+	size_t preset_count = sizeof(presets) / sizeof(presets[0]);
+
+	app_settings_format_daily_limit(text, sizeof(text), 0);
+	check(strcmp(text, "all") == 0, "daily limit formats unlimited");
+	app_settings_format_daily_limit(text, sizeof(text), 20);
+	check(strcmp(text, "20") == 0, "daily limit formats numeric value");
+
+	for (size_t index = 0; index < preset_count; index++)
+	{
+		unsigned int current = presets[index];
+		unsigned int next = presets[(index + 1) % preset_count];
+		unsigned int previous =
+			index == 0 ? presets[preset_count - 1] : presets[index - 1];
+
+		check(
+			app_settings_adjust_daily_limit(current, true) == next,
+			"daily limit preset increases through ladder"
+		);
+		check(
+			app_settings_adjust_daily_limit(current, false) == previous,
+			"daily limit preset decreases through ladder"
+		);
+	}
+
+	check(
+		app_settings_adjust_daily_limit(2, true) == 5,
+		"daily limit off-ladder increase snaps to next preset"
+	);
+	check(
+		app_settings_adjust_daily_limit(2, false) == 0,
+		"daily limit off-ladder decrease below first preset snaps to all"
+	);
+	check(
+		app_settings_adjust_daily_limit(75, true) == 100,
+		"daily limit off-ladder increase snaps upward"
+	);
+	check(
+		app_settings_adjust_daily_limit(75, false) == 50,
+		"daily limit off-ladder decrease snaps downward"
+	);
+	check(
+		app_settings_adjust_daily_limit(2000, true) == 0,
+		"daily limit off-ladder increase above presets snaps to all"
+	);
+	check(
+		app_settings_adjust_daily_limit(2000, false) == 1000,
+		"daily limit off-ladder decrease above presets snaps to max preset"
+	);
 }
 
 static void test_app_settings_save_round_trip(void)
@@ -5765,15 +5904,15 @@ static void test_deck_summary_reports_load_error(void)
 
 static void test_daily_use_workflow_persists_two_decks(void)
 {
-	struct deck_index index;
-	struct deck alpha_deck;
-	struct deck beta_deck;
-	struct deck alpha_reloaded_deck;
-	struct deck beta_reloaded_deck;
-	struct scheduler_session alpha_session;
-	struct scheduler_session beta_session;
-	struct scheduler_session alpha_reloaded;
-	struct scheduler_session beta_reloaded;
+	static struct deck_index index;
+	static struct deck alpha_deck;
+	static struct deck beta_deck;
+	static struct deck alpha_reloaded_deck;
+	static struct deck beta_reloaded_deck;
+	static struct scheduler_session alpha_session;
+	static struct scheduler_session beta_session;
+	static struct scheduler_session alpha_reloaded;
+	static struct scheduler_session beta_reloaded;
 	struct app_settings alpha_settings;
 	struct app_settings loaded_settings;
 	struct deck_summary summary;
@@ -6246,6 +6385,7 @@ int main(void)
 	test_app_power_battery_poll_arms_after_missing_clock();
 	test_app_power_battery_sample_policy();
 	test_app_power_battery_display_state();
+	test_app_power_low_battery_warning_latch();
 	test_app_power_idle_input_backoff();
 	test_app_text_counts_utf8_columns();
 	test_app_text_counts_wrapped_rows();
@@ -6338,6 +6478,7 @@ int main(void)
 	test_app_settings_rejects_non_plain_unsigned_values();
 	test_app_settings_duplicate_rows_use_defaults();
 	test_app_settings_empty_file_uses_defaults();
+	test_app_settings_daily_limit_helpers();
 	test_app_settings_save_round_trip();
 	test_app_settings_save_replaces_existing_file();
 	test_deck_index_builds_paths();

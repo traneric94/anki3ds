@@ -19,11 +19,13 @@ void app_power_schedule_next_battery_poll_after_sample(
 	if (next_poll_time == NULL)
 		return;
 
-	if (result == APP_POWER_BATTERY_SAMPLE_READ_FAILED)
+	if (
+		result == APP_POWER_BATTERY_SAMPLE_READ_FAILED ||
+		result == APP_POWER_BATTERY_SAMPLE_UNAVAILABLE
+	)
 	{
 		if (now == (time_t)-1)
 		{
-			/* Retry as soon as a real clock reading appears. */
 			*next_poll_time = APP_POWER_BATTERY_POLL_WHEN_CLOCK_AVAILABLE;
 			return;
 		}
@@ -49,11 +51,20 @@ bool app_power_battery_poll_is_due(time_t *next_poll_time, time_t now)
 		app_power_schedule_next_battery_poll(next_poll_time, now);
 		return false;
 	}
+	if (
+		*next_poll_time > now &&
+		*next_poll_time - now > APP_POWER_BATTERY_POLL_INTERVAL_SECONDS
+	)
+	{
+		return true;
+	}
 
 	return now >= *next_poll_time;
 }
 
-bool app_power_battery_sample_changes_display(enum app_power_battery_sample_result result)
+bool app_power_battery_sample_changes_display(
+	enum app_power_battery_sample_result result
+)
 {
 	return result == APP_POWER_BATTERY_SAMPLE_CHANGED;
 }
@@ -82,6 +93,29 @@ bool app_power_battery_save_warning_needed(
 {
 	return app_power_battery_display_state(status_available, charging, level) ==
 		APP_POWER_BATTERY_DISPLAY_LOW;
+}
+
+bool app_power_battery_low_warning_due(
+	bool *announced,
+	bool status_available,
+	bool charging,
+	unsigned int level
+)
+{
+	if (announced == NULL)
+		return false;
+
+	if (!app_power_battery_save_warning_needed(status_available, charging, level))
+	{
+		*announced = false;
+		return false;
+	}
+
+	if (*announced)
+		return false;
+
+	*announced = true;
+	return true;
 }
 
 long long app_power_idle_input_wait_ns(unsigned int idle_wait_count)

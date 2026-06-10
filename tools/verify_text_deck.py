@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 
-DECK_MAX_CARDS = 4096
+DECK_MAX_CARDS = 1024
 DECK_MAX_ID_LENGTH = 32
 DECK_MAX_TEXT_LENGTH = 384
 DECK_MAX_TAGS_LENGTH = 128
@@ -19,6 +19,7 @@ DECK_MAX_NAME_LENGTH = 64
 DECK_MAX_LINE_LENGTH = 1024
 DECK_MAX_ROW_BYTES = DECK_MAX_LINE_LENGTH - 2
 APP_SETTINGS_MAX_DAILY_LIMIT = 1000000
+APP_SETTINGS_MAX_LEARNING_MODE = 1
 
 PROGRESS_FILES = (
     "state.tsv",
@@ -389,6 +390,7 @@ def verify_settings(
 ) -> None:
     settings_path = deck_dir / "settings.tsv"
     setting_counts = {"new_limit": 0, "review_limit": 0}
+    optional_setting_counts = {"learning_mode": 0}
 
     for line_number, row in enumerate(settings_rows, start=1):
         if row == "" or row.startswith("#"):
@@ -404,29 +406,49 @@ def verify_settings(
             continue
 
         key, value = fields
-        if key not in setting_counts or re.fullmatch(r"[0-9]+", value) is None:
+        if (
+            (
+                key not in setting_counts
+                and key not in optional_setting_counts
+            )
+            or re.fullmatch(r"[0-9]+", value) is None
+        ):
             append_file_error(
                 errors,
                 settings_path,
                 (
-                    f"line {line_number}: expected new_limit or review_limit "
+                    f"line {line_number}: expected a supported setting "
                     "with a non-negative integer value"
                 ),
             )
             continue
 
-        if int(value) > APP_SETTINGS_MAX_DAILY_LIMIT:
+        parsed_value = int(value)
+        max_value = (
+            APP_SETTINGS_MAX_DAILY_LIMIT
+            if key in setting_counts
+            else APP_SETTINGS_MAX_LEARNING_MODE
+        )
+        if parsed_value > max_value:
+            limit_label = "limit" if key in setting_counts else key
             append_file_error(
                 errors,
                 settings_path,
                 (
-                    f"line {line_number}: limit must be at most "
-                    f"{APP_SETTINGS_MAX_DAILY_LIMIT}"
+                    f"line {line_number}: {limit_label} must be at most "
+                    f"{max_value}"
                 ),
             )
             continue
 
-        setting_counts[key] += 1
+        if key in setting_counts:
+            setting_counts[key] += 1
+        else:
+            optional_setting_counts[key] += 1
+
+    for key, count in optional_setting_counts.items():
+        if count > 1:
+            append_file_error(errors, settings_path, f"duplicate {key} row")
 
     if (
         setting_counts["new_limit"] != 1
@@ -439,22 +461,37 @@ def verify_settings(
         )
 
 
-def verify_no_progress_files(deck_dir: Path, errors: list[str]) -> None:
+def verify_no_progress_files(
+    deck_dir: Path,
+    errors: list[str],
+    allow_progress_files: bool = False,
+) -> None:
+    if allow_progress_files:
+        return
+
     for progress_file in PROGRESS_FILES:
         path = deck_dir / progress_file
         if path.exists():
             append_file_error(errors, path, "must not be committed or packaged")
 
 
-def verify_text_deck_entries(deck_dir: Path, errors: list[str]) -> None:
+def verify_text_deck_entries(
+    deck_dir: Path,
+    errors: list[str],
+    allow_progress_files: bool = False,
+) -> None:
     try:
         entries = sorted(deck_dir.iterdir(), key=lambda entry: entry.name)
     except OSError as error:
         append_file_error(errors, deck_dir, str(error))
         return
 
+    expected_files = set(TEXT_DECK_FILES)
+    if allow_progress_files:
+        expected_files.update(PROGRESS_FILES)
+
     for entry in entries:
-        if entry.name not in TEXT_DECK_FILES:
+        if entry.name not in expected_files:
             append_file_error(
                 errors,
                 entry,
@@ -462,7 +499,10 @@ def verify_text_deck_entries(deck_dir: Path, errors: list[str]) -> None:
             )
 
 
-def verify_text_deck(deck_dir: Path) -> list[str]:
+def verify_text_deck(
+    deck_dir: Path,
+    allow_progress_files: bool = False,
+) -> list[str]:
     errors: list[str] = []
 
     if not deck_dir.is_dir():
@@ -479,8 +519,8 @@ def verify_text_deck(deck_dir: Path) -> list[str]:
         verify_deck_json(deck_dir, deck_json, card_rows, errors)
     verify_cards(deck_dir, card_rows, errors)
     verify_settings(deck_dir, settings_rows, errors)
-    verify_no_progress_files(deck_dir, errors)
-    verify_text_deck_entries(deck_dir, errors)
+    verify_no_progress_files(deck_dir, errors, allow_progress_files)
+    verify_text_deck_entries(deck_dir, errors, allow_progress_files)
 
     return errors
 
@@ -530,6 +570,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="only print validation errors",
     )
+    parser.add_argument(
+        "--allow-progress-files",
+        action="store_true",
+        help=(
+            "allow app-owned state/log/temp/backup files when validating a "
+            "live SD-card deck directory"
+        ),
+    )
     parser.add_argument("deck_dirs", nargs="+", type=Path, metavar="DECK_DIR")
     return parser.parse_args()
 
@@ -540,7 +588,7 @@ def main() -> int:
     errors: list[str] = []
     summaries: list[DeckSummary] = []
     for deck_dir in args.deck_dirs:
-        deck_errors = verify_text_deck(deck_dir)
+        deck_errors = verify_text_deck(deck_dir, args.allow_progress_files)
         errors.extend(deck_errors)
         if not deck_errors:
             summaries.append(verified_deck_summary(deck_dir))
