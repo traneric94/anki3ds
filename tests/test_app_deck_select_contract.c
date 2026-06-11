@@ -75,7 +75,7 @@ static void test_deck_selector_window_and_meta(void)
 	index.overflowed = true;
 	for (size_t entry_index = 0; entry_index < index.count; entry_index++)
 	{
-		char id[16];
+		char id[32];
 		char name[32];
 
 		snprintf(id, sizeof(id), "deck-%lu", (unsigned long)entry_index);
